@@ -19,7 +19,7 @@ export default function NiBinGuyLandingPage() {
       Bin Cleaning, <span className="text-green-400">Done Right</span>
     </h1>
     <p className="text-lg md:text-xl max-w-xl mt-4">
-      Professional wheelie bin cleaning with a hazmat twist. Sparkling clean bins without the drama.
+      Professional wheelie bin cleaning at you home. Sparkling, fresh smelling clean bins without any drama.
     </p>
     <button className="mt-6 bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
       Book a Clean
@@ -35,15 +35,15 @@ export default function NiBinGuyLandingPage() {
         <div className="grid md:grid-cols-3 gap-6 text-center">
           <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
             <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
-            <p>We clean green, black, and blue bins right outside your home.</p>
+            <p>We clean green/brown, black, and blue bins right outside your home.</p>
           </div>
           <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
             <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
-            <p>Need regular bin maintenance? We handle business waste too.</p>
+            <p>Need regular bin cleaning? We handle your businesses bins too.</p>
           </div>
           <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
             <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
-            <p>We use biodegradable products and minimal water waste.</p>
+            <p>We use biodegradable products and recycle water to reduce water waste.</p>
           </div>
         </div>
       </section>
@@ -54,15 +54,15 @@ export default function NiBinGuyLandingPage() {
         <div className="grid md:grid-cols-2 gap-8">
           <div>
             <h3 className="text-xl font-semibold mb-2">Local & Trusted</h3>
-            <p>We're based in Bangor and proud to serve the local community.</p>
+            <p>We're based in Bangor and proud to serve the local community and surrounding areas.</p>
           </div>
           <div>
             <h3 className="text-xl font-semibold mb-2">Flexible Plans</h3>
-            <p>Choose from one-off or monthly cleans. No contracts needed.</p>
+            <p>Choose from one-off or monthly cleans.</p>
           </div>
           <div>
             <h3 className="text-xl font-semibold mb-2">Affordable Pricing</h3>
-            <p>Starting from just £3.50 per bin. Transparent pricing with no hidden fees.</p>
+            <p>Starting from just £5 per bin. Transparent pricing with no hidden fees.</p>
           </div>
           <div>
             <h3 className="text-xl font-semibold mb-2">Fully Insured</h3>
@@ -85,7 +85,7 @@ export default function NiBinGuyLandingPage() {
       {/* Footer */}
       <footer className="bg-black text-center py-6 text-gray-400">
         <p>© 2025 Ni Bin Guy. All rights reserved.</p>
-        <p>Bangor, BT20 5NF · 07555178484 · aabincleaning@gmail.com</p>
+        <p>Bangor, BT20 5NF · 07555178484 · nibinguy@gmail.com - aabincleaning@gmail.com</p>
       </footer>
     </div>
   );
