@@ -6,7 +6,7 @@ export default function NiBinGuyLandingPage() {
       {/* Hero Section */}
       <section className="flex flex-col items-center justify-center text-center py-20 px-4 bg-gradient-to-b from-black via-green-900 to-black">
         <img
-          src="/logo.png"
+          src="logo.png"
           alt="Ni Bin Guy Logo"
           className="w-40 h-40 mb-6"
         />
