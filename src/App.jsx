@@ -2,17 +2,16 @@ import React, { useState } from "react";
 
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
-  const [bins, setBins] = useState([{ type: "", count: 1 }]);
-  const [frequency, setFrequency] = useState("One-off");
+  const [bins, setBins] = useState([{ type: "", count: 1, frequency: "One-off" }]);
   const [address, setAddress] = useState("");
 
   const handleSend = () => {
     const binDetails = bins
       .filter((b) => b.type !== "")
-      .map((b) => `${b.count}x ${b.type}`)
+      .map((b) => `${b.count}x ${b.type} (${b.frequency})`)
       .join(", ");
 
-    const message = `Hi! I'd like to book a bin clean.%0ABin/s: ${binDetails}%0AFrequency: ${frequency}%0AAddress: ${address}`;
+    const message = `Hi! I'd like to book a bin clean.%0ABin/s: ${binDetails}%0AAddress: ${address}`;
     const phoneNumber = "+447555178484";
     window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
     setShowForm(false);
@@ -25,7 +24,7 @@ export default function NiBinGuyLandingPage() {
   };
 
   const addBinRow = () => {
-    setBins([...bins, { type: "", count: 1 }]);
+    setBins([...bins, { type: "", count: 1, frequency: "One-off" }]);
   };
 
   return (
@@ -68,25 +67,35 @@ export default function NiBinGuyLandingPage() {
 
             {/* Dynamic Bin Rows */}
             {bins.map((bin, index) => (
-              <div key={index} className="flex gap-4 mb-2">
+              <div key={index} className="space-y-2 border-b border-gray-200 pb-4 mb-4">
+                <div className="flex gap-4">
+                  <select
+                    value={bin.type}
+                    onChange={(e) => handleBinChange(index, "type", e.target.value)}
+                    className="w-2/3 border border-gray-300 rounded-lg px-4 py-2"
+                  >
+                    <option value="">Select Bin</option>
+                    <option value="Black Bin">Black</option>
+                    <option value="Brown Bin">Brown</option>
+                    <option value="Green Bin">Green</option>
+                    <option value="Blue Bin">Blue</option>
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    value={bin.count}
+                    onChange={(e) => handleBinChange(index, "count", e.target.value)}
+                    className="w-1/3 border border-gray-300 rounded-lg px-4 py-2"
+                  />
+                </div>
                 <select
-                  value={bin.type}
-                  onChange={(e) => handleBinChange(index, "type", e.target.value)}
-                  className="w-2/3 border border-gray-300 rounded-lg px-4 py-2"
+                  value={bin.frequency}
+                  onChange={(e) => handleBinChange(index, "frequency", e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2"
                 >
-                  <option value="">Select Bin</option>
-                  <option value="Black Bin">Black</option>
-                  <option value="Brown Bin">Brown</option>
-                  <option value="Green Bin">Green</option>
-                  <option value="Blue Bin">Blue</option>
+                  <option value="One-off">One-off</option>
+                  <option value="4 Weekly">4 Weekly</option>
                 </select>
-                <input
-                  type="number"
-                  min="1"
-                  value={bin.count}
-                  onChange={(e) => handleBinChange(index, "count", e.target.value)}
-                  className="w-1/3 border border-gray-300 rounded-lg px-4 py-2"
-                />
               </div>
             ))}
 
@@ -97,23 +106,13 @@ export default function NiBinGuyLandingPage() {
               + Add Another Bin
             </button>
 
-            {/* Frequency */}
-            <select
-              value={frequency}
-              onChange={(e) => setFrequency(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
-            >
-              <option>One-off</option>
-              <option>4 Weekly</option>
-            </select>
-
             {/* Address */}
             <input
               type="text"
               placeholder="Address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
             />
 
             <button
