@@ -6,11 +6,13 @@ export default function NiBinGuyLandingPage() {
   const [frequency, setFrequency] = useState("One-off");
   const [address, setAddress] = useState("");
 
-  const handleSend = () => {
-    const message = `Hi! I'd like to book a bin clean.%0ABin/s: ${bins}%0AFrequency: ${frequency}%0AAddress: ${address}`;
-    const phoneNumber = "+447555178484";
-    window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
-  };
+const handleSend = () => {
+  const message = `Hi! I'd like to book a bin clean.%0ABin/s: ${bins}%0AFrequency: ${frequency}%0AAddress: ${address}`;
+  const phoneNumber = "+447555178484";
+  window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
+  setShowForm(false); // 👈 closes the modal
+};
+
 
   return (
     <div className="min-h-screen bg-black text-white font-sans">
