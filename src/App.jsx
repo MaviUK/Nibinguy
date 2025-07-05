@@ -8,7 +8,7 @@ export default function NiBinGuyLandingPage() {
         <div className="flex flex-col items-center gap-4">
           <img
             src="logo.png"
-            alt="Ni Bin Guy Logo"
+            alt="Ni Bin Guy Logo" 
             className="w-32 h-32 md:w-40 md:h-40 rounded-xl shadow-lg"
           />
           <h1 className="text-4xl md:text-6xl font-bold">
