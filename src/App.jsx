@@ -4,7 +4,7 @@ export default function NiBinGuyLandingPage() {
   return (
     <div className="min-h-screen bg-black text-white font-sans">
       {/* Hero Section */}
-      <section className="relative overflow-hidden flex flex-col items-center justify-center text-center py-20 px-4 bg-black">
+      <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-black">
   {/* Subtle beam effect lower down */}
   <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0"></div>
 
@@ -26,6 +26,7 @@ export default function NiBinGuyLandingPage() {
     </button>
   </div>
 </section>
+
 
 
       {/* Services Section */}
