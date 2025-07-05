@@ -5,17 +5,17 @@ export default function NiBinGuyLandingPage() {
   const [bins, setBins] = useState([{ type: "", count: 1, frequency: "One-off" }]);
   const [address, setAddress] = useState("");
 
-  const handleSend = () => {
-    const binDetails = bins
-      .filter((b) => b.type !== "")
-      .map((b) => `${b.count}x ${b.type} (${b.frequency})`)
-      .join(", ");
+ const handleSend = () => {
+  const binDetails = bins
+    .filter((b) => b.type !== "")
+    .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
+    .join("%0A");
 
-    const message = `Hi! I'd like to book a bin clean.%0ABin/s: ${binDetails}%0AAddress: ${address}`;
-    const phoneNumber = "+447555178484";
-    window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
-    setShowForm(false);
-  };
+  const message = `${binDetails}%0A${address}`;
+  const phoneNumber = "+447555178484";
+  window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
+  setShowForm(false);
+};
 
   const handleBinChange = (index, field, value) => {
     const newBins = [...bins];
