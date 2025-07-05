@@ -1,0 +1,1 @@
+export default function NiBinGuyLandingPage() { return <div>Ni Bin Guy Landing Page</div>; }
