@@ -11,11 +11,12 @@ export default function NiBinGuyLandingPage() {
     .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
     .join("%0A");
 
-  const message = `${binDetails}%0A${address}`;
+  const message = `Hi I'd like to book a bin clean, please.%0A${binDetails}%0A${address}`;
   const phoneNumber = "+447555178484";
   window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
   setShowForm(false);
 };
+
 
   const handleBinChange = (index, field, value) => {
     const newBins = [...bins];
