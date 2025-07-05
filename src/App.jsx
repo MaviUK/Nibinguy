@@ -7,12 +7,12 @@ export default function NiBinGuyLandingPage() {
   const [address, setAddress] = useState("");
 
 const handleSend = () => {
-  const message = `Hi! I'd like to book a bin clean.%0ABin/s: ${bins}%0AFrequency: ${frequency}%0AAddress: ${address}`;
+  const binInfo = `${binCount}x ${bins}`;
+  const message = `Hi! I'd like to book a bin clean.%0ABin/s: ${binInfo}%0AFrequency: ${frequency}%0AAddress: ${address}`;
   const phoneNumber = "+447555178484";
   window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
-  setShowForm(false); // 👈 closes the modal
+  setShowForm(false);
 };
-
 
   return (
     <div className="min-h-screen bg-black text-white font-sans">
