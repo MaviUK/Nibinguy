@@ -5,18 +5,17 @@ export default function NiBinGuyLandingPage() {
   const [bins, setBins] = useState([{ type: "", count: 1, frequency: "One-off" }]);
   const [address, setAddress] = useState("");
 
- const handleSend = () => {
-  const binDetails = bins
-    .filter((b) => b.type !== "")
-    .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
-    .join("%0A");
+  const handleSend = () => {
+    const binDetails = bins
+      .filter((b) => b.type !== "")
+      .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
+      .join("%0A");
 
-  const message = `Hi I'd like to book a bin clean, please.%0A${binDetails}%0A${address}`;
-  const phoneNumber = "+447555178484";
-  window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
-  setShowForm(false);
-};
-
+    const message = `Hi I'd like to book a bin clean, please.%0A${binDetails}%0A${address}`;
+    const phoneNumber = "+447555178484";
+    window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
+    setShowForm(false);
+  };
 
   const handleBinChange = (index, field, value) => {
     const newBins = [...bins];
@@ -56,8 +55,14 @@ export default function NiBinGuyLandingPage() {
 
       {/* WhatsApp Booking Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
-          <div className="bg-white text-black rounded-xl shadow-xl w-11/12 max-w-md p-6 space-y-4 relative">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50"
+          onClick={() => setShowForm(false)}
+        >
+          <div
+            className="bg-white text-black rounded-xl shadow-xl w-11/12 max-w-md p-6 space-y-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <button
               onClick={() => setShowForm(false)}
               className="absolute top-2 right-4 text-gray-500 hover:text-red-500 text-xl"
