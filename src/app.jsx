@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 
 export default function NiBinGuyLandingPage() {
@@ -42,7 +41,7 @@ export default function NiBinGuyLandingPage() {
           <h1 className="text-4xl md:text-6xl font-bold">
             Bin Cleaning, <span className="text-green-400">Done Right</span>
           </h1>
-          <p className="text-lg md:text-xl max-w-xl mt-4">
+          <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
             Professional wheelie bin cleaning at your home. Sparkling clean & fresh smelling bins without any drama.
           </p>
           <button
@@ -72,7 +71,6 @@ export default function NiBinGuyLandingPage() {
             </button>
             <h2 className="text-2xl font-bold text-center">Book a Bin Clean</h2>
 
-            {/* Dynamic Bin Rows */}
             {bins.map((bin, index) => (
               <div key={index} className="space-y-2 border-b border-gray-200 pb-4 mb-4">
                 <div className="flex gap-4">
@@ -113,10 +111,9 @@ export default function NiBinGuyLandingPage() {
               + Add Another Bin
             </button>
 
-            {/* Address */}
             <input
               type="text"
-              placeholder="Address"
+              placeholder="Full Address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
@@ -132,10 +129,52 @@ export default function NiBinGuyLandingPage() {
         </div>
       )}
 
+      {/* What We Do Section */}
+      <section className="py-16 px-6 bg-zinc-900">
+        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
+        <div className="grid md:grid-cols-3 gap-6 text-center">
+          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
+            <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
+            <p>We clean green, black, and blue bins right outside your home.</p>
+          </div>
+          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
+            <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
+            <p>Need regular bin cleaning? We handle your business waste too.</p>
+          </div>
+          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
+            <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
+            <p>We use biodegradable products and minimal water waste.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Us Section */}
+      <section className="py-16 px-6 bg-black">
+        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
+        <div className="grid md:grid-cols-2 gap-8">
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Local & Trusted</h3>
+            <p>We're based in Bangor and proud to serve the local community.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Flexible Plans</h3>
+            <p>Choose from one-off or monthly cleans.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Affordable Pricing</h3>
+            <p>Starting from just £5 per bin. No hidden fees.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Fully Insured</h3>
+            <p>You're covered. We’re fully licensed and insured.</p>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-black text-center py-6 text-gray-400">
         <p>© 2025 Ni Bin Guy. All rights reserved.</p>
-        <p>Bangor, BT20 5NF · 07555178484 · nibinguy@gmail.com - aabincleaning@gmail.com</p>
+        <p>Bangor, BT20 5NF · 07555178484 · nibinguy@gmail.com · aabincleaning@gmail.com</p>
       </footer>
     </div>
   );
