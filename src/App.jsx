@@ -2,26 +2,37 @@ import React, { useState } from "react";
 
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
-  const [bins, setBins] = useState("");
+  const [bins, setBins] = useState([{ type: "", count: 1 }]);
   const [frequency, setFrequency] = useState("One-off");
   const [address, setAddress] = useState("");
 
-const handleSend = () => {
-  const binInfo = `${binCount}x ${bins}`;
-  const message = `Hi! I'd like to book a bin clean.%0ABin/s: ${binInfo}%0AFrequency: ${frequency}%0AAddress: ${address}`;
-  const phoneNumber = "+447555178484";
-  window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
-  setShowForm(false);
-};
+  const handleSend = () => {
+    const binDetails = bins
+      .filter((b) => b.type !== "")
+      .map((b) => `${b.count}x ${b.type}`)
+      .join(", ");
+
+    const message = `Hi! I'd like to book a bin clean.%0ABin/s: ${binDetails}%0AFrequency: ${frequency}%0AAddress: ${address}`;
+    const phoneNumber = "+447555178484";
+    window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
+    setShowForm(false);
+  };
+
+  const handleBinChange = (index, field, value) => {
+    const newBins = [...bins];
+    newBins[index][field] = field === "count" ? parseInt(value) : value;
+    setBins(newBins);
+  };
+
+  const addBinRow = () => {
+    setBins([...bins, { type: "", count: 1 }]);
+  };
 
   return (
     <div className="min-h-screen bg-black text-white font-sans">
       {/* Hero Section */}
       <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-black">
-        {/* Subtle beam effect lower down */}
         <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0"></div>
-
-        {/* Content above glow */}
         <div className="relative z-10 flex flex-col items-center gap-4">
           <img
             src="logo.png"
@@ -43,7 +54,7 @@ const handleSend = () => {
         </div>
       </section>
 
-      {/* Modal WhatsApp Form */}
+      {/* WhatsApp Booking Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
           <div className="bg-white text-black rounded-xl shadow-xl w-11/12 max-w-md p-6 space-y-4 relative">
@@ -53,25 +64,50 @@ const handleSend = () => {
             >
               &times;
             </button>
-            <h2 className="text-2xl font-bold mb-2 text-center">Book a Bin Clean</h2>
+            <h2 className="text-2xl font-bold text-center">Book a Bin Clean</h2>
 
-            <input
-              type="text"
-              placeholder="Bin/s (e.g. 1x Black, 1x Green)"
-              value={bins}
-              onChange={(e) => setBins(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2"
-            />
+            {/* Dynamic Bin Rows */}
+            {bins.map((bin, index) => (
+              <div key={index} className="flex gap-4 mb-2">
+                <select
+                  value={bin.type}
+                  onChange={(e) => handleBinChange(index, "type", e.target.value)}
+                  className="w-2/3 border border-gray-300 rounded-lg px-4 py-2"
+                >
+                  <option value="">Select Bin</option>
+                  <option value="Black Bin">Black</option>
+                  <option value="Brown Bin">Brown</option>
+                  <option value="Green Bin">Green</option>
+                  <option value="Blue Bin">Blue</option>
+                </select>
+                <input
+                  type="number"
+                  min="1"
+                  value={bin.count}
+                  onChange={(e) => handleBinChange(index, "count", e.target.value)}
+                  className="w-1/3 border border-gray-300 rounded-lg px-4 py-2"
+                />
+              </div>
+            ))}
 
+            <button
+              onClick={addBinRow}
+              className="text-sm text-green-600 hover:text-green-800 font-semibold"
+            >
+              + Add Another Bin
+            </button>
+
+            {/* Frequency */}
             <select
               value={frequency}
               onChange={(e) => setFrequency(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
             >
               <option>One-off</option>
               <option>4 Weekly</option>
             </select>
 
+            {/* Address */}
             <input
               type="text"
               placeholder="Address"
@@ -89,59 +125,6 @@ const handleSend = () => {
           </div>
         </div>
       )}
-
-      {/* Services Section */}
-      <section className="py-16 px-6 bg-zinc-900">
-        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
-        <div className="grid md:grid-cols-3 gap-6 text-center">
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-            <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
-            <p>We clean green/brown, black, and blue bins right outside your home.</p>
-          </div>
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-            <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
-            <p>Need regular bin cleaning? We handle your businesses bins too.</p>
-          </div>
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-            <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
-            <p>We use biodegradable products and recycle water to reduce water waste.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Why Us Section */}
-      <section className="py-16 px-6 bg-black">
-        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
-        <div className="grid md:grid-cols-2 gap-8">
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Local & Trusted</h3>
-            <p>We're based in Bangor and proud to serve the local community and surrounding areas.</p>
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Flexible Plans</h3>
-            <p>Choose from one-off or monthly cleans.</p>
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Affordable Pricing</h3>
-            <p>Starting from just £5 per bin. Transparent pricing with no hidden fees.</p>
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Fully Insured</h3>
-            <p>You're covered. We’re fully licensed and insured for peace of mind.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact Form */}
-      <section className="py-16 px-6 bg-zinc-900">
-        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Get in Touch</h2>
-        <form className="max-w-xl mx-auto grid gap-4">
-          <input type="text" placeholder="Your Name" className="p-3 rounded-lg bg-zinc-800 text-white placeholder-gray-400" />
-          <input type="email" placeholder="Email Address" className="p-3 rounded-lg bg-zinc-800 text-white placeholder-gray-400" />
-          <textarea rows="4" placeholder="Your Message" className="p-3 rounded-lg bg-zinc-800 text-white placeholder-gray-400" />
-          <button className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl transition">Send Message</button>
-        </form>
-      </section>
 
       {/* Footer */}
       <footer className="bg-black text-center py-6 text-gray-400">
