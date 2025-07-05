@@ -19,7 +19,7 @@ export default function NiBinGuyLandingPage() {
       Bin Cleaning, <span className="text-green-400">Done Right</span>
     </h1>
     <p className="text-lg md:text-xl max-w-xl mt-4">
-      Professional wheelie bin cleaning at you home. Sparkling, fresh smelling clean bins without any drama.
+      Professional wheelie bin cleaning at your home. Sparkling clean & fresh smelling bins without any drama.
     </p>
     <button className="mt-6 bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
       Book a Clean
