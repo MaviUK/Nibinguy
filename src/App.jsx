@@ -5,20 +5,22 @@ export default function NiBinGuyLandingPage() {
     <div className="min-h-screen bg-black text-white font-sans">
       {/* Hero Section */}
       <section className="flex flex-col items-center justify-center text-center py-20 px-4 bg-gradient-to-b from-black via-green-900 to-black">
-        <img
-          src="logo.png"
-          alt="Ni Bin Guy Logo"
-          className="w-40 h-40 mb-6"
-        />
-        <h1 className="text-4xl md:text-6xl font-bold mb-4">
-          Bin Cleaning, <span className="text-green-400">Done Right</span>
-        </h1>
-        <p className="text-lg md:text-xl max-w-xl mb-6">
-          Professional wheelie bin cleaning with a hazmat twist. Sparkling clean bins without the drama.
-        </p>
-        <button className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
-          Book a Clean
-        </button>
+        <div className="flex flex-col items-center gap-4">
+          <img
+            src="logo.png"
+            alt="Ni Bin Guy Logo"
+            className="w-32 h-32 md:w-40 md:h-40 rounded-xl shadow-lg"
+          />
+          <h1 className="text-4xl md:text-6xl font-bold">
+            Bin Cleaning, <span className="text-green-400">Done Right</span>
+          </h1>
+          <p className="text-lg md:text-xl max-w-xl mt-4">
+            Professional wheelie bin cleaning with a hazmat twist. Sparkling clean bins without the drama.
+          </p>
+          <button className="mt-6 bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
+            Book a Clean
+          </button>
+        </div>
       </section>
 
       {/* Services Section */}
