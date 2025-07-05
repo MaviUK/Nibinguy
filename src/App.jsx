@@ -9,7 +9,7 @@ export default function NiBinGuyLandingPage() {
           <img
             src="logo.png"
             alt="Ni Bin Guy Logo" 
-            className="w-32 h-32 md:w-40 md:h-40 rounded-xl shadow-lg"
+            className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-0g"
           />
           <h1 className="text-4xl md:text-6xl font-bold">
             Bin Cleaning, <span className="text-green-400">Done Right</span>
