@@ -8,19 +8,22 @@ export default function NiBinGuyLandingPage() {
   const [email, setEmail] = useState("");
 
   useEffect(() => {
-  if (window.SqueegeePortal) {
-    window.SqueegeePortal.init({
-      selector: "#squeegee-portal",
-      portalId: "25a031e7-75af-4a0e-9f3a-d308fd9b2e3a", // 🔁 Replace this with your actual Portal ID
-      components: [
-        "UpcomingAppointments" // ✅ Only show the schedule
-      ],
-      showLogin: true, // ✅ This triggers the login modal immediately
-      showComponentsOnLoad: true, // ✅ Ensures components are shown after login
-    });
-  }
-}, []);
-
+    if (window.SqueegeePortal && typeof window.SqueegeePortal.init === "function") {
+      try {
+        window.SqueegeePortal.init({
+          selector: "#squeegee-portal",
+          portalId: "25a031e7-75af-4a0e-9f3a-d308fd9b2e3a",
+          components: ["UpcomingAppointments"],
+          showLogin: true,
+          showComponentsOnLoad: true,
+        });
+      } catch (error) {
+        console.error("❌ Error initializing Squeegee portal:", error);
+      }
+    } else {
+      console.warn("⚠️ SqueegeePortal not available on window.");
+    }
+  }, []);
 
   const handleSend = () => {
     if (!name || !email || !address || bins.some((b) => !b.type)) {
@@ -186,24 +189,44 @@ export default function NiBinGuyLandingPage() {
         </div>
       </section>
 
-      {/* Customer Portal Section */}
+      {/* Why Us Section */}
+      <section className="py-16 px-6 bg-black">
+        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
+        <div className="grid md:grid-cols-2 gap-8">
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Local & Trusted</h3>
+            <p>We're based in Bangor and proud to serve the local community.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Flexible Plans</h3>
+            <p>Choose from one-off or monthly cleans.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Affordable Pricing</h3>
+            <p>Starting from just £5 per bin. No hidden fees.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Fully Insured</h3>
+            <p>You're covered. We’re fully licensed and insured.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Customer Portal Section (Moved to bottom) */}
       <section className="py-16 px-6 bg-black text-center">
         <h2 className="text-3xl font-bold text-green-400 mb-6">Customer Portal</h2>
-       <button
-  onClick={() => {
-    if (window.SqueegeePortal) {
-      console.log("SqueegeePortal loaded, triggering login toggle...");
-      window.SqueegeePortal.toggleLogin();
-    } else {
-      console.error("❌ SqueegeePortal is NOT loaded. Check the script tag in index.html.");
-      alert("Squeegee portal failed to load. Please refresh the page.");
-    }
-  }}
-  className="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-6 rounded-xl shadow-lg transition mb-6"
->
-  Customer Login / Logout
-</button>
-
+        <button
+          onClick={() => {
+            if (window.SqueegeePortal) {
+              window.SqueegeePortal.toggleLogin();
+            } else {
+              alert("Squeegee portal failed to load. Please refresh the page.");
+            }
+          }}
+          className="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-6 rounded-xl shadow-lg transition mb-6"
+        >
+          Customer Login / Logout
+        </button>
 
         <div
           id="squeegee-portal"
