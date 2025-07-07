@@ -33,7 +33,7 @@ export default function NiBinGuyLandingPage() {
 
     const binDetails = bins
       .filter((b) => b.type !== "")
-      .map((b) => ${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency}))
+      .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
       .join("%0A");
 
     const message = Hi my name is ${name}. I'd like to book a bin clean, please.%0A${binDetails}%0A${address}%0A${email};
