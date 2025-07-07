@@ -211,6 +211,28 @@ export default function NiBinGuyLandingPage() {
           </div>
         </div>
       </section>
+{/* Reasons to Clean Your Bin Section */}
+<section className="py-16 px-6 bg-zinc-900">
+  <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Clean Your Bin?</h2>
+  <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
+    <div>
+      <h3 className="text-xl font-semibold mb-2">Prevent Nasty Odours</h3>
+      <p>Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source.</p>
+    </div>
+    <div>
+      <h3 className="text-xl font-semibold mb-2">Stop Bacteria Buildup</h3>
+      <p>Leftover waste can attract harmful bacteria. Professional bin cleaning keeps your home environment safer and more hygienic.</p>
+    </div>
+    <div>
+      <h3 className="text-xl font-semibold mb-2">Deter Insects & Vermin</h3>
+      <p>Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless.</p>
+    </div>
+    <div>
+      <h3 className="text-xl font-semibold mb-2">Protect Your Family</h3>
+      <p>A clean bin reduces exposure to germs and pathogens, helping keep your household healthier.</p>
+    </div>
+  </div>
+</section>
 
       {/* Customer Portal Section (Moved to bottom) */}
       <section className="py-16 px-6 bg-black text-center">
