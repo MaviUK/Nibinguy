@@ -1,17 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
   const [bins, setBins] = useState([{ type: "", count: 1, frequency: "One-off" }]);
   const [address, setAddress] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    if (window.SqueegeePortal) {
+      window.SqueegeePortal.init({
+        selector: "#squeegee-portal",
+        portalId: "25a031e7-75af-4a0e-9f3a-d308fd9b2e3a", // Replace this with your actual portal ID
+        components: [
+          "UpcomingAppointments",
+          "AppointmentHistory",
+          "FinancialHistory",
+          "Chat"
+        ],
+      });
+    }
+  }, []);
 
   const handleSend = () => {
+    if (!name || !email || !address || bins.some((b) => !b.type)) {
+      alert("Please complete all fields before sending.");
+      return;
+    }
+
     const binDetails = bins
       .filter((b) => b.type !== "")
       .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
       .join("%0A");
 
-    const message = `Hi I'd like to book a bin clean, please.%0A${binDetails}%0A${address}`;
+    const message = `Hi my name is ${name}. I'd like to book a bin clean, please.%0A${binDetails}%0A${address}%0A${email}`;
     const phoneNumber = "+447555178484";
     window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
     setShowForm(false);
@@ -71,6 +93,14 @@ export default function NiBinGuyLandingPage() {
             </button>
             <h2 className="text-2xl font-bold text-center">Book a Bin Clean</h2>
 
+            <input
+              type="text"
+              placeholder="Your Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2"
+            />
+
             {bins.map((bin, index) => (
               <div key={index} className="space-y-2 border-b border-gray-200 pb-4 mb-4">
                 <div className="flex gap-4">
@@ -119,6 +149,14 @@ export default function NiBinGuyLandingPage() {
               className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
             />
 
+            <input
+              type="email"
+              placeholder="Email Address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
+            />
+
             <button
               onClick={handleSend}
               className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full"
@@ -148,27 +186,20 @@ export default function NiBinGuyLandingPage() {
         </div>
       </section>
 
-      {/* Why Us Section */}
-      <section className="py-16 px-6 bg-black">
-        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
-        <div className="grid md:grid-cols-2 gap-8">
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Local & Trusted</h3>
-            <p>We're based in Bangor and proud to serve the local community.</p>
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Flexible Plans</h3>
-            <p>Choose from one-off or monthly cleans.</p>
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Affordable Pricing</h3>
-            <p>Starting from just £5 per bin. No hidden fees.</p>
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Fully Insured</h3>
-            <p>You're covered. We’re fully licensed and insured.</p>
-          </div>
-        </div>
+      {/* Customer Portal Section */}
+      <section className="py-16 px-6 bg-black text-center">
+        <h2 className="text-3xl font-bold text-green-400 mb-6">Customer Portal</h2>
+        <button
+          onClick={() => window.SqueegeePortal?.toggleLogin()}
+          className="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-6 rounded-xl shadow-lg transition mb-6"
+        >
+          Customer Login / Logout
+        </button>
+
+        <div
+          id="squeegee-portal"
+          className="mt-8 bg-white text-black rounded-xl p-4 shadow-xl max-w-3xl mx-auto"
+        ></div>
       </section>
 
       {/* Footer */}
