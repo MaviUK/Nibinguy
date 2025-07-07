@@ -8,19 +8,19 @@ export default function NiBinGuyLandingPage() {
   const [email, setEmail] = useState("");
 
   useEffect(() => {
-    if (window.SqueegeePortal) {
-      window.SqueegeePortal.init({
-        selector: "#squeegee-portal",
-        portalId: "25a031e7-75af-4a0e-9f3a-d308fd9b2e3a", // Replace this with your actual portal ID
-        components: [
-          "UpcomingAppointments",
-          "AppointmentHistory",
-          "FinancialHistory",
-          "Chat"
-        ],
-      });
-    }
-  }, []);
+  if (window.SqueegeePortal) {
+    window.SqueegeePortal.init({
+      selector: "#squeegee-portal",
+      portalId: "25a031e7-75af-4a0e-9f3a-d308fd9b2e3a", // 🔁 Replace this with your actual Portal ID
+      components: [
+        "UpcomingAppointments" // ✅ Only show the schedule
+      ],
+      showLogin: true, // ✅ This triggers the login modal immediately
+      showComponentsOnLoad: true, // ✅ Ensures components are shown after login
+    });
+  }
+}, []);
+
 
   const handleSend = () => {
     if (!name || !email || !address || bins.some((b) => !b.type)) {
