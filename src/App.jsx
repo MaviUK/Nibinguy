@@ -189,12 +189,21 @@ export default function NiBinGuyLandingPage() {
       {/* Customer Portal Section */}
       <section className="py-16 px-6 bg-black text-center">
         <h2 className="text-3xl font-bold text-green-400 mb-6">Customer Portal</h2>
-        <button
-          onClick={() => window.SqueegeePortal?.toggleLogin()}
-          className="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-6 rounded-xl shadow-lg transition mb-6"
-        >
-          Customer Login / Logout
-        </button>
+       <button
+  onClick={() => {
+    if (window.SqueegeePortal) {
+      console.log("SqueegeePortal loaded, triggering login toggle...");
+      window.SqueegeePortal.toggleLogin();
+    } else {
+      console.error("❌ SqueegeePortal is NOT loaded. Check the script tag in index.html.");
+      alert("Squeegee portal failed to load. Please refresh the page.");
+    }
+  }}
+  className="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-6 rounded-xl shadow-lg transition mb-6"
+>
+  Customer Login / Logout
+</button>
+
 
         <div
           id="squeegee-portal"
