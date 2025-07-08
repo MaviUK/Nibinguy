@@ -60,7 +60,7 @@ export default function NiBinGuyLandingPage() {
   <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0"></div>
 
   {/* Bottom fade-out to black */}
-  <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-b from-transparent to-[#18181b] z-10 pointer-events-none" />
+  <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-b from-transparent via-[#121212] to-[#18181b] z-10 pointer-events-none" />
 
   <div className="relative z-20 flex flex-col items-center gap-4">
     <img
