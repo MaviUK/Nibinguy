@@ -116,7 +116,7 @@ export default function NiBinGuyLandingPage() {
           </div>
         </div>
       </section>
-
+{/* Why Clean your Bin? - Grid features */}
      <section className="py-16 px-6 bg-gradient-to-b from-zinc-900 to-black text-white">
   <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
   <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
@@ -157,49 +157,9 @@ export default function NiBinGuyLandingPage() {
     </div>
   </div>
 </section>
-<section className="py-16 px-6 bg-gradient-to-b from-[#1a1a1a] via-[#101010] to-black text-white min-h-[80vh]">
-  <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
-  <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
-    {/* Odours */}
-    <div className="flex items-start gap-4">
-      <img src="/odour.png" alt="Odours icon" className="w-12 h-12 mt-1" />
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Prevent Nasty Odours</h3>
-        <p className="text-gray-300">Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source.</p>
-      </div>
-    </div>
-
-    {/* Bacteria */}
-    <div className="flex items-start gap-4">
-      <img src="/bacteria.png" alt="Bacteria icon" className="w-12 h-12 mt-1" />
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Stop Bacteria Buildup</h3>
-        <p className="text-gray-300">Leftover waste attracts harmful bacteria. Bin cleaning keeps your environment safer.</p>
-      </div>
-    </div>
-
-    {/* Insects */}
-    <div className="flex items-start gap-4">
-      <img src="/pests.png" alt="Pests icon" className="w-12 h-12 mt-1" />
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Deter Insects & Vermin</h3>
-        <p className="text-gray-300">Flies, maggots, and rodents are drawn to dirty bins. Clean bins keep them away.</p>
-      </div>
-    </div>
-
-    {/* Family */}
-    <div className="flex items-start gap-4">
-      <img src="/family.png" alt="Family icon" className="w-12 h-12 mt-1" />
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Protect Your Family</h3>
-        <p className="text-gray-300">A clean bin means fewer germs around your home. It’s a healthier choice for everyone.</p>
-      </div>
-    </div>
-  </div>
-</section>
 
       {/* Why Ni Bin Guy - Grid features */}
-      <section className="py-16 px-6 bg-black border-t border-green-700">
+      <section className="py-16 px-6 bg-gradient-to-b from-[#1a1a1a] via-[#101010] to-black text-white">
         <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
         <div className="grid md:grid-cols-2 gap-10 max-w-5xl mx-auto">
           <div>
