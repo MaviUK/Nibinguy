@@ -117,55 +117,48 @@ export default function NiBinGuyLandingPage() {
         </div>
       </section>
 
-      {/* Why Clean Your Bin Section */}
-<section className="py-20 px-6 bg-white text-black">
-  <h2 className="text-3xl md:text-4xl font-bold text-center text-green-700 mb-12">
-    Why Clean Your Bin?
-  </h2>
-  <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
-    
-    <div className="flex items-start gap-6">
-      <img src="/odour.png" alt="Odour Icon" className="w-12 h-12 mt-1" />
+     {/* Why Clean Your Bin Section */}
+<section className="py-16 px-6 bg-zinc-800">
+  <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
+  <div className="grid md:grid-cols-2 gap-10 max-w-5xl mx-auto">
+    {/* Odour */}
+    <div className="flex gap-6 items-start">
+      <img src="/icons/odour.png" alt="Odour Icon" className="w-12 h-12 mt-1" />
       <div>
-        <h3 className="text-xl font-bold mb-2">Prevent Nasty Odours</h3>
-        <p className="text-gray-700">
-          Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source.
-        </p>
+        <h3 className="text-xl font-semibold mb-1">Prevent Nasty Odours</h3>
+        <p className="text-gray-300">Bins can start to smell unpleasant fast. Regular cleaning eliminates foul smells at the source.</p>
       </div>
     </div>
 
-    <div className="flex items-start gap-6">
-      <img src="/bacteria.png" alt="Bacteria Icon" className="w-12 h-12 mt-1" />
+    {/* Bacteria */}
+    <div className="flex gap-6 items-start">
+      <img src="/icons/bacteria.png" alt="Bacteria Icon" className="w-12 h-12 mt-1" />
       <div>
-        <h3 className="text-xl font-bold mb-2">Stop Bacteria Buildup</h3>
-        <p className="text-gray-700">
-          Leftover waste can attract harmful bacteria. Professional bin cleaning keeps your home safer and more hygienic.
-        </p>
+        <h3 className="text-xl font-semibold mb-1">Stop Bacteria Buildup</h3>
+        <p className="text-gray-300">Leftover waste attracts bacteria. Bin cleaning keeps your environment safer and hygienic.</p>
       </div>
     </div>
 
-    <div className="flex items-start gap-6">
-      <img src="/pests.png" alt="Pests Icon" className="w-12 h-12 mt-1" />
+    {/* Pests */}
+    <div className="flex gap-6 items-start">
+      <img src="/icons/pests.png" alt="Pests Icon" className="w-12 h-12 mt-1" />
       <div>
-        <h3 className="text-xl font-bold mb-2">Deter Insects & Vermin</h3>
-        <p className="text-gray-700">
-          Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless.
-        </p>
+        <h3 className="text-xl font-semibold mb-1">Deter Insects & Vermin</h3>
+        <p className="text-gray-300">Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless.</p>
       </div>
     </div>
 
-    <div className="flex items-start gap-6">
-      <img src="/family.png" alt="Family Icon" className="w-12 h-12 mt-1" />
+    {/* Family */}
+    <div className="flex gap-6 items-start">
+      <img src="/icons/family.png" alt="Family Icon" className="w-12 h-12 mt-1" />
       <div>
-        <h3 className="text-xl font-bold mb-2">Protect Your Family</h3>
-        <p className="text-gray-700">
-          A clean bin reduces exposure to germs and pathogens, helping keep your household healthier.
-        </p>
+        <h3 className="text-xl font-semibold mb-1">Protect Your Family</h3>
+        <p className="text-gray-300">A clean bin reduces germs and exposure to pathogens, helping keep your household healthy.</p>
       </div>
     </div>
-
   </div>
 </section>
+
 
 
       {/* Why Ni Bin Guy - Grid features */}
