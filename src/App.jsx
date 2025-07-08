@@ -55,9 +55,14 @@ export default function NiBinGuyLandingPage() {
   return (
     <div className="min-h-screen bg-black text-white font-sans">
       {/* Hero Section */}
-      <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-gradient-to-b from-black via-black to-[#18181b]">
+     <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-black">
+  {/* Glowing green blur circle */}
   <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0"></div>
-  <div className="relative z-10 flex flex-col items-center gap-4">
+
+  {/* Bottom fade-out to black */}
+  <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-b from-transparent to-[#18181b] z-10 pointer-events-none" />
+
+  <div className="relative z-20 flex flex-col items-center gap-4">
     <img
       src="logo.png"
       alt="Ni Bin Guy Logo"
@@ -77,7 +82,6 @@ export default function NiBinGuyLandingPage() {
     </button>
   </div>
 </section>
-
 
       {/* Booking Modal */}
       {showForm && (
