@@ -61,10 +61,10 @@ export default function NiBinGuyLandingPage() {
         <div className="relative z-20 flex flex-col items-center gap-4">
           <img src="logo.png" alt="Ni Bin Guy Logo" className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg" />
           <h1 className="text-4xl md:text-6xl font-bold">
-            Bin Cleaning, <span className="text-green-400">Done Right,</span> All Over County Down
+            Bin Cleaning, <span className="text-green-400">Done Right</span>
           </h1>
           <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
-            Professional wheelie bin cleaning at your home. Sparkling clean & fresh smelling bins without any drama.
+            Professional wheelie bin cleaning at your home, across <span className="text-green-400">County Down.</span> Sparkling clean & fresh smelling bins without any drama.
           </p>
           <button onClick={() => setShowForm(true)} className="mt-6 bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
             Book a Clean
