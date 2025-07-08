@@ -56,14 +56,28 @@ export default function NiBinGuyLandingPage() {
     <div className="min-h-screen bg-black text-white font-sans">
       {/* Hero Section */}
       <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-gradient-to-b from-black via-black to-[#18181b]">
-        <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0"></div>
-        <div className="relative z-10 flex flex-col items-center gap-4">
-          <img src="logo.png" alt="Ni Bin Guy Logo" className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg" />
-          <h1 className="text-4xl md:text-6xl font-bold">Bin Cleaning, <span className="text-green-400">Done Right</span></h1>
-          <p className="text-lg md:text-xl max-w-xl mt-4">Professional wheelie bin cleaning at your home. Sparkling clean & fresh smelling bins without any drama.</p>
-          <button onClick={() => setShowForm(true)} className="mt-6 bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Book a Clean</button>
-        </div>
-      </section>
+  <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0"></div>
+  <div className="relative z-10 flex flex-col items-center gap-4">
+    <img
+      src="logo.png"
+      alt="Ni Bin Guy Logo"
+      className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg"
+    />
+    <h1 className="text-4xl md:text-6xl font-bold">
+      Bin Cleaning, <span className="text-green-400">Done Right</span>
+    </h1>
+    <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
+      Professional wheelie bin cleaning at your home. Sparkling clean & fresh smelling bins without any drama.
+    </p>
+    <button
+      onClick={() => setShowForm(true)}
+      className="mt-6 bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+    >
+      Book a Clean
+    </button>
+  </div>
+</section>
+
 
       {/* Booking Modal */}
       {showForm && (
@@ -99,23 +113,24 @@ export default function NiBinGuyLandingPage() {
       )}
 
       {/* What We Do - Cards */}
-      <section className="py-16 px-6 bg-zinc-900">
-        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
-        <div className="grid md:grid-cols-3 gap-6 text-center">
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-            <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
-            <p>We clean green, black, and blue bins right outside your home.</p>
-          </div>
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-            <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
-            <p>Need regular bin cleaning? We handle your business waste too.</p>
-          </div>
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-            <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
-            <p>We use biodegradable products and minimal water waste.</p>
-          </div>
-        </div>
-      </section>
+      <section className="py-16 px-6 bg-[#18181b]">
+  <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
+  <div className="grid md:grid-cols-3 gap-6 text-center">
+    <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
+      <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
+      <p>We clean green, black, and blue bins right outside your home.</p>
+    </div>
+    <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
+      <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
+      <p>Need regular bin cleaning? We handle your business waste too.</p>
+    </div>
+    <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
+      <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
+      <p>We use biodegradable products and minimal water waste.</p>
+    </div>
+  </div>
+</section>
+
 {/* Why Clean your Bin? - Grid features */}
      <section className="py-16 px-6 bg-gradient-to-b from-zinc-900 to-black text-white">
   <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
