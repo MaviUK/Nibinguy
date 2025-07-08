@@ -55,35 +55,24 @@ export default function NiBinGuyLandingPage() {
   return (
     <div className="min-h-screen bg-black text-white font-sans">
       {/* Hero Section */}
-     <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-black">
-  {/* Glowing green blur circle */}
-  <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0"></div>
+      <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-black">
+        <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0"></div>
+        <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-b from-transparent via-[#121212] to-[#18181b] z-10 pointer-events-none" />
+        <div className="relative z-20 flex flex-col items-center gap-4">
+          <img src="logo.png" alt="Ni Bin Guy Logo" className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg" />
+          <h1 className="text-4xl md:text-6xl font-bold">
+            Bin Cleaning, <span className="text-green-400">Done Right</span>
+          </h1>
+          <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
+            Professional wheelie bin cleaning at your home. Sparkling clean & fresh smelling bins without any drama.
+          </p>
+          <button onClick={() => setShowForm(true)} className="mt-6 bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
+            Book a Clean
+          </button>
+        </div>
+      </section>
 
-  {/* Bottom fade-out to black */}
-  <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-b from-transparent via-[#121212] to-[#18181b] z-10 pointer-events-none" />
-
-  <div className="relative z-20 flex flex-col items-center gap-4">
-    <img
-      src="logo.png"
-      alt="Ni Bin Guy Logo"
-      className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg"
-    />
-    <h1 className="text-4xl md:text-6xl font-bold">
-      Bin Cleaning, <span className="text-green-400">Done Right</span>
-    </h1>
-    <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
-      Professional wheelie bin cleaning at your home. Sparkling clean & fresh smelling bins without any drama.
-    </p>
-    <button
-      onClick={() => setShowForm(true)}
-      className="mt-6 bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
-    >
-      Book a Clean
-    </button>
-  </div>
-</section>
-
-      {/* Booking Modal */}
+      {/* WhatsApp Booking Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50" onClick={() => setShowForm(false)}>
           <div className="bg-white text-black rounded-xl shadow-xl w-11/12 max-w-md p-6 space-y-4 relative" onClick={(e) => e.stopPropagation()}>
@@ -117,68 +106,62 @@ export default function NiBinGuyLandingPage() {
       )}
 
       {/* What We Do - Cards */}
-     <section className="py-16 px-6 bg-[#18181b]">
-  <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
-  <div className="grid md:grid-cols-3 gap-6 text-center">
-    <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-      <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
-      <p>We clean green, black, and blue bins right outside your home.</p>
-    </div>
-    <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-      <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
-      <p>Need regular bin cleaning? We handle your business waste too.</p>
-    </div>
-    <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-      <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
-      <p>We use biodegradable products and minimal water waste.</p>
-    </div>
-  </div>
-</section>
+      <section className="relative py-16 px-6 bg-[#18181b]">
+        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
+        <div className="grid md:grid-cols-3 gap-6 text-center">
+          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
+            <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
+            <p>We clean green, black, and blue bins right outside your home.</p>
+          </div>
+          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
+            <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
+            <p>Need regular bin cleaning? We handle your business waste too.</p>
+          </div>
+          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
+            <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
+            <p>We use biodegradable products and minimal water waste.</p>
+          </div>
+        </div>
+        <div className="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-b from-[#18181b] to-black pointer-events-none" />
+      </section>
 
-{/* Why Clean your Bin? - Grid features */}
-     <section className="py-16 px-6 bg-gradient-to-b from-black via-[#0a0a0a] to-zinc-900 text-white">
-  <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
-  <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
-    {/* Odours */}
-    <div className="flex items-start gap-4">
-      <img src="/odour.png" alt="Odours icon" className="w-12 h-12 mt-1" />
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Prevent Nasty Odours</h3>
-        <p className="text-gray-300">Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source.</p>
-      </div>
-    </div>
+      {/* Why Clean Your Bin? */}
+      <section className="py-16 px-6 bg-gradient-to-b from-black via-[#0a0a0a] to-zinc-900 text-white">
+        <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
+        <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
+          <div className="flex items-start gap-4">
+            <img src="/odour.png" alt="Odours icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Prevent Nasty Odours</h3>
+              <p className="text-gray-300">Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-4">
+            <img src="/bacteria.png" alt="Bacteria icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Stop Bacteria Buildup</h3>
+              <p className="text-gray-300">Leftover waste can attract harmful bacteria. Professional bin cleaning keeps your environment safer and more hygienic.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-4">
+            <img src="/pests.png" alt="Pests icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Deter Insects & Vermin</h3>
+              <p className="text-gray-300">Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-4">
+            <img src="/family.png" alt="Family icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Protect Your Family</h3>
+              <p className="text-gray-300">A clean bin reduces exposure to germs and pathogens, helping keep your household healthier.</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    {/* Bacteria */}
-    <div className="flex items-start gap-4">
-      <img src="/bacteria.png" alt="Bacteria icon" className="w-12 h-12 mt-1" />
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Stop Bacteria Buildup</h3>
-        <p className="text-gray-300">Leftover waste can attract harmful bacteria. Professional bin cleaning keeps your environment safer and more hygienic.</p>
-      </div>
-    </div>
-
-    {/* Insects & Vermin */}
-    <div className="flex items-start gap-4">
-      <img src="/pests.png" alt="Pests icon" className="w-12 h-12 mt-1" />
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Deter Insects & Vermin</h3>
-        <p className="text-gray-300">Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless.</p>
-      </div>
-    </div>
-
-    {/* Family */}
-    <div className="flex items-start gap-4">
-      <img src="/family.png" alt="Family icon" className="w-12 h-12 mt-1" />
-      <div>
-        <h3 className="text-xl font-semibold mb-1">Protect Your Family</h3>
-        <p className="text-gray-300">A clean bin reduces exposure to germs and pathogens, helping keep your household healthier.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-      {/* Why Ni Bin Guy - Grid features */}
-     <section className="py-16 px-6 bg-gradient-to-b from-zinc-900 via-[#1a1a1a] to-black text-white">
+      {/* Why Ni Bin Guy */}
+      <section className="py-16 px-6 bg-gradient-to-b from-zinc-900 via-[#1a1a1a] to-black text-white">
         <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
         <div className="grid md:grid-cols-2 gap-10 max-w-5xl mx-auto">
           <div>
