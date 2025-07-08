@@ -178,27 +178,32 @@ export default function NiBinGuyLandingPage() {
 </section>
 
       {/* Why Ni Bin Guy - Grid features */}
-      <section className="py-16 px-6 bg-gradient-to-b from-[#1a1a1a] via-[#101010] to-black text-white">
-        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
-        <div className="grid md:grid-cols-2 gap-10 max-w-5xl mx-auto">
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Local & Trusted</h3>
-            <p>We’re based in Bangor and proud to serve County Down residents with care.</p>
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Flexible Plans</h3>
-            <p>Whether you want a one-off clean or recurring service, we’ve got options.</p>
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Affordable Pricing</h3>
-            <p>From just £5 per bin — clear pricing with no surprises.</p>
-          </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Fully Insured</h3>
-            <p>We’re fully insured and compliant — so you can rest easy.</p>
-          </div>
-        </div>
-      </section>
+     <section className="relative py-16 px-6 bg-black">
+  {/* Smooth gradient transition from previous section */}
+  <div className="absolute -top-10 left-0 w-full h-10 bg-gradient-to-t from-black via-[#121212] to-zinc-900 z-0 pointer-events-none" />
+
+  <div className="relative z-10">
+    <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
+    <div className="grid md:grid-cols-2 gap-8">
+      <div>
+        <h3 className="text-xl font-semibold mb-2">Local & Trusted</h3>
+        <p>We're based in Bangor and proud to serve the local community.</p>
+      </div>
+      <div>
+        <h3 className="text-xl font-semibold mb-2">Flexible Plans</h3>
+        <p>Choose from one-off or monthly cleans.</p>
+      </div>
+      <div>
+        <h3 className="text-xl font-semibold mb-2">Affordable Pricing</h3>
+        <p>Starting from just £5 per bin. No hidden fees.</p>
+      </div>
+      <div>
+        <h3 className="text-xl font-semibold mb-2">Fully Insured</h3>
+        <p>You're covered. We’re fully licensed and insured.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* Customer Portal */}
       <section className="py-16 px-6 bg-black text-center">
