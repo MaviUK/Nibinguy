@@ -136,7 +136,7 @@ export default function NiBinGuyLandingPage() {
 </section>
 
 {/* Why Clean your Bin? - Grid features */}
-     <section className="py-16 px-6 bg-gradient-to-b from-zinc-900 to-black text-white">
+     <section className="py-16 px-6 bg-gradient-to-b from-black via-[#0a0a0a] to-zinc-900 text-white">
   <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
   <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
     {/* Odours */}
@@ -178,7 +178,7 @@ export default function NiBinGuyLandingPage() {
 </section>
 
       {/* Why Ni Bin Guy - Grid features */}
-      <section className="py-16 px-6 bg-gradient-to-b from-[#1a1a1a] via-[#101010] to-black text-white">
+     <section className="py-16 px-6 bg-gradient-to-b from-zinc-900 via-[#1a1a1a] to-black text-white">
         <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
         <div className="grid md:grid-cols-2 gap-10 max-w-5xl mx-auto">
           <div>
