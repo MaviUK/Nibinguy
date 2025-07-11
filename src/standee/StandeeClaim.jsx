@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react"
 import { useParams } from "react-router-dom"
 import { supabase } from "../lib/supabaseClient"
-import { submitClaim } from "../../lib/standeeHelpers"
+import { submitClaim } from "../lib/standeeHelpers.js"
 
 export default function StandeeClaim() {
   const { slug } = useParams()
