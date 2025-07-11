@@ -101,11 +101,11 @@ export default function StandeeClaim() {
 
   return (
     <div className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">🎁 You've Been Nominated!</h1>
+      <h1 className="text-2xl font-bold mb-4">🎁 You've Been Nominated For A Free Bin Clean!</h1>
       <p className="mb-4">Address: <strong>{standee.current_address}</strong></p>
 
       <div className="mb-4">
-        <label className="block font-medium">Select your bins:</label>
+        <label className="block font-medium">Select your bin for free clean:</label>
         <div className="flex gap-2 mt-2">
           {["Black", "Blue", "Brown"].map((bin) => (
             <button
@@ -122,7 +122,7 @@ export default function StandeeClaim() {
       </div>
 
       <div className="mb-4">
-        <label className="block font-medium">Select your 2 clean dates:</label>
+        <label className="block font-medium">Select your next 2 clean dates:</label>
         <div className="flex gap-4 mt-2">
           <input
             type="date"
