@@ -41,7 +41,7 @@ export async function submitClaim({
     .from('standee_location')
     .select('*')
     .eq('current_slug', slug)
-    .maybeSingle()
+    .maybeSingle() // ✅ THIS IS THE FIX
 
   if (locationError) {
     console.error('Error fetching standee location:', locationError)
