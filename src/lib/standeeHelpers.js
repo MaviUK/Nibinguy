@@ -43,6 +43,12 @@ export async function submitClaim({
     .eq('current_slug', slug)
     .maybeSingle() // ✅ THIS IS THE FIX
 
+if (!locationData) {
+  console.warn('No matching standee found for slug:', slug)  // log the actual slug
+  return { success: false, error: 'This standee does not exist.' }
+}
+
+
   if (locationError) {
     console.error('Error fetching standee location:', locationError)
     return { success: false, error: locationError.message }
