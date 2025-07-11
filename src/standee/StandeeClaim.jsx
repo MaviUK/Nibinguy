@@ -11,12 +11,11 @@ export default function StandeeClaim() {
   const [selectedBin, setSelectedBin] = useState("")
   const [firstDate, setFirstDate] = useState("")
   const [secondDate, setSecondDate] = useState("")
-const [neighbourName, setNeighbourName] = useState("")
+  const [neighbourName, setNeighbourName] = useState("")
   const [nominatedAddress, setNominatedAddress] = useState("")
   const [town, setTown] = useState("")
   const [postcode, setPostcode] = useState("")
   const [submitted, setSubmitted] = useState(false)
-
 
   useEffect(() => {
     async function fetchStandee() {
@@ -50,6 +49,7 @@ const [neighbourName, setNeighbourName] = useState("")
       address: standee.current_address,
       bins: [selectedBin],
       dates: [firstDate, secondDate],
+      neighbourName,
       nominatedAddress,
       town,
       postcode
@@ -90,7 +90,7 @@ const [neighbourName, setNeighbourName] = useState("")
       <div className="bg-black text-green-400 min-h-screen p-6">
         <h1 className="text-2xl font-bold">🎉 Success!</h1>
         <p>Your free bin clean is booked for <strong>{firstDate}</strong> and <strong>{secondDate}</strong>.</p>
-        <p>The standee is now heading to <strong>{nominatedAddress}</strong> in <strong>{town}</strong> ({postcode}).</p>
+        <p>The standee is now heading to <strong>{neighbourName}</strong> at <strong>{nominatedAddress}</strong> in <strong>{town}</strong> ({postcode}).</p>
       </div>
     )
   }
@@ -106,13 +106,13 @@ const [neighbourName, setNeighbourName] = useState("")
         <p className="text-center mb-6">Current Standee Location: <strong>{standee.current_address}</strong></p>
 
         <div className="mb-6">
-          <label className="block mb-2 font-medium">Select your bin:</label>
-          <div className="flex gap-3">
+          <label className="block font-medium">Select your bin:</label>
+          <div className="flex gap-3 mt-2">
             {["Black", "Blue", "Brown"].map((bin) => (
               <button
                 key={bin}
                 onClick={() => setSelectedBin(bin)}
-                className={`px-4 py-2 rounded border transition-all duration-200 ${
+                className={`px-4 py-2 rounded border ${
                   selectedBin === bin
                     ? "bg-green-500 text-black font-bold"
                     : "bg-white text-black"
@@ -125,8 +125,30 @@ const [neighbourName, setNeighbourName] = useState("")
         </div>
 
         <div className="mb-6">
-          <label className="block mb-2 font-medium">Select 2 clean dates:</label>
-          <div className="flex gap-3">
+          <label className="block font-medium">Neighbour's Name:</label>
+          <input
+            type="text"
+            placeholder="Full name"
+            value={neighbourName}
+            onChange={(e) => setNeighbourName(e.target.value)}
+            className="mt-2 p-2 border rounded w-full text-black"
+          />
+        </div>
+
+        <div className="mb-6">
+          <label className="block font-medium">Nominate your neighbour:</label>
+          <input
+            type="text"
+            placeholder="Full address"
+            value={nominatedAddress}
+            onChange={(e) => setNominatedAddress(e.target.value)}
+            className="mt-2 p-2 border rounded w-full text-black"
+          />
+        </div>
+
+        <div className="mb-6">
+          <label className="block font-medium">Select 2 clean dates:</label>
+          <div className="flex gap-3 mt-2">
             <input
               type="date"
               value={firstDate}
@@ -147,46 +169,42 @@ const [neighbourName, setNeighbourName] = useState("")
         </div>
 
         <div className="mb-6 flex gap-4">
-  <div className="flex-1">
-    <label className="block font-medium">Town:</label>
-    <input
-      type="text"
-      value={town}
-      onChange={(e) => setTown(e.target.value)}
-      className="mt-2 p-2 border rounded w-full"
-    />
-  </div>
-  <div className="w-32">
-    <label className="block font-medium">Postcode:</label>
-    <input
-      type="text"
-      maxLength={10}
-      value={postcode}
-      onChange={(e) => setPostcode(e.target.value)}
-      className="mt-2 p-2 border rounded w-full"
-    />
-  </div>
-</div>
-
-
-        <div className="mb-6">
-          <label className="block font-medium">Postcode:</label>
-          <input
-            type="text"
-            value={postcode}
-            onChange={(e) => setPostcode(e.target.value)}
-            className="mt-2 p-2 rounded border w-full text-black"
-          />
+          <div className="flex-1">
+            <label className="block font-medium">Town:</label>
+            <input
+              type="text"
+              value={town}
+              onChange={(e) => setTown(e.target.value)}
+              className="mt-2 p-2 border rounded w-full text-black"
+            />
+          </div>
+          <div className="w-32">
+            <label className="block font-medium">Postcode:</label>
+            <input
+              type="text"
+              maxLength={10}
+              value={postcode}
+              onChange={(e) => setPostcode(e.target.value)}
+              className="mt-2 p-2 border rounded w-full text-black"
+            />
+          </div>
         </div>
 
         <button
-  onClick={handleSubmit}
-  disabled={!selectedBin || !firstDate || !secondDate || !nominatedAddress || !town || !postcode}
-  className="w-full py-3 bg-red-700 text-white font-bold rounded shadow hover:bg-red-600 transition"
->
-  Claim My Free Clean
-</button>
-
+          onClick={handleSubmit}
+          disabled={
+            !selectedBin ||
+            !firstDate ||
+            !secondDate ||
+            !neighbourName ||
+            !nominatedAddress ||
+            !town ||
+            !postcode
+          }
+          className="w-full py-3 bg-red-700 text-white font-bold rounded shadow hover:bg-red-600 transition"
+        >
+          Claim My Free Clean
+        </button>
       </div>
     </div>
   )
