@@ -20,14 +20,23 @@ export default function StandeeClaim() {
   useEffect(() => {
     async function fetchStandee() {
       const normalizedSlug = slug.trim().toLowerCase()
+      console.log("🔍 Slug from URL:", slug)
+      console.log("🔍 Normalized slug for query:", normalizedSlug)
+
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("standee_location")
           .select("*")
           .eq("current_slug", normalizedSlug)
           .maybeSingle()
 
+        console.log("📦 Supabase response:", data)
+        if (error) {
+          console.error("❌ Supabase error:", error)
+        }
+
         if (!data) {
+          console.warn("⚠️ No data returned from Supabase")
           setStandee(null)
           setIsMatch(false)
         } else {
@@ -35,12 +44,13 @@ export default function StandeeClaim() {
           setIsMatch(data.current_slug === normalizedSlug)
         }
       } catch (err) {
-        console.error("Supabase fetch error:", err)
+        console.error("❗ Supabase fetch threw an exception:", err)
         setStandee(null)
         setIsMatch(false)
       }
       setLoading(false)
     }
+
     fetchStandee()
   }, [slug])
 
