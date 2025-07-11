@@ -15,19 +15,24 @@ export default function StandeeClaim() {
   const [submitted, setSubmitted] = useState(false)
   const inputRef = useRef(null)
 
+  // ✅ Fetch current standee location from Supabase
   useEffect(() => {
     async function fetchStandee() {
+      console.log("Checking slug:", slug)
+
       const { data, error } = await supabase
         .from("standee_location")
         .select("*")
-        .eq("current_slug", slug)
+        .like("current_slug", `%${slug}%`) // Debug: loose match
         .maybeSingle()
+
+      console.log("Fetched data:", data)
 
       if (error) {
         console.error("Error loading standee:", error)
-      }
-
-      if (data) {
+      } else if (!data) {
+        console.warn("No standee found for slug.")
+      } else {
         setStandee(data)
         setIsMatch(data.current_slug === slug)
       }
@@ -38,7 +43,7 @@ export default function StandeeClaim() {
     fetchStandee()
   }, [slug])
 
-  // Google Maps Autocomplete
+  // ✅ Google Maps Autocomplete
   useEffect(() => {
     if (!window.google || !inputRef.current) return
 
@@ -63,7 +68,7 @@ export default function StandeeClaim() {
 
   const handleSubmit = async () => {
     const response = await submitClaim({
-      address: standee.current_address,
+      address: standee?.current_address,
       bins,
       selectedDate,
       nominatedAddress
@@ -91,7 +96,7 @@ export default function StandeeClaim() {
     return (
       <div className="p-6 text-red-500">
         <h1 className="text-2xl font-bold">This isn't your standee!</h1>
-        <p>This standee is meant for: <strong>{standee.current_address}</strong></p>
+        <p>This standee is meant for: <strong>{standee?.current_address}</strong></p>
       </div>
     )
   }
