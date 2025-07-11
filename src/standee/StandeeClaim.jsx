@@ -1,78 +1,82 @@
-import React, { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
-import { supabase } from "../lib/supabaseClient";
-import { submitClaim } from "../lib/standeeHelpers.js";
+import React, { useEffect, useState, useRef } from "react"
+import { useParams } from "react-router-dom"
+import { supabase } from "../lib/supabaseClient"
+import { submitClaim } from "../lib/standeeHelpers.js"
 
 export default function StandeeClaim() {
-  const { slug } = useParams();
+  const { slug } = useParams()
 
-  const [loading, setLoading] = useState(true);
-  const [standee, setStandee] = useState(null);
-  const [isMatch, setIsMatch] = useState(false);
-  const [bins, setBins] = useState([]);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [nominatedAddress, setNominatedAddress] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-  const inputRef = useRef(null);
+  const [loading, setLoading] = useState(true)
+  const [standee, setStandee] = useState(null)
+  const [isMatch, setIsMatch] = useState(false)
+  const [bins, setBins] = useState([])
+  const [selectedDate, setSelectedDate] = useState("")
+  const [nominatedAddress, setNominatedAddress] = useState("")
+  const [submitted, setSubmitted] = useState(false)
+  const inputRef = useRef(null)
 
-  // ✅ Updated fetch logic
+  // Fetch current standee location from Supabase
   useEffect(() => {
     async function fetchStandee() {
-      const normalizedSlug = slug.trim();
-      console.log("Checking slug:", normalizedSlug);
+      const normalizedSlug = slug.trim().toLowerCase()
+      console.log("Checking slug:", normalizedSlug)
 
       const { data, error } = await supabase
         .from("standee_location")
         .select("*")
-        .ilike("current_slug", normalizedSlug) // ✅ more lenient match
-        .maybeSingle();
+        .eq("current_slug", normalizedSlug)
+        .maybeSingle()
 
-      console.log("Fetched data:", data);
+      console.log("Fetched data:", data)
+
+      // Optional: Debug all slugs in table
+      const { data: allSlugs } = await supabase
+        .from("standee_location")
+        .select("current_slug")
+
+      console.log("All slugs in DB:", allSlugs)
 
       if (error) {
-        console.error("Error loading standee:", error);
-        setLoading(false);
-        return;
+        console.error("Error loading standee:", error)
       }
 
       if (!data) {
-        console.warn("No standee found for slug.");
-        setStandee(null);
-        setIsMatch(false);
+        console.warn("No standee found for slug.")
+        setStandee(null)
+        setIsMatch(false)
       } else {
-        const dbSlug = data.current_slug?.trim();
-        setStandee(data);
-        setIsMatch(dbSlug === normalizedSlug);
+        setStandee(data)
+        setIsMatch(data.current_slug === normalizedSlug)
       }
 
-      setLoading(false);
+      setLoading(false)
     }
 
-    fetchStandee();
-  }, [slug]);
+    fetchStandee()
+  }, [slug])
 
   // Google Maps Autocomplete
   useEffect(() => {
-    if (!window.google || !inputRef.current) return;
+    if (!window.google || !inputRef.current) return
 
     const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
       types: ["address"],
       componentRestrictions: { country: "uk" }
-    });
+    })
 
     autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace();
+      const place = autocomplete.getPlace()
       if (place && place.formatted_address) {
-        setNominatedAddress(place.formatted_address);
+        setNominatedAddress(place.formatted_address)
       }
-    });
-  }, [inputRef.current]);
+    })
+  }, [inputRef.current])
 
   const toggleBin = (bin) => {
     setBins((prev) =>
       prev.includes(bin) ? prev.filter((b) => b !== bin) : [...prev, bin]
-    );
-  };
+    )
+  }
 
   const handleSubmit = async () => {
     const response = await submitClaim({
@@ -80,16 +84,16 @@ export default function StandeeClaim() {
       bins,
       selectedDate,
       nominatedAddress
-    });
+    })
 
     if (response.success) {
-      setSubmitted(true);
+      setSubmitted(true)
     } else {
-      alert(`Something went wrong: ${response.error}`);
+      alert(`Something went wrong: ${response.error}`)
     }
-  };
+  }
 
-  if (loading) return <p className="p-6">Loading...</p>;
+  if (loading) return <p className="p-6">Loading...</p>
 
   if (!standee) {
     return (
@@ -97,7 +101,7 @@ export default function StandeeClaim() {
         <h1 className="text-2xl font-bold">No standee found</h1>
         <p>Please check the URL or try again later.</p>
       </div>
-    );
+    )
   }
 
   if (!isMatch) {
@@ -106,7 +110,7 @@ export default function StandeeClaim() {
         <h1 className="text-2xl font-bold">This isn't your standee!</h1>
         <p>This standee is meant for: <strong>{standee?.current_address}</strong></p>
       </div>
-    );
+    )
   }
 
   if (submitted) {
@@ -116,15 +120,15 @@ export default function StandeeClaim() {
         <p>Your free bin clean is booked for <strong>{selectedDate}</strong>.</p>
         <p>The standee is now heading to <strong>{nominatedAddress}</strong>.</p>
       </div>
-    );
+    )
   }
 
-  const today = new Date();
-  const nextTuesdays = [];
+  const today = new Date()
+  const nextTuesdays = []
   for (let i = 1; nextTuesdays.length < 2; i++) {
-    const d = new Date();
-    d.setDate(today.getDate() + i);
-    if (d.getDay() === 2) nextTuesdays.push(d.toISOString().split("T")[0]);
+    const d = new Date()
+    d.setDate(today.getDate() + i)
+    if (d.getDay() === 2) nextTuesdays.push(d.toISOString().split("T")[0])
   }
 
   return (
@@ -180,5 +184,5 @@ export default function StandeeClaim() {
         Claim My Free Clean
       </button>
     </div>
-  );
+  )
 }
