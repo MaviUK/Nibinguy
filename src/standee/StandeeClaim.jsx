@@ -49,21 +49,21 @@ export default function StandeeClaim() {
   }, [slug])
 
   // Google Maps Autocomplete
-  useEffect(() => {
-    if (!window.google || !inputRef.current) return
+useEffect(() => {
+  if (!window.google || !inputRef.current) return
 
-    const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-      types: ["address"],
-      componentRestrictions: { country: "uk" }
-    })
+  const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+    types: ["address"],
+    componentRestrictions: { country: "uk" }
+  })
 
-    autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace()
-      if (place && place.formatted_address) {
-        setNominatedAddress(place.formatted_address)
-      }
-    })
-  }, [inputRef.current])
+  autocomplete.addListener("place_changed", () => {
+    const place = autocomplete.getPlace()
+    if (place && place.formatted_address) {
+      setNominatedAddress(place.formatted_address)
+    }
+  })
+}, [inputRef.current])
 
   const toggleBin = (bin) => {
     setBins((prev) =>
