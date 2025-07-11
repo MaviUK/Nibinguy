@@ -15,26 +15,32 @@ export default function StandeeClaim() {
   const [submitted, setSubmitted] = useState(false)
   const inputRef = useRef(null)
 
-  // ✅ Fetch current standee location from Supabase
+  // ✅ Fetch standee location
   useEffect(() => {
     async function fetchStandee() {
-      console.log("Checking slug:", slug)
+      const normalizedSlug = slug.toLowerCase().trim()
+      console.log("Checking slug:", normalizedSlug)
 
       const { data, error } = await supabase
         .from("standee_location")
         .select("*")
-        .like("current_slug", `%${slug}%`) // Debug: loose match
+        .eq("current_slug", normalizedSlug)
         .maybeSingle()
 
       console.log("Fetched data:", data)
 
       if (error) {
         console.error("Error loading standee:", error)
-      } else if (!data) {
+      }
+
+      if (!data) {
         console.warn("No standee found for slug.")
+        setStandee(null)
+        setIsMatch(false)
       } else {
+        const dbSlug = data.current_slug?.toLowerCase().trim()
         setStandee(data)
-        setIsMatch(data.current_slug === slug)
+        setIsMatch(dbSlug === normalizedSlug)
       }
 
       setLoading(false)
@@ -43,7 +49,7 @@ export default function StandeeClaim() {
     fetchStandee()
   }, [slug])
 
-  // ✅ Google Maps Autocomplete
+  // Google Maps Autocomplete
   useEffect(() => {
     if (!window.google || !inputRef.current) return
 
@@ -68,7 +74,7 @@ export default function StandeeClaim() {
 
   const handleSubmit = async () => {
     const response = await submitClaim({
-      address: standee?.current_address,
+      address: standee.current_address,
       bins,
       selectedDate,
       nominatedAddress
