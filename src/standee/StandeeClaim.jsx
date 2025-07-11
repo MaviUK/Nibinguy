@@ -167,14 +167,18 @@ useEffect(() => {
         </select>
       </div>
 
-      <div className="mb-6">
-        <label className="block font-medium">Nominate your neighbour:</label>
-        <input
-          ref={inputRef}
-          placeholder="Start typing their address..."
-          className="mt-2 p-2 border rounded w-full"
-        />
-      </div>
+     <div className="mb-6">
+  <label className="block font-medium">Nominate your neighbour:</label>
+  <gmpx-placeautocomplete
+    style={{ display: "block", width: "100%", height: "40px", marginTop: "0.5rem", borderRadius: "0.375rem", border: "1px solid #d1d5db", padding: "0.5rem" }}
+    placeholder="Start typing their address..."
+    onPlaceChange={(e) => {
+      const place = e.detail;
+      setNominatedAddress(place?.formatted_address || "");
+    }}
+  ></gmpx-placeautocomplete>
+</div>
+
 
       <button
         onClick={handleSubmit}
