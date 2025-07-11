@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react"
+import React, { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { supabase } from "../lib/supabaseClient"
 import { submitClaim } from "../lib/standeeHelpers.js"
@@ -13,9 +13,6 @@ export default function StandeeClaim() {
   const [nominatedAddress, setNominatedAddress] = useState("")
   const [submitted, setSubmitted] = useState(false)
 
-  const autocompleteRef = useRef(null)
-
-  // Fetch standee data
   useEffect(() => {
     async function fetchStandee() {
       const normalizedSlug = slug.trim().toLowerCase()
@@ -50,23 +47,6 @@ export default function StandeeClaim() {
     fetchStandee()
   }, [slug])
 
-  // Google Maps Web Component Autocomplete Listener
-  useEffect(() => {
-    const el = autocompleteRef.current
-    if (!el) return
-
-    const handler = (e) => {
-      const place = e.detail
-      setNominatedAddress(place?.formatted_address || "")
-    }
-
-    el.addEventListener("gmpx-placechange", handler)
-
-    return () => {
-      el.removeEventListener("gmpx-placechange", handler)
-    }
-  }, [])
-
   const toggleBin = (bin) => {
     setBins((prev) =>
       prev.includes(bin) ? prev.filter((b) => b !== bin) : [...prev, bin]
@@ -86,6 +66,14 @@ export default function StandeeClaim() {
     } else {
       alert(`Something went wrong: ${response.error}`)
     }
+  }
+
+  const today = new Date()
+  const nextTuesdays = []
+  for (let i = 1; nextTuesdays.length < 2; i++) {
+    const d = new Date()
+    d.setDate(today.getDate() + i)
+    if (d.getDay() === 2) nextTuesdays.push(d.toISOString().split("T")[0])
   }
 
   if (loading) return <p className="p-6">Loading...</p>
@@ -116,14 +104,6 @@ export default function StandeeClaim() {
         <p>The standee is now heading to <strong>{nominatedAddress}</strong>.</p>
       </div>
     )
-  }
-
-  const today = new Date()
-  const nextTuesdays = []
-  for (let i = 1; nextTuesdays.length < 2; i++) {
-    const d = new Date()
-    d.setDate(today.getDate() + i)
-    if (d.getDay() === 2) nextTuesdays.push(d.toISOString().split("T")[0])
   }
 
   return (
@@ -164,19 +144,13 @@ export default function StandeeClaim() {
 
       <div className="mb-6">
         <label className="block font-medium">Nominate your neighbour:</label>
-        <gmpx-placeautocomplete
-          ref={autocompleteRef}
+        <input
+          type="text"
           placeholder="Start typing their address..."
-          style={{
-            display: "block",
-            width: "100%",
-            height: "40px",
-            padding: "0.5rem",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-            marginTop: "0.5rem"
-          }}
-        ></gmpx-placeautocomplete>
+          value={nominatedAddress}
+          onChange={(e) => setNominatedAddress(e.target.value)}
+          className="mt-2 p-2 border rounded w-full"
+        />
       </div>
 
       <button
