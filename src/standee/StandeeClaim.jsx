@@ -18,6 +18,10 @@ export default function StandeeClaim() {
   const [postcode, setPostcode] = useState("")
   const [submitted, setSubmitted] = useState(false)
 
+  const today = new Date()
+  const maxDate = new Date()
+  maxDate.setDate(today.getDate() + 30)
+
   useEffect(() => {
     async function fetchStandee() {
       const normalizedSlug = slug.trim().toLowerCase()
@@ -122,7 +126,7 @@ export default function StandeeClaim() {
       </div>
 
       <div className="mb-4">
-        <label className="block font-medium">Pick 2 clean dates:</label>
+        <label className="block font-medium">Pick 2 clean dates (within 30 days):</label>
         <div className="flex gap-4 mt-2">
           <DatePicker
             selected={date1}
@@ -130,6 +134,8 @@ export default function StandeeClaim() {
             placeholderText="Select first date"
             className="p-2 border rounded w-full"
             dateFormat="yyyy-MM-dd"
+            minDate={today}
+            maxDate={maxDate}
           />
           <DatePicker
             selected={date2}
@@ -137,6 +143,8 @@ export default function StandeeClaim() {
             placeholderText="Select second date"
             className="p-2 border rounded w-full"
             dateFormat="yyyy-MM-dd"
+            minDate={today}
+            maxDate={maxDate}
           />
         </div>
       </div>
