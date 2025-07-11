@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { supabase } from "../lib/supabaseClient"
-import { submitClaim } from "../lib/standeeHelpers.js"
+import { submitClaim } from "../lib/standeeHelpers"
 
 export default function StandeeClaim() {
   const { slug } = useParams()
   const [loading, setLoading] = useState(true)
   const [standee, setStandee] = useState(null)
   const [isMatch, setIsMatch] = useState(false)
-  const [bin, setBin] = useState("") // SINGLE bin
+  const [selectedBin, setSelectedBin] = useState("")
   const [firstDate, setFirstDate] = useState("")
   const [secondDate, setSecondDate] = useState("")
   const [nominatedAddress, setNominatedAddress] = useState("")
@@ -40,14 +40,13 @@ export default function StandeeClaim() {
       }
       setLoading(false)
     }
-
     fetchStandee()
   }, [slug])
 
   const handleSubmit = async () => {
     const response = await submitClaim({
       address: standee.current_address,
-      bins: [bin], // Single bin in array
+      bins: [selectedBin],
       dates: [firstDate, secondDate],
       nominatedAddress,
       town,
@@ -61,74 +60,75 @@ export default function StandeeClaim() {
     }
   }
 
-  if (loading) return <p className="p-6">Loading...</p>
+  const minDate = new Date().toISOString().split("T")[0]
+  const maxDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+
+  if (loading) return <div className="text-white p-6">Loading...</div>
 
   if (!standee) {
     return (
-      <div className="p-6 text-red-500">
-        <h1 className="text-2xl font-bold">Standee Not Found</h1>
-        <p>Check the URL or try again later.</p>
+      <div className="text-white p-6">
+        <h1 className="text-2xl font-bold">No standee found</h1>
+        <p>Please check the URL or try again later.</p>
       </div>
     )
   }
 
   if (!isMatch) {
     return (
-      <div className="p-6 text-red-500">
-        <h1 className="text-2xl font-bold">Wrong Standee</h1>
-        <p>This standee is currently located at <strong>{standee.current_address}</strong>.</p>
+      <div className="text-red-400 p-6">
+        <h1 className="text-2xl font-bold">This isn't your standee!</h1>
+        <p>This standee is meant for: <strong>{standee?.current_address}</strong></p>
       </div>
     )
   }
 
   if (submitted) {
     return (
-      <div className="p-6 text-green-700">
+      <div className="text-green-400 p-6">
         <h1 className="text-2xl font-bold">🎉 Success!</h1>
-        <p>Your bin clean is booked for <strong>{firstDate}</strong> and <strong>{secondDate}</strong>.</p>
-        <p>You've nominated <strong>{nominatedAddress}</strong> in <strong>{town}</strong> ({postcode}).</p>
+        <p>Your free bin clean is booked for <strong>{firstDate}</strong> and <strong>{secondDate}</strong>.</p>
+        <p>The standee is now heading to <strong>{nominatedAddress}</strong> in <strong>{town}</strong> ({postcode}).</p>
       </div>
     )
   }
 
-  const today = new Date()
-  const minDate = today.toISOString().split("T")[0]
-  const maxDate = new Date(today.setDate(today.getDate() + 30)).toISOString().split("T")[0]
-
   return (
-    <div className="p-6 max-w-xl mx-auto text-gray-800">
-      <img src="/logo.png" alt="Ni Bin Guy logo" className="w-40 mx-auto mb-6" />
+    <div className="bg-black min-h-screen text-white font-sans p-6 max-w-xl mx-auto">
+      <img src="/logo.png" alt="Ni Bin Guy Logo" className="w-32 mb-6 mx-auto" />
 
-      <h1 className="text-3xl font-bold text-center text-green-700 mb-4">🎁 Claim Your Free Bin Clean</h1>
-      <p className="mb-4 text-center">Standee currently located at: <strong>{standee.current_address}</strong></p>
+      <h1 className="text-3xl font-bold text-center mb-6">🎁 You've Been Nominated!</h1>
+      <p className="text-center mb-6">Current Standee Location: <strong>{standee.current_address}</strong></p>
 
-      <div className="mb-4">
-        <label className="block font-semibold mb-1">Select your bin:</label>
+      <div className="mb-6">
+        <label className="block mb-2 font-medium">Select your bin:</label>
         <div className="flex gap-3">
-          {["Black", "Blue", "Brown"].map((b) => (
+          {["Black", "Blue", "Brown"].map((bin) => (
             <button
-              key={b}
-              onClick={() => setBin(b)}
-              className={`px-4 py-2 rounded border font-bold ${
-                bin === b ? "bg-green-700 text-white" : "bg-white text-black"
+              key={bin}
+              onClick={() => setSelectedBin(bin)}
+              className={`px-4 py-2 rounded border transition-all duration-200 ${
+                selectedBin === bin
+                  ? "bg-green-500 text-black font-bold"
+                  : "bg-white text-black"
               }`}
             >
-              {b}
+              {bin}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="mb-4">
-        <label className="block font-semibold mb-1">Select 2 clean dates:</label>
-        <div className="flex gap-4">
+      <div className="mb-6">
+        <label className="block mb-2 font-medium">Select 2 clean dates:</label>
+        <div className="flex gap-3">
           <input
             type="date"
             value={firstDate}
             onChange={(e) => setFirstDate(e.target.value)}
             min={minDate}
             max={maxDate}
-            className="p-2 border rounded w-1/2"
+            className="p-2 rounded border w-1/2 text-black"
           />
           <input
             type="date"
@@ -136,52 +136,48 @@ export default function StandeeClaim() {
             onChange={(e) => setSecondDate(e.target.value)}
             min={minDate}
             max={maxDate}
-            className="p-2 border rounded w-1/2"
+            className="p-2 rounded border w-1/2 text-black"
           />
         </div>
       </div>
 
       <div className="mb-4">
-        <label className="block font-semibold mb-1">Nominate your neighbour:</label>
+        <label className="block font-medium">Nominate your neighbour:</label>
         <input
           type="text"
           value={nominatedAddress}
           onChange={(e) => setNominatedAddress(e.target.value)}
           placeholder="Full address"
-          className="p-2 border rounded w-full"
+          className="mt-2 p-2 rounded border w-full text-black"
         />
       </div>
 
       <div className="mb-4">
-        <label className="block font-semibold mb-1">Town:</label>
+        <label className="block font-medium">Town:</label>
         <input
           type="text"
           value={town}
           onChange={(e) => setTown(e.target.value)}
-          placeholder="e.g. Bangor"
-          className="p-2 border rounded w-full"
+          className="mt-2 p-2 rounded border w-full text-black"
         />
       </div>
 
       <div className="mb-6">
-        <label className="block font-semibold mb-1">Postcode:</label>
+        <label className="block font-medium">Postcode:</label>
         <input
           type="text"
           value={postcode}
           onChange={(e) => setPostcode(e.target.value)}
-          placeholder="e.g. BT20 5NF"
-          className="p-2 border rounded w-full"
+          className="mt-2 p-2 rounded border w-full text-black"
         />
       </div>
 
       <button
         onClick={handleSubmit}
-        disabled={
-          !bin || !firstDate || !secondDate || !nominatedAddress || !town || !postcode
-        }
-        className="w-full bg-green-700 text-white py-3 rounded font-bold hover:bg-green-800 transition"
+        disabled={!selectedBin || !firstDate || !secondDate || !nominatedAddress || !town || !postcode}
+        className="w-full py-3 bg-pink-500 text-white font-bold rounded shadow hover:bg-pink-400 transition"
       >
-        ✅ Book My Free Bin Clean
+        Claim My Free Clean
       </button>
     </div>
   )
