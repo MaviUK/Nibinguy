@@ -15,7 +15,7 @@ export default function StandeeClaim() {
   const [submitted, setSubmitted] = useState(false)
   const inputRef = useRef(null)
 
-  // ✅ Correctly fetch standee by slug
+  // Fetch current standee location from Supabase
   useEffect(() => {
     async function fetchStandee() {
       const { data, error } = await supabase
@@ -28,7 +28,7 @@ export default function StandeeClaim() {
         console.error("Error loading standee:", error)
       } else {
         setStandee(data)
-        setIsMatch(data?.current_slug === slug)
+        setIsMatch(data?.current_slug?.toLowerCase() === slug.toLowerCase())
       }
 
       setLoading(false)
