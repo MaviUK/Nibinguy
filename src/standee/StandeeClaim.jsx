@@ -50,20 +50,27 @@ export default function StandeeClaim() {
 
   // Google Maps Autocomplete
 useEffect(() => {
-  if (!window.google || !inputRef.current) return
+  const interval = setInterval(() => {
+    if (window.google && window.google.maps && inputRef.current) {
+      const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+        types: ["address"],
+        componentRestrictions: { country: "uk" },
+      })
 
-  const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-    types: ["address"],
-    componentRestrictions: { country: "uk" }
-  })
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace()
+        if (place && place.formatted_address) {
+          setNominatedAddress(place.formatted_address)
+        }
+      })
 
-  autocomplete.addListener("place_changed", () => {
-    const place = autocomplete.getPlace()
-    if (place && place.formatted_address) {
-      setNominatedAddress(place.formatted_address)
+      clearInterval(interval) // stop polling once initialized
     }
-  })
-}, [inputRef.current])
+  }, 300)
+
+  return () => clearInterval(interval)
+}, [])
+
 
   const toggleBin = (bin) => {
     setBins((prev) =>
