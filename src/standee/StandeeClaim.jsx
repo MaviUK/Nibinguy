@@ -12,48 +12,59 @@ export default function StandeeClaim() {
   const [selectedDate, setSelectedDate] = useState("")
   const [nominatedAddress, setNominatedAddress] = useState("")
   const [submitted, setSubmitted] = useState(false)
-  const autoRef = useRef(null)
 
-  // Fetch standee by slug
+  const autocompleteRef = useRef(null)
+
+  // Fetch standee data
   useEffect(() => {
     async function fetchStandee() {
       const normalizedSlug = slug.trim().toLowerCase()
+      console.log("Checking slug:", normalizedSlug)
+
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("standee_location")
           .select("*")
           .eq("current_slug", normalizedSlug)
           .maybeSingle()
 
-        if (data) {
-          setStandee(data)
-          setIsMatch(data.current_slug === normalizedSlug)
-        } else {
+        console.log("Fetched data:", data)
+
+        if (!data) {
+          console.warn("No standee found for slug.")
           setStandee(null)
           setIsMatch(false)
+        } else {
+          setStandee(data)
+          setIsMatch(data.current_slug === normalizedSlug)
         }
       } catch (err) {
         console.error("Supabase fetch error:", err)
         setStandee(null)
         setIsMatch(false)
-      } finally {
-        setLoading(false)
       }
+
+      setLoading(false)
     }
 
     fetchStandee()
   }, [slug])
 
-  // Initialize place autocomplete
+  // Google Maps Web Component Autocomplete Listener
   useEffect(() => {
-    if (!autoRef.current) return
+    const el = autocompleteRef.current
+    if (!el) return
 
-    customElements.whenDefined("gmpx-placeautocomplete").then(() => {
-      autoRef.current.addEventListener("placechange", (e) => {
-        const place = e.detail
-        setNominatedAddress(place?.formatted_address || "")
-      })
-    })
+    const handler = (e) => {
+      const place = e.detail
+      setNominatedAddress(place?.formatted_address || "")
+    }
+
+    el.addEventListener("gmpx-placechange", handler)
+
+    return () => {
+      el.removeEventListener("gmpx-placechange", handler)
+    }
   }, [])
 
   const toggleBin = (bin) => {
@@ -154,7 +165,8 @@ export default function StandeeClaim() {
       <div className="mb-6">
         <label className="block font-medium">Nominate your neighbour:</label>
         <gmpx-placeautocomplete
-          ref={autoRef}
+          ref={autocompleteRef}
+          placeholder="Start typing their address..."
           style={{
             display: "block",
             width: "100%",
@@ -164,7 +176,6 @@ export default function StandeeClaim() {
             border: "1px solid #ccc",
             marginTop: "0.5rem"
           }}
-          placeholder="Start typing their address..."
         ></gmpx-placeautocomplete>
       </div>
 
