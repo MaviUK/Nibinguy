@@ -12,42 +12,49 @@ export default function StandeeClaim() {
   const [selectedDate, setSelectedDate] = useState("")
   const [nominatedAddress, setNominatedAddress] = useState("")
   const [submitted, setSubmitted] = useState(false)
-  const inputRef = useRef(null)
+  const autoRef = useRef(null)
 
+  // Fetch standee by slug
   useEffect(() => {
     async function fetchStandee() {
       const normalizedSlug = slug.trim().toLowerCase()
-      console.log("Checking slug:", normalizedSlug)
-
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("standee_location")
           .select("*")
           .eq("current_slug", normalizedSlug)
           .maybeSingle()
 
-        console.log("Fetched data:", data)
-
-        if (!data) {
-          console.warn("No standee found for slug.")
-          setStandee(null)
-          setIsMatch(false)
-        } else {
+        if (data) {
           setStandee(data)
           setIsMatch(data.current_slug === normalizedSlug)
+        } else {
+          setStandee(null)
+          setIsMatch(false)
         }
       } catch (err) {
         console.error("Supabase fetch error:", err)
         setStandee(null)
         setIsMatch(false)
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     fetchStandee()
   }, [slug])
 
+  // Initialize place autocomplete
+  useEffect(() => {
+    if (!autoRef.current) return
+
+    customElements.whenDefined("gmpx-placeautocomplete").then(() => {
+      autoRef.current.addEventListener("placechange", (e) => {
+        const place = e.detail
+        setNominatedAddress(place?.formatted_address || "")
+      })
+    })
+  }, [])
 
   const toggleBin = (bin) => {
     setBins((prev) =>
@@ -144,19 +151,22 @@ export default function StandeeClaim() {
         </select>
       </div>
 
-     <div className="mb-6">
-  <label className="block font-medium">Nominate your neighbour:</label>
-  <gmpx-placeautocomplete
-    style="display: block; width: 100%; height: 40px; padding: 0.5rem; border-radius: 6px; border: 1px solid #ccc; margin-top: 0.5rem;"
-    placeholder="Start typing their address..."
-    onPlaceChange={(e) => {
-      const place = e.detail;
-      setNominatedAddress(place?.formatted_address || "");
-    }}
-  ></gmpx-placeautocomplete>
-</div>
-
-
+      <div className="mb-6">
+        <label className="block font-medium">Nominate your neighbour:</label>
+        <gmpx-placeautocomplete
+          ref={autoRef}
+          style={{
+            display: "block",
+            width: "100%",
+            height: "40px",
+            padding: "0.5rem",
+            borderRadius: "6px",
+            border: "1px solid #ccc",
+            marginTop: "0.5rem"
+          }}
+          placeholder="Start typing their address..."
+        ></gmpx-placeautocomplete>
+      </div>
 
       <button
         onClick={handleSubmit}
