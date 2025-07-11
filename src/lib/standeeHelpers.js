@@ -34,10 +34,16 @@ export async function submitClaim({ address, bins, selectedDate, nominatedAddres
 
   // Step 2: Load current standee record by slug
   const { data: locationData, error: locationError } = await supabase
-    .from('standee_location')
-    .select('*')
-    .eq('current_slug', slug)
-    .single()
+  .from('standee_location')
+  .select('*')
+  .eq('current_slug', slug)
+  .maybeSingle()
+
+if (!locationData) {
+  console.error('No matching standee location found for slug:', slug)
+  return { success: false, error: 'No standee matched this URL.' }
+}
+
 
   if (locationError) {
     console.error('Could not fetch current standee location:', locationError)
