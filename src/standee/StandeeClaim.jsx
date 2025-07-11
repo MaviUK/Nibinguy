@@ -8,6 +8,7 @@ export default function StandeeClaim() {
 
   const [loading, setLoading] = useState(true)
   const [standee, setStandee] = useState(null)
+  const [isMatch, setIsMatch] = useState(false)
   const [bins, setBins] = useState([])
   const [selectedDate, setSelectedDate] = useState("")
   const [nominatedAddress, setNominatedAddress] = useState("")
@@ -24,8 +25,11 @@ export default function StandeeClaim() {
 
       if (error) {
         console.error("Error loading standee:", error)
-      } else {
+      }
+
+      if (data) {
         setStandee(data)
+        setIsMatch(data.current_slug === slug)
       }
 
       setLoading(false)
@@ -34,6 +38,7 @@ export default function StandeeClaim() {
     fetchStandee()
   }, [slug])
 
+  // Google Maps Autocomplete
   useEffect(() => {
     if (!window.google || !inputRef.current) return
 
@@ -71,26 +76,22 @@ export default function StandeeClaim() {
     }
   }
 
-  const match = standee?.current_slug?.toLowerCase() === slug.toLowerCase()
-
   if (loading) return <p className="p-6">Loading...</p>
 
-  // Handle case where no match and standee exists
-  if (!match && standee) {
-    return (
-      <div className="p-6 text-red-500">
-        <h1 className="text-2xl font-bold">This isn't your standee!</h1>
-        <p>This standee is meant for: <strong>{standee.current_address}</strong></p>
-      </div>
-    )
-  }
-
-  // Still no data
   if (!standee) {
     return (
       <div className="p-6 text-red-500">
         <h1 className="text-2xl font-bold">No standee found</h1>
         <p>Please check the URL or try again later.</p>
+      </div>
+    )
+  }
+
+  if (!isMatch) {
+    return (
+      <div className="p-6 text-red-500">
+        <h1 className="text-2xl font-bold">This isn't your standee!</h1>
+        <p>This standee is meant for: <strong>{standee.current_address}</strong></p>
       </div>
     )
   }
