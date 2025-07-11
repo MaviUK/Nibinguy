@@ -1,4 +1,3 @@
-// src/lib/standeeHelpers.js
 import { supabase } from './supabaseClient'
 
 // Slugify a string (e.g. for address URLs)
@@ -9,12 +8,17 @@ function slugify(str) {
     .replace(/\s+/g, '-')
 }
 
-// Submit a claim and update standee location
-export async function submitClaim({ address, bins, selectedDate, nominatedAddress }) {
+// Submit a claim
+export async function submitClaim({
+  address,
+  bins,
+  selectedDate,
+  nominatedAddress
+}) {
   const slug = slugify(address)
   const nominatedSlug = slugify(nominatedAddress)
 
-  // Step 1: Insert claim into 'claims' table
+  // Step 1: Save to 'claims' table
   const { error: claimError } = await supabase.from('claims').insert([
     {
       address,
@@ -32,25 +36,23 @@ export async function submitClaim({ address, bins, selectedDate, nominatedAddres
     return { success: false, error: claimError.message }
   }
 
-  // Step 2: Load current standee record by slug
+  // Step 2: Update standee location
   const { data: locationData, error: locationError } = await supabase
-  .from('standee_location')
-  .select('*')
-  .eq('current_slug', slug)
-  .maybeSingle()
-
-if (!locationData) {
-  console.error('No matching standee location found for slug:', slug)
-  return { success: false, error: 'No standee matched this URL.' }
-}
-
+    .from('standee_location')
+    .select('*')
+    .eq('current_slug', slug)
+    .maybeSingle()
 
   if (locationError) {
-    console.error('Could not fetch current standee location:', locationError)
+    console.error('Error fetching standee location:', locationError)
     return { success: false, error: locationError.message }
   }
 
-  // Step 3: Append to history and update standee to new nominee
+  if (!locationData) {
+    console.error('No standee matched the slug:', slug)
+    return { success: false, error: 'This standee does not exist.' }
+  }
+
   const updatedHistory = [
     ...(locationData.history || []),
     {
