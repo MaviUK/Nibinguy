@@ -48,29 +48,6 @@ export default function StandeeClaim() {
     fetchStandee()
   }, [slug])
 
-  // Google Maps Autocomplete
-useEffect(() => {
-  const interval = setInterval(() => {
-    if (window.google && window.google.maps && inputRef.current) {
-      const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-        types: ["address"],
-        componentRestrictions: { country: "uk" },
-      })
-
-      autocomplete.addListener("place_changed", () => {
-        const place = autocomplete.getPlace()
-        if (place && place.formatted_address) {
-          setNominatedAddress(place.formatted_address)
-        }
-      })
-
-      clearInterval(interval) // stop polling once initialized
-    }
-  }, 300)
-
-  return () => clearInterval(interval)
-}, [])
-
 
   const toggleBin = (bin) => {
     setBins((prev) =>
