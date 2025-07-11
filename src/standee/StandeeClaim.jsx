@@ -20,7 +20,7 @@ export default function StandeeClaim() {
         .from("standee_location")
         .select("*")
         .eq("current_slug", slug)
-        .maybeSingle() // ✅ safe against 0 results
+        .maybeSingle()
 
       if (error) {
         console.error("Error loading standee:", error)
@@ -75,11 +75,22 @@ export default function StandeeClaim() {
 
   if (loading) return <p className="p-6">Loading...</p>
 
-  if (standee && !match) {
+  // Handle case where no match and standee exists
+  if (!match && standee) {
     return (
       <div className="p-6 text-red-500">
         <h1 className="text-2xl font-bold">This isn't your standee!</h1>
         <p>This standee is meant for: <strong>{standee.current_address}</strong></p>
+      </div>
+    )
+  }
+
+  // Still no data
+  if (!standee) {
+    return (
+      <div className="p-6 text-red-500">
+        <h1 className="text-2xl font-bold">No standee found</h1>
+        <p>Please check the URL or try again later.</p>
       </div>
     )
   }
