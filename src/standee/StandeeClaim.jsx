@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react"
+import React, { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { supabase } from "../lib/supabaseClient"
 import { submitClaim } from "../lib/standeeHelpers.js"
@@ -8,7 +8,7 @@ export default function StandeeClaim() {
   const [loading, setLoading] = useState(true)
   const [standee, setStandee] = useState(null)
   const [isMatch, setIsMatch] = useState(false)
-  const [bins, setBins] = useState([])
+  const [bin, setBin] = useState("") // SINGLE bin
   const [firstDate, setFirstDate] = useState("")
   const [secondDate, setSecondDate] = useState("")
   const [nominatedAddress, setNominatedAddress] = useState("")
@@ -40,19 +40,14 @@ export default function StandeeClaim() {
       }
       setLoading(false)
     }
+
     fetchStandee()
   }, [slug])
-
-  const toggleBin = (bin) => {
-    setBins((prev) =>
-      prev.includes(bin) ? prev.filter((b) => b !== bin) : [...prev, bin]
-    )
-  }
 
   const handleSubmit = async () => {
     const response = await submitClaim({
       address: standee.current_address,
-      bins,
+      bins: [bin], // Single bin in array
       dates: [firstDate, secondDate],
       nominatedAddress,
       town,
@@ -71,8 +66,8 @@ export default function StandeeClaim() {
   if (!standee) {
     return (
       <div className="p-6 text-red-500">
-        <h1 className="text-2xl font-bold">No standee found</h1>
-        <p>Please check the URL or try again later.</p>
+        <h1 className="text-2xl font-bold">Standee Not Found</h1>
+        <p>Check the URL or try again later.</p>
       </div>
     )
   }
@@ -80,50 +75,53 @@ export default function StandeeClaim() {
   if (!isMatch) {
     return (
       <div className="p-6 text-red-500">
-        <h1 className="text-2xl font-bold">This isn't your standee!</h1>
-        <p>This standee is meant for: <strong>{standee?.current_address}</strong></p>
+        <h1 className="text-2xl font-bold">Wrong Standee</h1>
+        <p>This standee is currently located at <strong>{standee.current_address}</strong>.</p>
       </div>
     )
   }
 
   if (submitted) {
     return (
-      <div className="p-6 text-green-600">
+      <div className="p-6 text-green-700">
         <h1 className="text-2xl font-bold">🎉 Success!</h1>
-        <p>Your free bin clean is booked for <strong>{firstDate}</strong> and <strong>{secondDate}</strong>.</p>
-        <p>The standee is now heading to <strong>{nominatedAddress}</strong> in <strong>{town}</strong> ({postcode}).</p>
+        <p>Your bin clean is booked for <strong>{firstDate}</strong> and <strong>{secondDate}</strong>.</p>
+        <p>You've nominated <strong>{nominatedAddress}</strong> in <strong>{town}</strong> ({postcode}).</p>
       </div>
     )
   }
 
-  const minDate = new Date().toISOString().split("T")[0]
-  const maxDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+  const today = new Date()
+  const minDate = today.toISOString().split("T")[0]
+  const maxDate = new Date(today.setDate(today.getDate() + 30)).toISOString().split("T")[0]
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">🎁 You've Been Nominated For A Free Bin Clean!</h1>
-      <p className="mb-4">Address: <strong>{standee.current_address}</strong></p>
+    <div className="p-6 max-w-xl mx-auto text-gray-800">
+      <img src="/logo.png" alt="Ni Bin Guy logo" className="w-40 mx-auto mb-6" />
+
+      <h1 className="text-3xl font-bold text-center text-green-700 mb-4">🎁 Claim Your Free Bin Clean</h1>
+      <p className="mb-4 text-center">Standee currently located at: <strong>{standee.current_address}</strong></p>
 
       <div className="mb-4">
-        <label className="block font-medium">Select your bin for free clean:</label>
-        <div className="flex gap-2 mt-2">
-          {["Black", "Blue", "Brown"].map((bin) => (
+        <label className="block font-semibold mb-1">Select your bin:</label>
+        <div className="flex gap-3">
+          {["Black", "Blue", "Brown"].map((b) => (
             <button
-              key={bin}
-              onClick={() => toggleBin(bin)}
-              className={`px-4 py-2 rounded border ${
-                bins.includes(bin) ? "bg-green-500 text-white" : "bg-white text-black"
+              key={b}
+              onClick={() => setBin(b)}
+              className={`px-4 py-2 rounded border font-bold ${
+                bin === b ? "bg-green-700 text-white" : "bg-white text-black"
               }`}
             >
-              {bin}
+              {b}
             </button>
           ))}
         </div>
       </div>
 
       <div className="mb-4">
-        <label className="block font-medium">Select your next 2 clean dates:</label>
-        <div className="flex gap-4 mt-2">
+        <label className="block font-semibold mb-1">Select 2 clean dates:</label>
+        <div className="flex gap-4">
           <input
             type="date"
             value={firstDate}
@@ -144,49 +142,46 @@ export default function StandeeClaim() {
       </div>
 
       <div className="mb-4">
-        <label className="block font-medium">Nominate your neighbour:</label>
+        <label className="block font-semibold mb-1">Nominate your neighbour:</label>
         <input
           type="text"
-          placeholder="Full address"
           value={nominatedAddress}
           onChange={(e) => setNominatedAddress(e.target.value)}
-          className="mt-2 p-2 border rounded w-full"
+          placeholder="Full address"
+          className="p-2 border rounded w-full"
         />
       </div>
 
       <div className="mb-4">
-        <label className="block font-medium">Town:</label>
+        <label className="block font-semibold mb-1">Town:</label>
         <input
           type="text"
           value={town}
           onChange={(e) => setTown(e.target.value)}
-          className="mt-2 p-2 border rounded w-full"
+          placeholder="e.g. Bangor"
+          className="p-2 border rounded w-full"
         />
       </div>
 
       <div className="mb-6">
-        <label className="block font-medium">Postcode:</label>
+        <label className="block font-semibold mb-1">Postcode:</label>
         <input
           type="text"
           value={postcode}
           onChange={(e) => setPostcode(e.target.value)}
-          className="mt-2 p-2 border rounded w-full"
+          placeholder="e.g. BT20 5NF"
+          className="p-2 border rounded w-full"
         />
       </div>
 
       <button
         onClick={handleSubmit}
         disabled={
-          !bins.length ||
-          !firstDate ||
-          !secondDate ||
-          !nominatedAddress ||
-          !town ||
-          !postcode
+          !bin || !firstDate || !secondDate || !nominatedAddress || !town || !postcode
         }
-        className="w-full bg-green-600 text-white py-3 rounded shadow font-bold"
+        className="w-full bg-green-700 text-white py-3 rounded font-bold hover:bg-green-800 transition"
       >
-        Claim My Free Clean
+        ✅ Book My Free Bin Clean
       </button>
     </div>
   )
