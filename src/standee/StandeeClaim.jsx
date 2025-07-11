@@ -176,12 +176,13 @@ export default function StandeeClaim() {
         </div>
 
         <button
-          onClick={handleSubmit}
-          disabled={!selectedBin || !firstDate || !secondDate || !nominatedAddress || !town || !postcode}
-          className="w-full py-3 bg-pink-500 text-white font-bold rounded shadow hover:bg-pink-400 transition"
-        >
-          Claim My Free Clean
-        </button>
+  onClick={handleSubmit}
+  disabled={!selectedBin || !firstDate || !secondDate || !nominatedAddress || !town || !postcode}
+  className="w-full py-3 bg-red-700 text-white font-bold rounded shadow hover:bg-red-600 transition"
+>
+  Claim My Free Clean
+</button>
+
       </div>
     </div>
   )
