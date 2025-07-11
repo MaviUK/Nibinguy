@@ -8,27 +8,24 @@ export default function StandeeClaim() {
 
   const [loading, setLoading] = useState(true)
   const [standee, setStandee] = useState(null)
-  const [isMatch, setIsMatch] = useState(false)
   const [bins, setBins] = useState([])
   const [selectedDate, setSelectedDate] = useState("")
   const [nominatedAddress, setNominatedAddress] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const inputRef = useRef(null)
 
-  // Fetch current standee location from Supabase
   useEffect(() => {
     async function fetchStandee() {
       const { data, error } = await supabase
         .from("standee_location")
         .select("*")
         .eq("current_slug", slug)
-        .maybeSingle()
+        .maybeSingle() // ✅ safe against 0 results
 
       if (error) {
         console.error("Error loading standee:", error)
       } else {
         setStandee(data)
-        setIsMatch(data?.current_slug?.toLowerCase() === slug.toLowerCase())
       }
 
       setLoading(false)
@@ -37,7 +34,6 @@ export default function StandeeClaim() {
     fetchStandee()
   }, [slug])
 
-  // Google Maps Autocomplete
   useEffect(() => {
     if (!window.google || !inputRef.current) return
 
@@ -75,13 +71,15 @@ export default function StandeeClaim() {
     }
   }
 
+  const match = standee?.current_slug?.toLowerCase() === slug.toLowerCase()
+
   if (loading) return <p className="p-6">Loading...</p>
 
-  if (!isMatch) {
+  if (standee && !match) {
     return (
       <div className="p-6 text-red-500">
         <h1 className="text-2xl font-bold">This isn't your standee!</h1>
-        <p>This standee is meant for: <strong>{standee?.current_address}</strong></p>
+        <p>This standee is meant for: <strong>{standee.current_address}</strong></p>
       </div>
     )
   }
