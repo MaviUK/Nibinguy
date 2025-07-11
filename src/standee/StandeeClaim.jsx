@@ -10,7 +10,9 @@ export default function StandeeClaim() {
   const [isMatch, setIsMatch] = useState(false)
   const [bins, setBins] = useState([])
   const [selectedDate, setSelectedDate] = useState("")
-  const [nominatedAddress, setNominatedAddress] = useState("")
+  const [streetAddress, setStreetAddress] = useState("")
+  const [town, setTown] = useState("")
+  const [postcode, setPostcode] = useState("")
   const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
@@ -19,7 +21,7 @@ export default function StandeeClaim() {
       console.log("Checking slug:", normalizedSlug)
 
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from("standee_location")
           .select("*")
           .eq("current_slug", normalizedSlug)
@@ -54,11 +56,12 @@ export default function StandeeClaim() {
   }
 
   const handleSubmit = async () => {
+    const fullNominatedAddress = `${streetAddress}, ${town}, ${postcode}`
     const response = await submitClaim({
       address: standee.current_address,
       bins,
       selectedDate,
-      nominatedAddress
+      nominatedAddress: fullNominatedAddress
     })
 
     if (response.success) {
@@ -75,6 +78,8 @@ export default function StandeeClaim() {
     d.setDate(today.getDate() + i)
     if (d.getDay() === 2) nextTuesdays.push(d.toISOString().split("T")[0])
   }
+
+  const allFieldsFilled = bins.length && selectedDate && streetAddress && town && postcode
 
   if (loading) return <p className="p-6">Loading...</p>
 
@@ -101,7 +106,7 @@ export default function StandeeClaim() {
       <div className="p-6 text-green-600">
         <h1 className="text-2xl font-bold">🎉 Success!</h1>
         <p>Your free bin clean is booked for <strong>{selectedDate}</strong>.</p>
-        <p>The standee is now heading to <strong>{nominatedAddress}</strong>.</p>
+        <p>The standee is now heading to <strong>{streetAddress}, {town}, {postcode}</strong>.</p>
       </div>
     )
   }
@@ -142,21 +147,45 @@ export default function StandeeClaim() {
         </select>
       </div>
 
-      <div className="mb-6">
-        <label className="block font-medium">Nominate your neighbour:</label>
+      <div className="mb-4">
+        <label className="block font-medium">Neighbour's Street Address:</label>
         <input
           type="text"
-          placeholder="Start typing their address..."
-          value={nominatedAddress}
-          onChange={(e) => setNominatedAddress(e.target.value)}
+          placeholder="e.g. 5 Beechfield Drive"
+          value={streetAddress}
+          onChange={(e) => setStreetAddress(e.target.value)}
+          className="mt-2 p-2 border rounded w-full"
+        />
+      </div>
+
+      <div className="mb-4">
+        <label className="block font-medium">Town:</label>
+        <input
+          type="text"
+          placeholder="e.g. Bangor"
+          value={town}
+          onChange={(e) => setTown(e.target.value)}
+          className="mt-2 p-2 border rounded w-full"
+        />
+      </div>
+
+      <div className="mb-6">
+        <label className="block font-medium">Postcode:</label>
+        <input
+          type="text"
+          placeholder="e.g. BT20 5NF"
+          value={postcode}
+          onChange={(e) => setPostcode(e.target.value)}
           className="mt-2 p-2 border rounded w-full"
         />
       </div>
 
       <button
         onClick={handleSubmit}
-        disabled={!bins.length || !selectedDate || !nominatedAddress}
-        className="w-full bg-green-600 text-white py-3 rounded shadow font-bold"
+        disabled={!allFieldsFilled}
+        className={`w-full py-3 rounded shadow font-bold ${
+          allFieldsFilled ? "bg-green-600 text-white" : "bg-gray-400 text-white cursor-not-allowed"
+        }`}
       >
         Claim My Free Clean
       </button>
