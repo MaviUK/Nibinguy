@@ -1,3 +1,4 @@
+// src/lib/standeeHelpers.js
 import { supabase } from './supabaseClient'
 
 // Slugify a string (e.g. for address URLs)
@@ -8,16 +9,12 @@ function slugify(str) {
     .replace(/\s+/g, '-')
 }
 
-export async function submitClaim({
-  address,
-  bins,
-  selectedDate,
-  nominatedAddress
-}) {
+// Submit a claim and update standee location
+export async function submitClaim({ address, bins, selectedDate, nominatedAddress }) {
   const slug = slugify(address)
   const nominatedSlug = slugify(nominatedAddress)
 
-  // Step 1: Submit claim to `claims` table
+  // Step 1: Insert claim into 'claims' table
   const { error: claimError } = await supabase.from('claims').insert([
     {
       address,
@@ -35,11 +32,11 @@ export async function submitClaim({
     return { success: false, error: claimError.message }
   }
 
-  // Step 2: Update standee location to the new nominee
+  // Step 2: Load current standee record by slug
   const { data: locationData, error: locationError } = await supabase
     .from('standee_location')
     .select('*')
-    .limit(1)
+    .eq('current_slug', slug)
     .single()
 
   if (locationError) {
@@ -47,6 +44,7 @@ export async function submitClaim({
     return { success: false, error: locationError.message }
   }
 
+  // Step 3: Append to history and update standee to new nominee
   const updatedHistory = [
     ...(locationData.history || []),
     {
