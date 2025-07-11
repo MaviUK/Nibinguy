@@ -11,10 +11,12 @@ export default function StandeeClaim() {
   const [selectedBin, setSelectedBin] = useState("")
   const [firstDate, setFirstDate] = useState("")
   const [secondDate, setSecondDate] = useState("")
+const [neighbourName, setNeighbourName] = useState("")
   const [nominatedAddress, setNominatedAddress] = useState("")
   const [town, setTown] = useState("")
   const [postcode, setPostcode] = useState("")
   const [submitted, setSubmitted] = useState(false)
+
 
   useEffect(() => {
     async function fetchStandee() {
@@ -144,26 +146,28 @@ export default function StandeeClaim() {
           </div>
         </div>
 
-        <div className="mb-4">
-          <label className="block font-medium">Nominate your neighbour:</label>
-          <input
-            type="text"
-            value={nominatedAddress}
-            onChange={(e) => setNominatedAddress(e.target.value)}
-            placeholder="Full address"
-            className="mt-2 p-2 rounded border w-full text-black"
-          />
-        </div>
+        <div className="mb-6 flex gap-4">
+  <div className="flex-1">
+    <label className="block font-medium">Town:</label>
+    <input
+      type="text"
+      value={town}
+      onChange={(e) => setTown(e.target.value)}
+      className="mt-2 p-2 border rounded w-full"
+    />
+  </div>
+  <div className="w-32">
+    <label className="block font-medium">Postcode:</label>
+    <input
+      type="text"
+      maxLength={10}
+      value={postcode}
+      onChange={(e) => setPostcode(e.target.value)}
+      className="mt-2 p-2 border rounded w-full"
+    />
+  </div>
+</div>
 
-        <div className="mb-4">
-          <label className="block font-medium">Town:</label>
-          <input
-            type="text"
-            value={town}
-            onChange={(e) => setTown(e.target.value)}
-            className="mt-2 p-2 rounded border w-full text-black"
-          />
-        </div>
 
         <div className="mb-6">
           <label className="block font-medium">Postcode:</label>
