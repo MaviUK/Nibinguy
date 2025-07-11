@@ -5,7 +5,6 @@ import { submitClaim } from "../lib/standeeHelpers.js"
 
 export default function StandeeClaim() {
   const { slug } = useParams()
-
   const [loading, setLoading] = useState(true)
   const [standee, setStandee] = useState(null)
   const [isMatch, setIsMatch] = useState(false)
@@ -15,33 +14,34 @@ export default function StandeeClaim() {
   const [submitted, setSubmitted] = useState(false)
   const inputRef = useRef(null)
 
-  // Fetch current standee location from Supabase
   useEffect(() => {
     async function fetchStandee() {
       const normalizedSlug = slug.trim().toLowerCase()
       console.log("Checking slug:", normalizedSlug)
 
-      const { data, error } = await supabase
-        .from("standee_location")
-        .select("*")
-        .eq("current_slug", normalizedSlug)
-        .maybeSingle()
+      let data = null
+      let error = null
+
+      try {
+        const result = await supabase
+          .from("standee_location")
+          .select("*")
+          .eq("current_slug", normalizedSlug)
+          .single()
+
+        data = result.data
+        error = result.error
+      } catch (err) {
+        console.warn("Query error:", err)
+      }
 
       console.log("Fetched data:", data)
 
-      // Optional: Debug all slugs in table
-      const { data: allSlugs } = await supabase
-        .from("standee_location")
-        .select("current_slug")
-
-      console.log("All slugs in DB:", allSlugs)
-
-      if (error) {
-        console.error("Error loading standee:", error)
-      }
-
       if (!data) {
-        console.warn("No standee found for slug.")
+        const { data: allRecords } = await supabase
+          .from("standee_location")
+          .select("*")
+        console.log("Fallback debug — all records:", allRecords)
         setStandee(null)
         setIsMatch(false)
       } else {
