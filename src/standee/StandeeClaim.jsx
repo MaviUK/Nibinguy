@@ -19,34 +19,27 @@ export default function StandeeClaim() {
       const normalizedSlug = slug.trim().toLowerCase()
       console.log("Checking slug:", normalizedSlug)
 
-      let data = null
-      let error = null
-
       try {
-        const result = await supabase
+        const { data, error } = await supabase
           .from("standee_location")
           .select("*")
           .eq("current_slug", normalizedSlug)
-          .single()
+          .maybeSingle()
 
-        data = result.data
-        error = result.error
+        console.log("Fetched data:", data)
+
+        if (!data) {
+          console.warn("No standee found for slug.")
+          setStandee(null)
+          setIsMatch(false)
+        } else {
+          setStandee(data)
+          setIsMatch(data.current_slug === normalizedSlug)
+        }
       } catch (err) {
-        console.warn("Query error:", err)
-      }
-
-      console.log("Fetched data:", data)
-
-      if (!data) {
-        const { data: allRecords } = await supabase
-          .from("standee_location")
-          .select("*")
-        console.log("Fallback debug — all records:", allRecords)
+        console.error("Supabase fetch error:", err)
         setStandee(null)
         setIsMatch(false)
-      } else {
-        setStandee(data)
-        setIsMatch(data.current_slug === normalizedSlug)
       }
 
       setLoading(false)
