@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, Link } from "react-router-dom"
 import { supabase } from "../lib/supabaseClient"
 import { submitClaim } from "../lib/standeeHelpers"
 
@@ -104,11 +104,13 @@ export default function StandeeClaim() {
   return (
     <div className="bg-black min-h-screen text-white font-sans px-6 py-10">
       <div className="flex justify-center mb-6">
-        <img src="/logo.png" alt="Ni Bin Guy Logo" className="w-56 md:w-72" />
+        <Link to="/">
+          <img src="/logo.png" alt="Ni Bin Guy Logo" className="w-56 md:w-72 hover:opacity-80 transition" />
+        </Link>
       </div>
 
       <div className="max-w-xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-6">🎁 You've Been Nominated!</h1>
+        <h1 className="text-3xl font-bold text-center mb-6">🎁 You've Been Nominated For a Free Bin Clean!</h1>
         <p className="text-center mb-6">Current Standee Location: <strong>{standee.current_address}</strong></p>
 
         <div className="mb-6">
@@ -131,7 +133,7 @@ export default function StandeeClaim() {
         </div>
 
         <div className="mb-6">
-          <label className="block font-medium">Select 2 clean dates:</label>
+          <label className="block font-medium">Select the next 2 dates your bin is emptied:</label>
           <div className="flex gap-3 mt-2">
             <input
               type="date"
