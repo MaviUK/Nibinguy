@@ -48,6 +48,16 @@ export default function StandeeClaim() {
     fetchStandee()
   }, [slug])
 
+  // Auto-fill secondDate 14 days after firstDate
+  useEffect(() => {
+    if (firstDate) {
+      const first = new Date(firstDate)
+      const second = new Date(first)
+      second.setDate(first.getDate() + 14)
+      setSecondDate(second.toISOString().split("T")[0])
+    }
+  }, [firstDate])
+
   const handleSubmit = async () => {
     const newAddress = `${nominatedAddress}, ${town}`
     const newSlug = slugify(newAddress)
@@ -93,32 +103,28 @@ export default function StandeeClaim() {
 
   if (submitted) {
     return (
-      <div className="bg-black text-white min-h-screen px-6 py-10">
-        <div className="flex justify-center mb-6">
+      <div className="bg-black text-green-400 min-h-screen p-6 text-center">
+        <div className="flex justify-center mb-4">
           <Link to="/">
             <img src="/logo.png" alt="Ni Bin Guy Logo" className="w-56 md:w-72 hover:opacity-80 transition" />
           </Link>
         </div>
+        <h1 className="text-3xl font-bold mb-4">🎉 Success!</h1>
+        <p className="mb-4">
+          Your free bin clean is booked. It will be cleaned on one of these 2 dates:
+        </p>
+        <p className="text-2xl font-semibold mb-6">
+          {firstDate} or {secondDate}
+        </p>
+        <p>
+          The Wheelie Washer is now heading to{" "}
+          <strong>{neighbourName} at {nominatedAddress}, {town}</strong> ({postcode}).
+        </p>
 
-        <div className="max-w-xl mx-auto text-green-400 text-center">
-          <h1 className="text-3xl font-bold mb-4">🎉 Success!</h1>
-          <p className="text-lg mb-4">
-            Your free bin clean is booked. It will be cleaned on one of these 2 dates:
-          </p>
-          <p className="text-xl font-semibold mb-6">
-            {firstDate} or {secondDate}
-          </p>
-          <p className="mb-10">
-            The Wheelie Washer is now heading to <strong>{neighbourName}</strong> at{" "}
-            <strong>{nominatedAddress}, {town}</strong> ({postcode}).
-          </p>
-
-          <p className="text-white mb-4 font-medium">
-            Want to book your other bins or sign up for a regular 4-weekly clean?
-          </p>
-
-          <Link to="/" className="inline-block">
-            <button className="bg-white text-black font-bold py-3 px-6 rounded shadow hover:bg-gray-200 transition">
+        <div className="mt-10">
+          <h2 className="text-lg mb-2">Want to book more bins or set up a 4-weekly schedule?</h2>
+          <Link to="/">
+            <button className="mt-2 px-6 py-3 bg-red-700 text-white font-bold rounded shadow hover:bg-red-600 transition">
               Book Here
             </button>
           </Link>
@@ -172,15 +178,13 @@ export default function StandeeClaim() {
             <input
               type="date"
               value={secondDate}
-              onChange={(e) => setSecondDate(e.target.value)}
-              min={minDate}
-              max={maxDate}
-              className="p-2 rounded border w-1/2 text-black"
+              readOnly
+              className="p-2 rounded border w-1/2 text-black bg-gray-100"
             />
           </div>
         </div>
 
-        <h2 className="text-lg font-semibold text-white mb-4 mt-4">
+        <h2 className="text-2xl font-semibold text-green-400 text-center mb-6 mt-8">
           Now Please Nominate Someone Who Needs A Wheelie Wash!
         </h2>
 
