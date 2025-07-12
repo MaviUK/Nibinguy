@@ -1,5 +1,3 @@
-// ...imports and logic unchanged...
-
   return (
     <div className="bg-black min-h-screen text-white font-sans px-6 py-10">
       <div className="flex justify-center mb-6">
@@ -29,7 +27,6 @@
           </div>
         </div>
 
-        {/* ✅ Moved Date Selection here */}
         <div className="mb-6">
           <label className="block font-medium">Select 2 clean dates:</label>
           <div className="flex gap-3 mt-2">
