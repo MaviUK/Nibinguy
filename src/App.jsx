@@ -2,7 +2,7 @@ import React from "react"
 import { Routes, Route } from "react-router-dom"
 import NiBinGuyLandingPage from "./LandingPage"
 import StandeeClaim from "./standee/StandeeClaim"
-import LatestStandeeRedirect from "./standee/latest" // ✅ Import the new redirect route
+import LatestStandeeRedirect from "./pages/standee/latest" // ✅ Import the new redirect route
 
 export default function App() {
   return (
