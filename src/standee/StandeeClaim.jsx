@@ -100,18 +100,24 @@ export default function StandeeClaim() {
           </Link>
         </div>
 
-        <div className="max-w-xl mx-auto text-green-400">
-          <h1 className="text-3xl font-bold text-center mb-6">🎉 Success!</h1>
-          <p className="text-lg text-center mb-4">
+        <div className="max-w-xl mx-auto text-green-400 text-center">
+          <h1 className="text-3xl font-bold mb-4">🎉 Success!</h1>
+          <p className="text-lg mb-4">
             Your free bin clean is booked. It will be cleaned on one of these 2 dates:
           </p>
-          <p className="text-xl text-center font-semibold mb-6">
+          <p className="text-xl font-semibold mb-6">
             {firstDate} or {secondDate}
           </p>
-          <p className="text-center">
-            The Wheelie Washer is now heading to{" "}
+          <p className="mb-10">
+            The Wheelie Washer is now heading to <strong>{neighbourName}</strong> at{" "}
             <strong>{nominatedAddress}, {town}</strong> ({postcode}).
           </p>
+
+          <Link to="/" className="inline-block">
+            <button className="bg-white text-black font-bold py-3 px-6 rounded shadow hover:bg-gray-200 transition">
+              Book other bins to be cleaned
+            </button>
+          </Link>
         </div>
       </div>
     )
