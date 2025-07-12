@@ -19,17 +19,16 @@ export async function submitClaim({
   postcode
 }) {
   const originalSlug = slugify(address)
-  const newFullAddress = `${nominatedAddress.trim()} ${town.trim()}`
+  const newFullAddress = `${nominatedAddress.trim()}, ${town.trim()}`
   const newSlug = slugify(newFullAddress)
 
-  // Step 1: Insert to claims table (only needed fields)
+  // Step 1: Insert to claims table (only necessary fields)
   const { error: claimError } = await supabase.from('claims').insert([
     {
       address,
       slug: originalSlug,
       claimed_at: new Date().toISOString(),
       bins,
-      selected_dates: dates,
       nominated_address: nominatedAddress,
       nominated_slug: newSlug
     }
@@ -40,7 +39,7 @@ export async function submitClaim({
     return { success: false, error: claimError.message }
   }
 
-  // Step 2: Fetch standee location by slug
+  // Step 2: Fetch the current standee
   const { data: locationData, error: locationError } = await supabase
     .from('standee_location')
     .select('*')
@@ -52,7 +51,7 @@ export async function submitClaim({
     return { success: false, error: 'This standee does not exist.' }
   }
 
-  // Step 3: Update standee location with new address + slug
+  // Step 3: Update standee_location to new address and slug
   const updatedHistory = [
     ...(locationData.history || []),
     {
@@ -78,7 +77,7 @@ export async function submitClaim({
     return { success: false, error: updateError.message }
   }
 
-  // Step 4: Send email notification (with full info)
+  // Step 4: Send email (includes full form data)
   try {
     await fetch('/.netlify/functions/sendClaimEmail', {
       method: 'POST',
