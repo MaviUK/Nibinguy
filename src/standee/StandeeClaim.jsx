@@ -3,11 +3,16 @@ import { useParams } from "react-router-dom"
 import { supabase } from "../lib/supabaseClient"
 import { submitClaim } from "../lib/standeeHelpers"
 
+function slugify(text) {
+  return text.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
+}
+
 export default function StandeeClaim() {
   const { slug } = useParams()
   const [loading, setLoading] = useState(true)
   const [standee, setStandee] = useState(null)
   const [isMatch, setIsMatch] = useState(false)
+
   const [selectedBin, setSelectedBin] = useState("")
   const [firstDate, setFirstDate] = useState("")
   const [secondDate, setSecondDate] = useState("")
@@ -17,37 +22,26 @@ export default function StandeeClaim() {
   const [postcode, setPostcode] = useState("")
   const [submitted, setSubmitted] = useState(false)
 
+  const minDate = new Date().toISOString().split("T")[0]
+  const maxDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+
   useEffect(() => {
     async function fetchStandee() {
       const normalizedSlug = slug.trim().toLowerCase()
-      console.log("🔍 Slug from URL:", slug)
-      console.log("🔍 Normalized slug for query:", normalizedSlug)
+      const { data, error } = await supabase
+        .from("standee_location")
+        .select("*")
+        .eq("current_slug", normalizedSlug)
+        .maybeSingle()
 
-      try {
-        const { data, error } = await supabase
-          .from("standee_location")
-          .select("*")
-          .eq("current_slug", normalizedSlug)
-          .maybeSingle()
-
-        console.log("📦 Supabase response:", data)
-        if (error) {
-          console.error("❌ Supabase error:", error)
-        }
-
-        if (!data) {
-          console.warn("⚠️ No data returned from Supabase")
-          setStandee(null)
-          setIsMatch(false)
-        } else {
-          setStandee(data)
-          setIsMatch(data.current_slug === normalizedSlug)
-        }
-      } catch (err) {
-        console.error("❗ Supabase fetch threw an exception:", err)
+      if (!data || error) {
         setStandee(null)
         setIsMatch(false)
+      } else {
+        setStandee(data)
+        setIsMatch(data.current_slug === normalizedSlug)
       }
+
       setLoading(false)
     }
 
@@ -55,6 +49,9 @@ export default function StandeeClaim() {
   }, [slug])
 
   const handleSubmit = async () => {
+    const newAddress = `${nominatedAddress}, ${town}`
+    const newSlug = slugify(newAddress)
+
     const response = await submitClaim({
       address: standee.current_address,
       bins: [selectedBin],
@@ -62,7 +59,9 @@ export default function StandeeClaim() {
       neighbourName,
       nominatedAddress,
       town,
-      postcode
+      postcode,
+      newSlug,
+      newAddress
     })
 
     if (response.success) {
@@ -71,9 +70,6 @@ export default function StandeeClaim() {
       alert(`Something went wrong: ${response.error}`)
     }
   }
-
-  const minDate = new Date().toISOString().split("T")[0]
-  const maxDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
 
   if (loading) return <div className="bg-black text-white min-h-screen p-6">Loading...</div>
 
@@ -90,7 +86,7 @@ export default function StandeeClaim() {
     return (
       <div className="bg-black text-red-400 min-h-screen p-6">
         <h1 className="text-2xl font-bold">This isn't your standee!</h1>
-        <p>This standee is meant for: <strong>{standee?.current_address}</strong></p>
+        <p>This standee is meant for: <strong>{standee.current_address}</strong></p>
       </div>
     )
   }
@@ -100,7 +96,7 @@ export default function StandeeClaim() {
       <div className="bg-black text-green-400 min-h-screen p-6">
         <h1 className="text-2xl font-bold">🎉 Success!</h1>
         <p>Your free bin clean is booked for <strong>{firstDate}</strong> and <strong>{secondDate}</strong>.</p>
-        <p>The standee is now heading to <strong>{neighbourName}</strong> at <strong>{nominatedAddress}</strong> in <strong>{town}</strong> ({postcode}).</p>
+        <p>The standee is now heading to <strong>{neighbourName}</strong> at <strong>{nominatedAddress}, {town}</strong> ({postcode}).</p>
       </div>
     )
   }
@@ -138,7 +134,6 @@ export default function StandeeClaim() {
           <label className="block font-medium">Neighbour's Name:</label>
           <input
             type="text"
-            placeholder="Full name"
             value={neighbourName}
             onChange={(e) => setNeighbourName(e.target.value)}
             className="mt-2 p-2 border rounded w-full text-black"
@@ -149,7 +144,6 @@ export default function StandeeClaim() {
           <label className="block font-medium">Nominate your neighbour:</label>
           <input
             type="text"
-            placeholder="Full address"
             value={nominatedAddress}
             onChange={(e) => setNominatedAddress(e.target.value)}
             className="mt-2 p-2 border rounded w-full text-black"
