@@ -113,9 +113,13 @@ export default function StandeeClaim() {
             <strong>{nominatedAddress}, {town}</strong> ({postcode}).
           </p>
 
+          <p className="text-white mb-4 font-medium">
+            Want to book your other bins or sign up for a regular 4-weekly clean?
+          </p>
+
           <Link to="/" className="inline-block">
             <button className="bg-white text-black font-bold py-3 px-6 rounded shadow hover:bg-gray-200 transition">
-              Book other bins to be cleaned
+              Book Here
             </button>
           </Link>
         </div>
@@ -176,8 +180,8 @@ export default function StandeeClaim() {
           </div>
         </div>
 
-        <h2 className="text-xl font-bold text-center mb-4 mt-10 text-white">
-          🧹 Now Please Nominate Someone Who Needs A Wheelie Wash!
+        <h2 className="text-lg font-semibold text-white mb-4 mt-4">
+          Now Please Nominate Someone Who Needs A Wheelie Wash!
         </h2>
 
         <div className="mb-6">
