@@ -109,7 +109,7 @@ export default function StandeeClaim() {
             {firstDate} or {secondDate}
           </p>
           <p className="text-center">
-            The Wheelie Washer is now heading to <strong>{neighbourName}</strong> at{" "}
+            The Wheelie Washer is now heading to{" "}
             <strong>{nominatedAddress}, {town}</strong> ({postcode}).
           </p>
         </div>
