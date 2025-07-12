@@ -93,10 +93,26 @@ export default function StandeeClaim() {
 
   if (submitted) {
     return (
-      <div className="bg-black text-green-400 min-h-screen p-6">
-        <h1 className="text-2xl font-bold">🎉 Success!</h1>
-        <p>Your free bin clean is booked for <strong>{firstDate}</strong> and <strong>{secondDate}</strong>.</p>
-        <p>The standee is now heading to <strong>{neighbourName}</strong> at <strong>{nominatedAddress}, {town}</strong> ({postcode}).</p>
+      <div className="bg-black text-white min-h-screen px-6 py-10">
+        <div className="flex justify-center mb-6">
+          <Link to="/">
+            <img src="/logo.png" alt="Ni Bin Guy Logo" className="w-56 md:w-72 hover:opacity-80 transition" />
+          </Link>
+        </div>
+
+        <div className="max-w-xl mx-auto text-green-400">
+          <h1 className="text-3xl font-bold text-center mb-6">🎉 Success!</h1>
+          <p className="text-lg text-center mb-4">
+            Your free bin clean is booked. It will be cleaned on one of these 2 dates:
+          </p>
+          <p className="text-xl text-center font-semibold mb-6">
+            {firstDate} or {secondDate}
+          </p>
+          <p className="text-center">
+            The Wheelie Washer is now heading to <strong>{neighbourName}</strong> at{" "}
+            <strong>{nominatedAddress}, {town}</strong> ({postcode}).
+          </p>
+        </div>
       </div>
     )
   }
@@ -154,8 +170,8 @@ export default function StandeeClaim() {
           </div>
         </div>
 
-        <h2 className="text-xl font-bold text-center mb-6 mt-6">
-          Now Please Nominate Someone Who Needs A Wheelie Wash!
+        <h2 className="text-xl font-bold text-center mb-4 mt-10 text-white">
+          🧹 Now Please Nominate Someone Who Needs A Wheelie Wash!
         </h2>
 
         <div className="mb-6">
