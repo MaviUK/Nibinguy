@@ -4,8 +4,10 @@ import { supabase } from './supabaseClient'
 function slugify(str) {
   return str
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
+    .trim()
+    .replace(/,+$/, '')         // Remove trailing commas
+    .replace(/\s+/g, '-')       // Replace spaces with hyphens
+    .replace(/[^\w-]/g, '')     // Remove non-word characters except hyphen
 }
 
 // Submit a claim: insert to `claims`, update `standee_location`, and trigger email
@@ -18,18 +20,28 @@ export async function submitClaim({
   town,
   postcode
 }) {
-  const originalSlug = slugify(address)
-  const newFullAddress = `${nominatedAddress.trim()}, ${town.trim()}`
+  // Normalize inputs
+  const trimmedAddress = address.trim()
+  const trimmedNominated = nominatedAddress.trim()
+  const trimmedTown = town.trim()
+  const trimmedPostcode = postcode.trim()
+
+  const originalSlug = slugify(trimmedAddress)
+  const newFullAddress = `${trimmedNominated}, ${trimmedTown}`
   const newSlug = slugify(newFullAddress)
 
-  // Step 1: Insert to claims table (only necessary fields)
+  console.log('🔍 Original slug:', originalSlug)
+  console.log('🏡 New address:', newFullAddress)
+  console.log('🆕 New slug:', newSlug)
+
+  // Step 1: Insert to claims table (no town/postcode/neighborName in DB)
   const { error: claimError } = await supabase.from('claims').insert([
     {
-      address,
+      address: trimmedAddress,
       slug: originalSlug,
       claimed_at: new Date().toISOString(),
       bins,
-      nominated_address: nominatedAddress,
+      nominated_address: trimmedNominated,
       nominated_slug: newSlug
     }
   ])
@@ -39,7 +51,7 @@ export async function submitClaim({
     return { success: false, error: claimError.message }
   }
 
-  // Step 2: Fetch the current standee
+  // Step 2: Fetch the current standee by slug
   const { data: locationData, error: locationError } = await supabase
     .from('standee_location')
     .select('*')
@@ -47,11 +59,11 @@ export async function submitClaim({
     .maybeSingle()
 
   if (locationError || !locationData) {
-    console.error('❌ Error fetching standee location:', locationError || 'Not found')
+    console.error('❌ Standee fetch failed:', locationError || 'Not found')
     return { success: false, error: 'This standee does not exist.' }
   }
 
-  // Step 3: Update standee_location to new address and slug
+  // Step 3: Update standee_location with new address/slug and history
   const updatedHistory = [
     ...(locationData.history || []),
     {
@@ -73,23 +85,23 @@ export async function submitClaim({
     .eq('id', locationData.id)
 
   if (updateError) {
-    console.error('❌ Error updating standee location:', updateError)
+    console.error('❌ Standee update error:', updateError)
     return { success: false, error: updateError.message }
   }
 
-  // Step 4: Send email (includes full form data)
+  // Step 4: Send email with full form content
   try {
     await fetch('/.netlify/functions/sendClaimEmail', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         neighbourName,
-        address,
+        address: trimmedAddress,
         bins,
         dates,
-        nominatedAddress,
-        town,
-        postcode
+        nominatedAddress: trimmedNominated,
+        town: trimmedTown,
+        postcode: trimmedPostcode
       })
     })
   } catch (err) {
