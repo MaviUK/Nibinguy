@@ -1,30 +1,30 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabaseClient'
+import { supabase } from '../../lib/supabaseClient'
+import slugify from '../../lib/slugify'
 
 export default function LatestStandeeRedirect() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const redirectToLatest = async () => {
+    async function fetchLatest() {
       const { data, error } = await supabase
         .from('standee_location')
-        .select('current_slug')
+        .select('*')
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
       if (error || !data) {
-        console.error('Could not find latest standee:', error)
+        console.error('Failed to fetch latest standee:', error)
         return
       }
 
-      // Redirect to the most recent slug
       navigate(`/standee/${data.current_slug}`)
     }
 
-    redirectToLatest()
+    fetchLatest()
   }, [navigate])
 
-  return null
+  return <p>Redirecting to the latest standee...</p>
 }
