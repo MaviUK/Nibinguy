@@ -1,9 +1,6 @@
 import { supabase } from './supabaseClient'
-import { Resend } from 'resend'
 
-const resend = new Resend(import.meta.env.VITE_RESEND_API_KEY)
-
-// Utility to create slug from string
+// Slugify a string to use for URL-safe slugs
 function slugify(str) {
   return str
     .toLowerCase()
@@ -11,7 +8,7 @@ function slugify(str) {
     .replace(/\s+/g, '-')
 }
 
-// Main function
+// Submit a claim: insert to `claims`, update `standee_location`, and call email function
 export async function submitClaim({
   address,
   bins,
@@ -21,47 +18,47 @@ export async function submitClaim({
   town,
   postcode
 }) {
-  const slug = slugify(address)
-  const fullAddress = `${nominatedAddress}, ${town}`
-  const nominatedSlug = slugify(fullAddress)
+  const originalSlug = slugify(address)
+  const newFullAddress = `${nominatedAddress}, ${town}`
+  const newSlug = slugify(newFullAddress)
 
-  // Step 1: Save claim (excluding neighbour name)
+  // Step 1: Insert to `claims` table
   const { error: claimError } = await supabase.from('claims').insert([
     {
       address,
-      slug,
+      slug: originalSlug,
       claimed_at: new Date().toISOString(),
       bins,
-      selected_date_1: dates[0],
-      selected_date_2: dates[1],
+      selected_dates: dates,
       nominated_address: nominatedAddress,
+      nominated_slug: newSlug,
       town,
       postcode
     }
   ])
 
   if (claimError) {
-    console.error('❌ Claim submission error:', claimError)
+    console.error('Claim submission error:', claimError)
     return { success: false, error: claimError.message }
   }
 
-  // Step 2: Get current standee location
+  // Step 2: Fetch the current standee
   const { data: locationData, error: locationError } = await supabase
     .from('standee_location')
     .select('*')
-    .eq('current_slug', slug)
+    .eq('current_slug', originalSlug)
     .maybeSingle()
 
   if (locationError) {
-    console.error('❌ Error fetching standee location:', locationError)
+    console.error('Error fetching standee location:', locationError)
     return { success: false, error: locationError.message }
   }
 
   if (!locationData) {
+    console.warn('No matching standee found for slug:', originalSlug)
     return { success: false, error: 'This standee does not exist.' }
   }
 
-  // Step 3: Update standee location
   const updatedHistory = [
     ...(locationData.history || []),
     {
@@ -71,11 +68,12 @@ export async function submitClaim({
     }
   ]
 
+  // Step 3: Update standee_location to new address and slug
   const { error: updateError } = await supabase
     .from('standee_location')
     .update({
-      current_address: fullAddress,
-      current_slug: nominatedSlug,
+      current_address: newFullAddress,
+      current_slug: newSlug,
       claimed: false,
       updated_at: new Date().toISOString(),
       history: updatedHistory
@@ -83,32 +81,28 @@ export async function submitClaim({
     .eq('id', locationData.id)
 
   if (updateError) {
-    console.error('❌ Error updating standee location:', updateError)
+    console.error('Error updating standee location:', updateError)
     return { success: false, error: updateError.message }
   }
 
-  // Step 4: Send email
+  // Step 4: Send email via Netlify function
   try {
-    await resend.emails.send({
-      from: 'noreply@nibinguy.uy',
-      to: 'aabincleaning@gmail.com',
-      subject: '🎉 New Free Bin Clean Claimed',
-      html: `
-        <h2>🧼 New Claim Received</h2>
-        <p><strong>Neighbour Name:</strong> ${neighbourName}</p>
-        <p><strong>Original Address:</strong> ${address}</p>
-        <p><strong>Selected Bin:</strong> ${bins[0]}</p>
-        <p><strong>Selected Dates:</strong> ${dates[0]} and ${dates[1]}</p>
-        <hr/>
-        <h3>📍 Standee Nominated To:</h3>
-        <p><strong>Address:</strong> ${nominatedAddress}</p>
-        <p><strong>Town:</strong> ${town}</p>
-        <p><strong>Postcode:</strong> ${postcode}</p>
-      `
+    await fetch('/.netlify/functions/sendClaimEmail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        neighbourName,
+        address,
+        bins,
+        dates,
+        nominatedAddress,
+        town,
+        postcode
+      })
     })
-  } catch (emailError) {
-    console.error('❌ Email failed to send:', emailError)
-    return { success: false, error: 'Saved, but email failed to send.' }
+  } catch (err) {
+    console.error('Email function failed:', err)
+    return { success: false, error: 'Email failed to send.' }
   }
 
   return { success: true }
