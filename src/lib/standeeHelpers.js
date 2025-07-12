@@ -8,7 +8,7 @@ function slugify(str) {
     .replace(/\s+/g, '-')
 }
 
-// Submit a claim: insert to `claims`, update `standee_location`, and call email function
+// Submit a claim: insert to `claims`, update `standee_location`, and trigger email
 export async function submitClaim({
   address,
   bins,
@@ -19,10 +19,10 @@ export async function submitClaim({
   postcode
 }) {
   const originalSlug = slugify(address)
-  const newFullAddress = `${nominatedAddress}, ${town}`
+  const newFullAddress = `${nominatedAddress.trim()} ${town.trim()}`
   const newSlug = slugify(newFullAddress)
 
-  // Step 1: Insert to `claims` table
+  // Step 1: Insert to claims table (only needed fields)
   const { error: claimError } = await supabase.from('claims').insert([
     {
       address,
@@ -31,34 +31,28 @@ export async function submitClaim({
       bins,
       selected_dates: dates,
       nominated_address: nominatedAddress,
-      nominated_slug: newSlug,
-      town,
-      postcode
+      nominated_slug: newSlug
     }
   ])
 
   if (claimError) {
-    console.error('Claim submission error:', claimError)
+    console.error('❌ Claim submission error:', claimError)
     return { success: false, error: claimError.message }
   }
 
-  // Step 2: Fetch the current standee
+  // Step 2: Fetch standee location by slug
   const { data: locationData, error: locationError } = await supabase
     .from('standee_location')
     .select('*')
     .eq('current_slug', originalSlug)
     .maybeSingle()
 
-  if (locationError) {
-    console.error('Error fetching standee location:', locationError)
-    return { success: false, error: locationError.message }
-  }
-
-  if (!locationData) {
-    console.warn('No matching standee found for slug:', originalSlug)
+  if (locationError || !locationData) {
+    console.error('❌ Error fetching standee location:', locationError || 'Not found')
     return { success: false, error: 'This standee does not exist.' }
   }
 
+  // Step 3: Update standee location with new address + slug
   const updatedHistory = [
     ...(locationData.history || []),
     {
@@ -68,7 +62,6 @@ export async function submitClaim({
     }
   ]
 
-  // Step 3: Update standee_location to new address and slug
   const { error: updateError } = await supabase
     .from('standee_location')
     .update({
@@ -81,11 +74,11 @@ export async function submitClaim({
     .eq('id', locationData.id)
 
   if (updateError) {
-    console.error('Error updating standee location:', updateError)
+    console.error('❌ Error updating standee location:', updateError)
     return { success: false, error: updateError.message }
   }
 
-  // Step 4: Send email via Netlify function
+  // Step 4: Send email notification (with full info)
   try {
     await fetch('/.netlify/functions/sendClaimEmail', {
       method: 'POST',
@@ -101,7 +94,7 @@ export async function submitClaim({
       })
     })
   } catch (err) {
-    console.error('Email function failed:', err)
+    console.error('❌ Email function failed:', err)
     return { success: false, error: 'Email failed to send.' }
   }
 
