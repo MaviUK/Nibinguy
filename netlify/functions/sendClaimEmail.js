@@ -2,53 +2,43 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-export async function handler(event) {
-  const body = JSON.parse(event.body)
-
-  const {
-    neighbourName,
-    address,
-    bins,
-    dates,
-    nominatedAddress,
-    town,
-    postcode
-  } = body
+export default async (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
 
   try {
-    const { error } = await resend.emails.send({
-      from: 'noreply@nibinguy.uy',
+    const {
+      neighbourName,
+      address,
+      bins,
+      dates,
+      nominatedAddress,
+      town,
+      postcode
+    } = req.body
+
+    const formattedDates = dates.join(' and ')
+    const formattedBins = bins.join(', ')
+    const fullAddress = `${nominatedAddress}, ${town}, ${postcode}`
+
+    await resend.emails.send({
+      from: 'Ni Bin Guy <noreply@nibinguy.uy>',
       to: 'aabincleaning@gmail.com',
-      subject: '🎉 New Free Bin Clean Claimed',
+      subject: '🧼 New Standee Claim Submitted',
       html: `
-        <h2>🧼 New Claim Received</h2>
-        <p><strong>Neighbour Name:</strong> ${neighbourName}</p>
-        <p><strong>Original Address:</strong> ${address}</p>
-        <p><strong>Selected Bin:</strong> ${bins[0]}</p>
-        <p><strong>Selected Dates:</strong> ${dates[0]} and ${dates[1]}</p>
-        <hr/>
-        <h3>📍 Standee Nominated To:</h3>
-        <p><strong>Address:</strong> ${nominatedAddress}</p>
-        <p><strong>Town:</strong> ${town}</p>
-        <p><strong>Postcode:</strong> ${postcode}</p>
+        <h2>🎉 A new neighbour has claimed their free clean!</h2>
+        <p><strong>Name:</strong> ${neighbourName}</p>
+        <p><strong>Bin selected:</strong> ${formattedBins}</p>
+        <p><strong>Clean dates:</strong> ${formattedDates}</p>
+        <p><strong>Current standee location:</strong> ${address}</p>
+        <p><strong>Nominated to:</strong> ${fullAddress}</p>
       `
     })
 
-    if (error) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ success: false, error: error.message })
-      }
-    }
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true })
-    }
+    return res.status(200).json({ success: true })
   } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ success: false, error: err.message })
-    }
+    console.error('Email sending failed:', err)
+    return res.status(500).json({ error: 'Email send failed' })
   }
 }
