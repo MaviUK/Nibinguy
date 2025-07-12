@@ -1,3 +1,106 @@
+import React, { useEffect, useState } from "react"
+import { useParams } from "react-router-dom"
+import { supabase } from "../lib/supabaseClient"
+import { submitClaim } from "../lib/standeeHelpers"
+
+function slugify(text) {
+  return text.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
+}
+
+export default function StandeeClaim() {
+  const { slug } = useParams()
+  const [loading, setLoading] = useState(true)
+  const [standee, setStandee] = useState(null)
+  const [isMatch, setIsMatch] = useState(false)
+
+  const [selectedBin, setSelectedBin] = useState("")
+  const [firstDate, setFirstDate] = useState("")
+  const [secondDate, setSecondDate] = useState("")
+  const [neighbourName, setNeighbourName] = useState("")
+  const [nominatedAddress, setNominatedAddress] = useState("")
+  const [town, setTown] = useState("")
+  const [postcode, setPostcode] = useState("")
+  const [submitted, setSubmitted] = useState(false)
+
+  const minDate = new Date().toISOString().split("T")[0]
+  const maxDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+
+  useEffect(() => {
+    async function fetchStandee() {
+      const normalizedSlug = slug.trim().toLowerCase()
+      const { data, error } = await supabase
+        .from("standee_location")
+        .select("*")
+        .eq("current_slug", normalizedSlug)
+        .maybeSingle()
+
+      if (!data || error) {
+        setStandee(null)
+        setIsMatch(false)
+      } else {
+        setStandee(data)
+        setIsMatch(data.current_slug === normalizedSlug)
+      }
+
+      setLoading(false)
+    }
+
+    fetchStandee()
+  }, [slug])
+
+  const handleSubmit = async () => {
+    const newAddress = `${nominatedAddress}, ${town}`
+    const newSlug = slugify(newAddress)
+
+    const response = await submitClaim({
+      address: standee.current_address,
+      bins: [selectedBin],
+      dates: [firstDate, secondDate],
+      neighbourName,
+      nominatedAddress,
+      town,
+      postcode,
+      newSlug,
+      newAddress
+    })
+
+    if (response.success) {
+      setSubmitted(true)
+    } else {
+      alert(`Something went wrong: ${response.error}`)
+    }
+  }
+
+  if (loading) return <div className="bg-black text-white min-h-screen p-6">Loading...</div>
+
+  if (!standee) {
+    return (
+      <div className="bg-black text-white min-h-screen p-6">
+        <h1 className="text-2xl font-bold">No standee found</h1>
+        <p>Please check the URL or try again later.</p>
+      </div>
+    )
+  }
+
+  if (!isMatch) {
+    return (
+      <div className="bg-black text-red-400 min-h-screen p-6">
+        <h1 className="text-2xl font-bold">This isn't your standee!</h1>
+        <p>This standee is meant for: <strong>{standee.current_address}</strong></p>
+      </div>
+    )
+  }
+
+  if (submitted) {
+    return (
+      <div className="bg-black text-green-400 min-h-screen p-6">
+        <h1 className="text-2xl font-bold">🎉 Success!</h1>
+        <p>Your free bin clean is booked for <strong>{firstDate}</strong> and <strong>{secondDate}</strong>.</p>
+        <p>The standee is now heading to <strong>{neighbourName}</strong> at <strong>{nominatedAddress}, {town}</strong> ({postcode}).</p>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-black min-h-screen text-white font-sans px-6 py-10">
       <div className="flex justify-center mb-6">
