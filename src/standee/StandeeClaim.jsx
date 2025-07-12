@@ -154,6 +154,10 @@ export default function StandeeClaim() {
           </div>
         </div>
 
+        <h2 className="text-xl font-bold text-center mb-6 mt-6">
+          Now Please Nominate Someone Who Needs A Wheelie Wash!
+        </h2>
+
         <div className="mb-6">
           <label className="block font-medium">Neighbour's Name:</label>
           <input
