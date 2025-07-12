@@ -1,4 +1,3 @@
-// src/pages/standee/latest.jsx
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
@@ -7,16 +6,16 @@ export default function LatestStandeeRedirect() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    const redirectToLatest = async () => {
+    async function redirectToLatest() {
       const { data, error } = await supabase
         .from('standee_location')
-        .select('current_slug')
+        .select('*')
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
-      if (error || !data?.current_slug) {
-        console.error('Could not load latest standee:', error)
+      if (error || !data) {
+        console.error('❌ Failed to fetch latest standee:', error)
         return
       }
 
@@ -26,5 +25,5 @@ export default function LatestStandeeRedirect() {
     redirectToLatest()
   }, [navigate])
 
-  return <p style={{ color: 'white', textAlign: 'center', marginTop: '2rem' }}>Redirecting to the latest standee...</p>
+  return <p className="text-white p-6">Redirecting to the latest standee...</p>
 }
