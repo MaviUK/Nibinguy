@@ -88,7 +88,7 @@ export default function NiBinGuyLandingPage() {
       )}
 
       {/* What We Do - Cards */}
-     <section className="py-16 px-6 bg-[#18181b] rounded-2xl overflow-hidden shadow-xl mx-4 md:mx-16 my-8">
+     <section className="relative py-16 px-6 bg-[#18181b]">
   <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
   <div className="grid md:grid-cols-3 gap-6 text-center">
     <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
