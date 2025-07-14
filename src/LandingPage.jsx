@@ -88,25 +88,23 @@ export default function NiBinGuyLandingPage() {
       )}
 
       {/* What We Do - Cards */}
-      <section className="relative py-16 px-6 bg-[#18181b]">
-        <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
-        <div className="grid md:grid-cols-3 gap-6 text-center">
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-            <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
-            <p>We clean green, black, and blue bins right outside your home.</p>
-          </div>
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-            <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
-            <p>Need regular bin cleaning? We handle your business waste too.</p>
-          </div>
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-xl">
-            <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
-            <p>We use biodegradable products and minimal water waste.</p>
-          </div>
-        </div>
-        <div className="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-b from-[#18181b] to-black pointer-events-none" />
-      </section>
-
+     <section className="py-16 px-6 bg-[#18181b] rounded-2xl overflow-hidden shadow-xl mx-4 md:mx-16 my-8">
+  <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
+  <div className="grid md:grid-cols-3 gap-6 text-center">
+    <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+      <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
+      <p>We clean green, black, and blue bins right outside your home.</p>
+    </div>
+    <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+      <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
+      <p>Need regular bin cleaning? We handle your business waste too.</p>
+    </div>
+    <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+      <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
+      <p>We use biodegradable products and minimal water waste.</p>
+    </div>
+  </div>
+</section>
       {/* Why Clean Your Bin? */}
       <section className="py-16 px-6 bg-gradient-to-b from-black via-[#0a0a0a] to-zinc-900 text-white">
         <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
