@@ -104,7 +104,7 @@ export default function NiBinGuyLandingPage() {
             <p>We use biodegradable products and minimal water waste.</p>
           </div>
         </div>
-        <div className="absolute bottom-0 left-0 w-full h-20 bg-gradient-to-b from-[#18181b] to-black pointer-events-none" />
+        <div className="absolute bottom-10 left-0 w-full h-20 bg-gradient-to-b from-[#18181b] to-black pointer-events-none" />
       </section>
 
       {/* Why Clean Your Bin? */}
