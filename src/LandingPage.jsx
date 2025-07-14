@@ -6,25 +6,7 @@ export default function NiBinGuyLandingPage() {
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-
-  useEffect(() => {
-    if (window.SqueegeePortal && typeof window.SqueegeePortal.init === "function") {
-      try {
-        window.SqueegeePortal.init({
-          selector: "#squeegee-portal",
-          portalId: "25a031e7-75af-4a0e-9f3a-d308fd9b2e3a",
-          components: ["UpcomingAppointments"],
-          showLogin: true,
-          showComponentsOnLoad: true,
-        });
-      } catch (error) {
-        console.error("❌ Error initializing Squeegee portal:", error);
-      }
-    } else {
-      console.warn("⚠️ SqueegeePortal not available on window.");
-    }
-  }, []);
-
+  
   const handleSend = () => {
     if (!name || !email || !address || bins.some((b) => !b.type)) {
       alert("Please complete all fields before sending.");
@@ -186,10 +168,18 @@ export default function NiBinGuyLandingPage() {
       {/* Customer Portal */}
       <section className="py-16 px-6 bg-black text-center">
         <h2 className="text-3xl font-bold text-green-400 mb-6">Customer Portal</h2>
-        <button onClick={() => window.SqueegeePortal?.toggleLogin()} className="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-6 rounded-xl shadow-lg transition mb-6">
-          Customer Login / Logout
-        </button>
-        <div id="squeegee-portal" className="mt-8 bg-white text-black rounded-xl p-4 shadow-xl max-w-3xl mx-auto"></div>
+
+<section className="py-16 px-6 bg-black text-center">
+  <h2 className="text-3xl font-bold text-green-400 mb-6">Customer Portal</h2>
+  <div
+    data-sqc="layout"
+    data-sqa="25a031e7-75af-4a0e-9f3a-d308fd9b2e3a"
+    data-sqe="https://sqgee.com"
+    style={{ width: "100%", minHeight: "500px", background: "white" }}
+    className="mt-8 rounded-xl p-4 shadow-xl max-w-3xl mx-auto"
+  ></div>
+</section>
+
       </section>
 
       {/* Footer */}
