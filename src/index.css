@@ -2,7 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ✅ Squeegee Portal Isolation Wrapper */
+/* ✅ Your custom styles go below this line */
+
 .squeegee-portal-wrapper {
   all: initial;
   display: block;
@@ -14,4 +15,6 @@
   box-sizing: border-box;
   border-radius: 12px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  margin: 0 auto;
+  max-width: 800px;
 }
