@@ -164,8 +164,6 @@ export default function NiBinGuyLandingPage() {
       </section>
 
       {/* Customer Portal */}
-      <section className="py-16 px-6 bg-black text-center">
-        <h2 className="text-3xl font-bold text-green-400 mb-6">Customer Portal</h2>
 
 <section className="py-16 px-6 bg-black text-center">
   <h2 className="text-3xl font-bold text-green-400 mb-6">Customer Portal</h2>
@@ -177,8 +175,6 @@ export default function NiBinGuyLandingPage() {
     className="mt-8 rounded-xl p-4 shadow-xl max-w-3xl mx-auto"
   ></div>
 </section>
-
-      </section>
 
       {/* Footer */}
       <footer className="bg-black text-center py-6 text-gray-400">
