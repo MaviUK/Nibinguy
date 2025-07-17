@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ✅ Squeegee Portal Isolation Wrapper */
+.squeegee-portal-wrapper {
+  all: initial;
+  display: block;
+  width: 100%;
+  min-height: 700px;
+  background: white;
+  overflow: visible;
+  padding: 20px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+}
