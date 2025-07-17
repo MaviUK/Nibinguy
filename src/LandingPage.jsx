@@ -167,18 +167,20 @@ export default function NiBinGuyLandingPage() {
 
 <section className="py-16 px-6 bg-black text-center">
   <h2 className="text-3xl font-bold text-green-400 mb-6">Customer Portal</h2>
-  <div
-    data-sqc="layout"
-    data-sqa="25a031e7-75af-4a0e-9f3a-d308fd9b2e3a"
-    data-sqe="https://sqgee.com"
-    style={{
-      all: 'initial',
-      width: '100%',
-      minHeight: '600px',
-      display: 'block',
-      background: 'white'
-    }}
-  ></div>
+<div
+  data-sqc="layout"
+  data-sqa="25a031e7-75af-4a0e-9f3a-d308fd9b2e3a"
+  data-sqe="https://sqgee.com"
+  style={{
+    all: 'initial',
+    width: '100%',
+    minHeight: '700px',
+    display: 'block',
+    background: 'white',
+    overflow: 'visible'
+  }}
+></div>
+
 </section>
 
 
