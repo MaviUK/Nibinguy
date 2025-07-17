@@ -171,10 +171,16 @@ export default function NiBinGuyLandingPage() {
     data-sqc="layout"
     data-sqa="25a031e7-75af-4a0e-9f3a-d308fd9b2e3a"
     data-sqe="https://sqgee.com"
-    style={{ width: "100%", minHeight: "500px", background: "white" }}
-    className="mt-8 rounded-xl p-4 shadow-xl max-w-3xl mx-auto"
+    style={{
+      all: 'initial',
+      width: '100%',
+      minHeight: '600px',
+      display: 'block',
+      background: 'white'
+    }}
   ></div>
 </section>
+
 
       {/* Footer */}
       <footer className="bg-black text-center py-6 text-gray-400">
