@@ -163,12 +163,6 @@ export default function NiBinGuyLandingPage() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="bg-black text-center py-6 text-gray-400">
-        <p>© 2025 Ni Bin Guy. All rights reserved.</p>
-        <p>Bangor, BT20 5NF · 07555178484 · nibinguy@gmail.com · aabincleaning@gmail.com</p>
-      </footer>
     </div>
   );
 }
