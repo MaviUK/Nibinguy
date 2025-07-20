@@ -1,5 +1,5 @@
 const { Resend } = require('resend');
-const resend = new Resend(process.env.re_52whuqKH_G4n4aJgKjUkaeoc82MTAv7Pe);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
