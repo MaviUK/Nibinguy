@@ -59,11 +59,25 @@
   </script>
 
   <!-- ✅ Correct Squeegee Portal Script -->
- <script src="https://widgets.sqg.ee/main.js" defer></script>
+  <script src="https://widgets.sqg.ee/main.js" defer></script>
 
 </head>
 <body>
+
+  <!-- ✅ Static Squeegee Portal Outside React -->
+  <section style="padding: 40px; background: black; text-align: center; color: white;">
+    <h2 style="font-size: 2rem; color: #4ade80; margin-bottom: 20px;">Customer Portal</h2>
+    <div 
+      data-sqc="layout"
+      data-sqa="25a031e7-75af-4a0e-9f3a-d308fd9b2e3a"
+      data-sqe="https://sqgee.com"
+      style="width: 100%; max-width: 800px; min-height: 700px; margin: 0 auto; display: block; background: white; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.2); overflow: visible; padding: 20px; box-sizing: border-box;">
+    </div>
+  </section>
+
+  <!-- ✅ React App Root -->
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
+
 </body>
 </html>
