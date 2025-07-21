@@ -1,9 +1,13 @@
-const { Resend } = require('resend');
+import { Resend } from 'resend';
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-exports.handler = async (event) => {
+export async function handler(event) {
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
   try {
@@ -26,9 +30,15 @@ exports.handler = async (event) => {
       `,
     });
 
-    return { statusCode: 200, body: JSON.stringify({ success: true }) };
-  } catch (err) {
-    console.error('Booking email failed:', err);
-    return { statusCode: 500, body: JSON.stringify({ error: 'Email send failed' }) };
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ success: true }),
+    };
+  } catch (error) {
+    console.error('Booking email failed:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Email send failed' }),
+    };
   }
-};
+}
