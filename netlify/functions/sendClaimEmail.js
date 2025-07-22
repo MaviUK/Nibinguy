@@ -1,12 +1,18 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-export default async (req, res) => {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+exports.handler = async (event) => {
+  console.log('Resend API Key inside function:', process.env.RESEND_API_KEY);
+
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
+  
   try {
     const {
       neighbourName,
@@ -35,10 +41,15 @@ export default async (req, res) => {
         <p><strong>Nominated to:</strong> ${fullAddress}</p>
       `
     })
-
-    return res.status(200).json({ success: true })
-  } catch (err) {
-    console.error('Email sending failed:', err)
-    return res.status(500).json({ error: 'Email send failed' })
+ return {
+      statusCode: 200,
+      body: JSON.stringify({ success: true }),
+    };
+  } catch (error) {
+    console.error('Booking email failed:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Email send failed' }),
+    };
   }
-}
+};
