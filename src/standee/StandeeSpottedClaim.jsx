@@ -39,6 +39,17 @@ export default function StandeeSpottedClaim() {
     fetchStandee()
   }, [slug])
 
+  const handleDateChange = (value) => {
+    setDates([value, getDatePlusDays(value, 14)])
+  }
+
+  const getDatePlusDays = (dateStr, days) => {
+    if (!dateStr) return ""
+    const date = new Date(dateStr)
+    date.setDate(date.getDate() + days)
+    return date.toISOString().split("T")[0]
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
 
@@ -91,7 +102,7 @@ export default function StandeeSpottedClaim() {
 
   return (
     <div className="bg-black text-white min-h-screen p-6 flex flex-col items-center">
-      <img src="/nibinguy-logo.png" alt="Ni Bin Guy" className="w-48 mb-4" />
+      <img src="/logo.png" alt="Ni Bin Guy" className="w-48 mb-4" />
       <h1 className="text-3xl font-bold text-center mb-2">🎯 You’ve Spotted The Wheelie Washer!</h1>
       <p className="text-center mb-6">
         Current Standee Location: <strong>{standee.current_address}</strong>
@@ -146,30 +157,4 @@ export default function StandeeSpottedClaim() {
         </div>
 
         <div>
-          <p className="mb-2 font-bold">Select the next 2 dates your bin is emptied:</p>
-          <div className="flex gap-2">
-            <input
-              type="date"
-              className="flex-1 p-3 rounded bg-white text-black"
-              value={dates[0]}
-              onChange={(e) => setDates([e.target.value, dates[1]])}
-            />
-            <input
-              type="date"
-              className="flex-1 p-3 rounded bg-white text-black"
-              value={dates[1]}
-              onChange={(e) => setDates([dates[0], e.target.value])}
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          className="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-3 px-6 rounded"
-        >
-          Claim My Free Clean
-        </button>
-      </form>
-    </div>
-  )
-}
+          <p className="mb-2
