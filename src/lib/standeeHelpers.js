@@ -1,16 +1,14 @@
 import { supabase } from './supabaseClient'
 
-// Slugify a string to use for URL-safe slugs
 function slugify(str) {
   return str
     .toLowerCase()
     .trim()
-    .replace(/,+$/, '')         // Remove trailing commas
-    .replace(/\s+/g, '-')       // Replace spaces with hyphens
-    .replace(/[^\w-]/g, '')     // Remove non-word characters except hyphen
+    .replace(/,+$/, '')
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]/g, '')
 }
 
-// Submit a claim: insert to `claims`, update `standee_location`, and trigger email
 export async function submitClaim({
   address,
   bins,
@@ -18,9 +16,9 @@ export async function submitClaim({
   neighbourName,
   nominatedAddress,
   town,
-  postcode
+  postcode,
+  isSpotted = false   // ✅ Add this flag
 }) {
-  // Normalize inputs
   const trimmedAddress = address.trim()
   const trimmedNominated = nominatedAddress.trim()
   const trimmedTown = town.trim()
@@ -33,8 +31,8 @@ export async function submitClaim({
   console.log('🔍 Original slug:', originalSlug)
   console.log('🏡 New address:', newFullAddress)
   console.log('🆕 New slug:', newSlug)
+  console.log('👀 Is spotted claim:', isSpotted)
 
-  // Step 1: Insert to claims table
   const { error: claimError } = await supabase.from('claims').insert([{
     address: trimmedAddress,
     slug: originalSlug,
@@ -49,7 +47,6 @@ export async function submitClaim({
     return { success: false, error: claimError.message }
   }
 
-  // Step 2: Fetch the current standee by slug
   const { data: locationData, error: locationError } = await supabase
     .from('standee_location')
     .select('*')
@@ -61,33 +58,34 @@ export async function submitClaim({
     return { success: false, error: 'This standee does not exist.' }
   }
 
-  // Step 3: Update standee_location with new address/slug and history
-  const updatedHistory = [
-    ...(locationData.history || []),
-    {
-      address: locationData.current_address,
-      slug: locationData.current_slug,
-      timestamp: new Date().toISOString()
+  // ✅ Step 3: Only update location if NOT a spotted claim
+  if (!isSpotted) {
+    const updatedHistory = [
+      ...(locationData.history || []),
+      {
+        address: locationData.current_address,
+        slug: locationData.current_slug,
+        timestamp: new Date().toISOString()
+      }
+    ]
+
+    const { error: updateError } = await supabase
+      .from('standee_location')
+      .update({
+        current_address: newFullAddress,
+        current_slug: newSlug,
+        claimed: false,
+        updated_at: new Date().toISOString(),
+        history: updatedHistory
+      })
+      .eq('id', locationData.id)
+
+    if (updateError) {
+      console.error('❌ Standee update error:', updateError)
+      return { success: false, error: updateError.message }
     }
-  ]
-
-  const { error: updateError } = await supabase
-    .from('standee_location')
-    .update({
-      current_address: newFullAddress,
-      current_slug: newSlug,
-      claimed: false,
-      updated_at: new Date().toISOString(),
-      history: updatedHistory
-    })
-    .eq('id', locationData.id)
-
-  if (updateError) {
-    console.error('❌ Standee update error:', updateError)
-    return { success: false, error: updateError.message }
   }
 
-  // Step 4: Send email with the correct payload including dates
   try {
     console.log('📤 Sending to email function:', {
       name: neighbourName,
@@ -96,7 +94,7 @@ export async function submitClaim({
       binType: bins[0],
       nominatedAddress: `${trimmedNominated}, ${trimmedTown}, ${trimmedPostcode}`,
       dates
-    });
+    })
 
     await fetch('/.netlify/functions/sendClaimEmail', {
       method: 'POST',
