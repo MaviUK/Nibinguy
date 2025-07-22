@@ -87,8 +87,17 @@ export async function submitClaim({
     return { success: false, error: updateError.message }
   }
 
-  // Step 4: Send email with the correct payload
+  // Step 4: Send email with the correct payload including dates
   try {
+    console.log('📤 Sending to email function:', {
+      name: neighbourName,
+      address: trimmedAddress,
+      email: 'noreply@nibinguy.com',
+      binType: bins[0],
+      nominatedAddress: `${trimmedNominated}, ${trimmedTown}, ${trimmedPostcode}`,
+      dates
+    });
+
     await fetch('/.netlify/functions/sendClaimEmail', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -97,7 +106,8 @@ export async function submitClaim({
         address: trimmedAddress,
         email: 'noreply@nibinguy.com',
         binType: bins[0],
-        nominatedAddress: `${trimmedNominated}, ${trimmedTown}, ${trimmedPostcode}`
+        nominatedAddress: `${trimmedNominated}, ${trimmedTown}, ${trimmedPostcode}`,
+        dates
       })
     })
   } catch (err) {
