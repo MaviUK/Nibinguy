@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import CustomerPortalLoader from "./components/CustomerPortalLoader";
 
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
@@ -194,9 +193,6 @@ export default function NiBinGuyLandingPage() {
           </div>
         </div>
       </section>
-
-      {/* ✅ Customer Portal */}
-      <CustomerPortalLoader />
     </div>
   );
 }
