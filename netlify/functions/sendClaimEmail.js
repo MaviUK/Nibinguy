@@ -23,7 +23,7 @@ export default async (req, res) => {
     const fullAddress = `${nominatedAddress}, ${town}, ${postcode}`
 
     await resend.emails.send({
-      from: 'Ni Bin Guy <noreply@nibinguy.uy>',
+      from: 'Ni Bin Guy <noreply@nibing.uy>',
       to: 'aabincleaning@gmail.com',
       subject: '🧼 New Standee Claim Submitted',
       html: `
