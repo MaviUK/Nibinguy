@@ -157,4 +157,30 @@ export default function StandeeSpottedClaim() {
         </div>
 
         <div>
-          <p className="mb-2
+          <p className="mb-2 font-bold">Select the next 2 dates your bin is emptied:</p>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              className="flex-1 p-3 rounded bg-white text-black"
+              value={dates[0]}
+              onChange={(e) => handleDateChange(e.target.value)}
+            />
+            <input
+              type="date"
+              className="flex-1 p-3 rounded bg-white text-black"
+              value={dates[1]}
+              readOnly
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-3 px-6 rounded"
+        >
+          Claim My Free Clean
+        </button>
+      </form>
+    </div>
+  )
+}
