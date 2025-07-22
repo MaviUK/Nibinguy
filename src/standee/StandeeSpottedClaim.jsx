@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom"
 import { supabase } from "../lib/supabaseClient"
 import { submitClaim } from "../lib/standeeHelpers"
 
-export default function SpottedClaim() {
+export default function StandeeSpottedClaim() {
   const { slug } = useParams()
   const [standee, setStandee] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -18,9 +18,9 @@ export default function SpottedClaim() {
         .eq("current_slug", slug)
         .maybeSingle()
 
-      if (!data || error) {
+      if (error || !data) {
         setClaimError("Standee not found.")
-      } else if (data.spotted_claims >= 3) {
+      } else if ((data.spotted_claims || 0) >= 3) {
         setClaimError("This standee has reached the claim limit.")
       } else {
         setStandee(data)
@@ -33,6 +33,8 @@ export default function SpottedClaim() {
   }, [slug])
 
   const handleSubmit = async () => {
+    setLoading(true)
+
     const response = await submitClaim({
       address: standee.current_address,
       bins: [],
@@ -42,7 +44,8 @@ export default function SpottedClaim() {
       town: "",
       postcode: "",
       newSlug: slug,
-      newAddress: standee.current_address
+      newAddress: standee.current_address,
+      isSpotted: true   // ✅ This flag tells your submitClaim to NOT touch current_slug
     })
 
     if (response.success) {
@@ -50,10 +53,13 @@ export default function SpottedClaim() {
         .from("standee_location")
         .update({ spotted_claims: (standee.spotted_claims || 0) + 1 })
         .eq("id", standee.id)
+
       setSubmitted(true)
     } else {
-      setClaimError(response.error)
+      setClaimError(response.error || "Something went wrong. Please try again.")
     }
+
+    setLoading(false)
   }
 
   if (loading) return <div className="bg-black text-white p-6">Loading...</div>
@@ -78,7 +84,9 @@ export default function SpottedClaim() {
   return (
     <div className="bg-black text-white p-6 min-h-screen">
       <h1 className="text-3xl font-bold mb-4">🎉 Claim Your Free Bin Clean</h1>
-      <p className="mb-4">You’ve spotted the Wheelie Washer at <strong>{standee.current_address}</strong>.</p>
+      <p className="mb-4">
+        You’ve spotted the Wheelie Washer at <strong>{standee.current_address}</strong>.
+      </p>
       <button
         onClick={handleSubmit}
         className="bg-red-700 text-white font-bold py-3 px-6 rounded hover:bg-red-600"
