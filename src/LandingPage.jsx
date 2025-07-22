@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import CustomerPortalLoader from "./components/CustomerPortalLoader"
+
 
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
@@ -194,5 +196,14 @@ export default function NiBinGuyLandingPage() {
         </div>
       </section>
     </div>
+      {/* Why Ni Bin Guy */}
+      <section className="py-16 px-6 bg-gradient-to-b from-zinc-900 via-[#1a1a1a] to-black text-white">
+        {/* ... your content */}
+      </section>
+
+      {/* ✅ Customer Portal */}
+      <CustomerPortalLoader />
+    </div>
+
   );
 }
