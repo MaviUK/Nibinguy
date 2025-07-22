@@ -12,7 +12,6 @@ exports.handler = async (event) => {
 
   try {
     const {
-      subject,
       name,
       address,
       email,
@@ -27,8 +26,9 @@ exports.handler = async (event) => {
 
     let htmlContent = '';
 
-    if (subject === 'Wheelie Watcher Spotted') {
-      if (!name || !address || !email || !phone || !binType || !firstDate || !secondDate || !standeeLocation) {
+    if (standeeLocation) {
+      // ✅ Wheelie Watcher Spotted Claim
+      if (!name || !address || !email || !phone || !binType || !firstDate || !secondDate) {
         console.log('Missing required fields for Wheelie Watcher:', { name, address, email, phone, binType, firstDate, secondDate, standeeLocation });
         return {
           statusCode: 400,
@@ -47,6 +47,7 @@ exports.handler = async (event) => {
         <p><strong>Current Standee Location:</strong> ${standeeLocation}</p>
       `;
     } else {
+      // ✅ Homeowner Claim
       if (!name || !address || !email || !binType || !nominatedAddress) {
         console.log('Missing required fields for Homeowner Claim:', { name, address, email, binType, nominatedAddress, dates });
         return {
