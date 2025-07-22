@@ -17,7 +17,9 @@ export async function submitClaim({
   nominatedAddress,
   town,
   postcode,
-  isSpotted = false   // ✅ Add this flag
+  isSpotted = false,
+  email = '',
+  phone = ''
 }) {
   const trimmedAddress = address.trim()
   const trimmedNominated = nominatedAddress.trim()
@@ -58,7 +60,6 @@ export async function submitClaim({
     return { success: false, error: 'This standee does not exist.' }
   }
 
-  // ✅ Step 3: Only update location if NOT a spotted claim
   if (!isSpotted) {
     const updatedHistory = [
       ...(locationData.history || []),
@@ -87,27 +88,56 @@ export async function submitClaim({
   }
 
   try {
-    console.log('📤 Sending to email function:', {
-      name: neighbourName,
-      address: trimmedAddress,
-      email: 'noreply@nibinguy.com',
-      binType: bins[0],
-      nominatedAddress: `${trimmedNominated}, ${trimmedTown}, ${trimmedPostcode}`,
-      dates
-    })
+    if (isSpotted) {
+      console.log('📤 Sending Wheelie Watcher Email:', {
+        name: neighbourName,
+        email: 'noreply@nibing.uy',
+        phone,
+        address: nominatedAddress,
+        binType: bins[0],
+        firstDate: dates[0],
+        secondDate: dates[1],
+        standeeLocation: trimmedAddress
+      })
 
-    await fetch('/.netlify/functions/sendClaimEmail', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      await fetch('/.netlify/functions/sendClaimEmail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: 'Wheelie Watcher Spotted',
+          name: neighbourName,
+          email: 'noreply@nibing.uy',
+          phone,
+          address: nominatedAddress,
+          binType: bins[0],
+          firstDate: dates[0],
+          secondDate: dates[1],
+          standeeLocation: trimmedAddress
+        })
+      })
+    } else {
+      console.log('📤 Sending Homeowner Claim Email:', {
         name: neighbourName,
         address: trimmedAddress,
-        email: 'noreply@nibinguy.com',
+        email: 'noreply@nibing.uy',
         binType: bins[0],
         nominatedAddress: `${trimmedNominated}, ${trimmedTown}, ${trimmedPostcode}`,
         dates
       })
-    })
+
+      await fetch('/.netlify/functions/sendClaimEmail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: neighbourName,
+          address: trimmedAddress,
+          email: 'noreply@nibing.uy',
+          binType: bins[0],
+          nominatedAddress: `${trimmedNominated}, ${trimmedTown}, ${trimmedPostcode}`,
+          dates
+        })
+      })
+    }
   } catch (err) {
     console.error('❌ Email function failed:', err)
     return { success: false, error: 'Email failed to send.' }
