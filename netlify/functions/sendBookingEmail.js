@@ -21,7 +21,7 @@ exports.handler = async (event) => {
       .join('<br>');
 
     const response = await resend.emails.send({
-      from: 'Ni Bin Guy <noreply@nibinguy.uy>',
+      from: 'Ni Bin Guy <noreply@nibing.uy>',
       to: 'aabincleaning@gmail.com',
       subject: '🗑️ New Bin Cleaning Booking',
       html: `
