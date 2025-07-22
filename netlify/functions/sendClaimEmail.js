@@ -37,14 +37,14 @@ exports.handler = async (event) => {
       }
 
       htmlContent = `
-        <h3>🕵️ Wheelie Watcher Spotted!</h3>
+        <h3>New Standee Claim Submitted!</h3>
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Email:</strong> ${email}</p>
         <p><strong>Mobile:</strong> ${phone}</p>
         <p><strong>Address:</strong> ${address}</p>
-        <p><strong>Standee Location:</strong> ${standeeLocation}</p>
-        <p><strong>Bin Type:</strong> ${binType}</p>
-        <p><strong>Next Bin Clean Dates:</strong> ${firstDate}, ${secondDate}</p>
+        <p><strong>Bin:</strong> ${binType}</p>
+        <p><strong>Dates:</strong> ${firstDate}, ${secondDate}</p>
+        <p><strong>Current Standee Location:</strong> ${standeeLocation}</p>
       `;
     } else {
       if (!name || !address || !email || !binType || !nominatedAddress) {
