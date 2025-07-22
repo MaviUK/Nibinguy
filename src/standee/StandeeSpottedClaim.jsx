@@ -10,6 +10,14 @@ export default function StandeeSpottedClaim() {
   const [submitted, setSubmitted] = useState(false)
   const [claimError, setClaimError] = useState(null)
 
+  // form fields
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
+  const [address, setAddress] = useState("")
+  const [bin, setBin] = useState("")
+  const [dates, setDates] = useState(["", ""])
+
   useEffect(() => {
     async function fetchStandee() {
       const { data, error } = await supabase
@@ -32,20 +40,23 @@ export default function StandeeSpottedClaim() {
     fetchStandee()
   }, [slug])
 
-  const handleSubmit = async () => {
-    setLoading(true)
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    if (!name || !email || !phone || !address || !bin || !dates[0] || !dates[1]) {
+      setClaimError("Please fill in all fields.")
+      return
+    }
 
     const response = await submitClaim({
       address: standee.current_address,
-      bins: [],
-      dates: [],
-      neighbourName: "",
-      nominatedAddress: "",
-      town: "",
+      bins: [bin],
+      dates,
+      neighbourName: name,
+      nominatedAddress: address,
+      town: "", // optional
       postcode: "",
-      newSlug: slug,
-      newAddress: standee.current_address,
-      isSpotted: true   // ✅ This flag tells your submitClaim to NOT touch current_slug
+      isSpotted: true
     })
 
     if (response.success) {
@@ -56,10 +67,8 @@ export default function StandeeSpottedClaim() {
 
       setSubmitted(true)
     } else {
-      setClaimError(response.error || "Something went wrong. Please try again.")
+      setClaimError(response.error || "Something went wrong.")
     }
-
-    setLoading(false)
   }
 
   if (loading) return <div className="bg-black text-white p-6">Loading...</div>
@@ -87,12 +96,65 @@ export default function StandeeSpottedClaim() {
       <p className="mb-4">
         You’ve spotted the Wheelie Washer at <strong>{standee.current_address}</strong>.
       </p>
-      <button
-        onClick={handleSubmit}
-        className="bg-red-700 text-white font-bold py-3 px-6 rounded hover:bg-red-600"
-      >
-        Claim My Free Clean
-      </button>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="text"
+          placeholder="Your Name"
+          className="w-full p-3 rounded bg-gray-800 text-white"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          type="email"
+          placeholder="Email"
+          className="w-full p-3 rounded bg-gray-800 text-white"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          type="tel"
+          placeholder="Mobile Number"
+          className="w-full p-3 rounded bg-gray-800 text-white"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Your Address"
+          className="w-full p-3 rounded bg-gray-800 text-white"
+          value={address}
+          onChange={(e) => setAddress(e.target.value)}
+        />
+        <select
+          className="w-full p-3 rounded bg-gray-800 text-white"
+          value={bin}
+          onChange={(e) => setBin(e.target.value)}
+        >
+          <option value="">Select Bin Type</option>
+          <option value="Black">Black</option>
+          <option value="Blue">Blue</option>
+          <option value="Brown">Brown</option>
+        </select>
+        <input
+          type="date"
+          className="w-full p-3 rounded bg-gray-800 text-white"
+          value={dates[0]}
+          onChange={(e) => setDates([e.target.value, dates[1]])}
+        />
+        <input
+          type="date"
+          className="w-full p-3 rounded bg-gray-800 text-white"
+          value={dates[1]}
+          onChange={(e) => setDates([dates[0], e.target.value])}
+        />
+
+        <button
+          type="submit"
+          className="bg-red-700 text-white font-bold py-3 px-6 rounded hover:bg-red-600"
+        >
+          Claim My Free Clean
+        </button>
+      </form>
     </div>
   )
 }
