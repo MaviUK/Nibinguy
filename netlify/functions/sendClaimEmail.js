@@ -22,18 +22,20 @@ exports.handler = async (event) => {
     }
 
     const response = await resend.emails.send({
-      from: "noreply@nibing.uy",
-      to: "aabincleaning@gmail.com",
-      subject: "New Standee Claim Submitted!",
-      html: `
-        <h3>New Standee Claim Submitted!</h3>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Address:</strong> ${address}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Bin Type:</strong> ${binType}</p>
-        <p><strong>Nominated Address:</strong> ${nominatedAddress}</p>
-      `,
-    });
+  from: "noreply@nibing.uy",
+  to: "aabincleaning@gmail.com",
+  subject: "New Standee Claim Submitted!",
+  html: `
+    <h3>New Standee Claim Submitted!</h3>
+    <p><strong>Name:</strong> ${name}</p>
+    <p><strong>Address:</strong> ${address}</p>
+    <p><strong>Email:</strong> ${email}</p>
+    <p><strong>Bin Type:</strong> ${binType}</p>
+    <p><strong>Nominated Address:</strong> ${nominatedAddress}</p>
+    <p><strong>Next Bin Clean Dates:</strong> ${dates ? dates.join(", ") : "Not provided"}</p>
+  `,
+});
+
 
     console.log('Resend API Response:', response);
 
