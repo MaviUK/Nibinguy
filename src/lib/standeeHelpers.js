@@ -34,17 +34,15 @@ export async function submitClaim({
   console.log('🏡 New address:', newFullAddress)
   console.log('🆕 New slug:', newSlug)
 
-  // Step 1: Insert to claims table (no town/postcode/neighborName in DB)
-  const { error: claimError } = await supabase.from('claims').insert([
-    {
-      address: trimmedAddress,
-      slug: originalSlug,
-      claimed_at: new Date().toISOString(),
-      bins,
-      nominated_address: trimmedNominated,
-      nominated_slug: newSlug
-    }
-  ])
+  // Step 1: Insert to claims table
+  const { error: claimError } = await supabase.from('claims').insert([{
+    address: trimmedAddress,
+    slug: originalSlug,
+    claimed_at: new Date().toISOString(),
+    bins,
+    nominated_address: trimmedNominated,
+    nominated_slug: newSlug
+  }])
 
   if (claimError) {
     console.error('❌ Claim submission error:', claimError)
@@ -89,19 +87,17 @@ export async function submitClaim({
     return { success: false, error: updateError.message }
   }
 
-  // Step 4: Send email with full form content
+  // Step 4: Send email with the correct payload
   try {
     await fetch('/.netlify/functions/sendClaimEmail', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        neighbourName,
+        name: neighbourName,
         address: trimmedAddress,
-        bins,
-        dates,
-        nominatedAddress: trimmedNominated,
-        town: trimmedTown,
-        postcode: trimmedPostcode
+        email: 'noreply@nibinguy.com',
+        binType: bins[0],
+        nominatedAddress: `${trimmedNominated}, ${trimmedTown}, ${trimmedPostcode}`
       })
     })
   } catch (err) {
