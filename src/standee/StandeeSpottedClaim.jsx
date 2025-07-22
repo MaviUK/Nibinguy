@@ -10,7 +10,6 @@ export default function StandeeSpottedClaim() {
   const [submitted, setSubmitted] = useState(false)
   const [claimError, setClaimError] = useState(null)
 
-  // form fields
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")
@@ -54,7 +53,7 @@ export default function StandeeSpottedClaim() {
       dates,
       neighbourName: name,
       nominatedAddress: address,
-      town: "", // optional
+      town: "",
       postcode: "",
       isSpotted: true
     })
@@ -83,74 +82,90 @@ export default function StandeeSpottedClaim() {
 
   if (submitted) {
     return (
-      <div className="bg-black text-green-500 p-6 min-h-screen">
-        <h1 className="text-2xl font-bold">🎉 Success!</h1>
+      <div className="bg-black text-green-500 p-6 min-h-screen text-center">
+        <h1 className="text-3xl font-bold mb-4">🎉 Success!</h1>
         <p>Your free bin clean is booked. Thank you for spotting the Wheelie Washer!</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-black text-white p-6 min-h-screen">
-      <h1 className="text-3xl font-bold mb-4">🎉 Claim Your Free Bin Clean</h1>
-      <p className="mb-4">
-        You’ve spotted the Wheelie Washer at <strong>{standee.current_address}</strong>.
+    <div className="bg-black text-white min-h-screen p-6 flex flex-col items-center">
+      <img src="/nibinguy-logo.png" alt="Ni Bin Guy" className="w-48 mb-4" />
+      <h1 className="text-3xl font-bold text-center mb-2">🎯 You’ve Spotted The Wheelie Washer!</h1>
+      <p className="text-center mb-6">
+        Current Standee Location: <strong>{standee.current_address}</strong>
       </p>
-      <form onSubmit={handleSubmit} className="space-y-4">
+
+      <form onSubmit={handleSubmit} className="w-full max-w-md space-y-4">
         <input
           type="text"
           placeholder="Your Name"
-          className="w-full p-3 rounded bg-gray-800 text-white"
+          className="w-full p-3 rounded bg-white text-black"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
         <input
           type="email"
           placeholder="Email"
-          className="w-full p-3 rounded bg-gray-800 text-white"
+          className="w-full p-3 rounded bg-white text-black"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
         <input
           type="tel"
           placeholder="Mobile Number"
-          className="w-full p-3 rounded bg-gray-800 text-white"
+          className="w-full p-3 rounded bg-white text-black"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
         />
         <input
           type="text"
           placeholder="Your Address"
-          className="w-full p-3 rounded bg-gray-800 text-white"
+          className="w-full p-3 rounded bg-white text-black"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
         />
-        <select
-          className="w-full p-3 rounded bg-gray-800 text-white"
-          value={bin}
-          onChange={(e) => setBin(e.target.value)}
-        >
-          <option value="">Select Bin Type</option>
-          <option value="Black">Black</option>
-          <option value="Blue">Blue</option>
-          <option value="Brown">Brown</option>
-        </select>
-        <input
-          type="date"
-          className="w-full p-3 rounded bg-gray-800 text-white"
-          value={dates[0]}
-          onChange={(e) => setDates([e.target.value, dates[1]])}
-        />
-        <input
-          type="date"
-          className="w-full p-3 rounded bg-gray-800 text-white"
-          value={dates[1]}
-          onChange={(e) => setDates([dates[0], e.target.value])}
-        />
+
+        <div>
+          <p className="mb-2 font-bold">Select your bin:</p>
+          <div className="flex gap-2">
+            {["Black", "Blue", "Brown"].map((b) => (
+              <button
+                type="button"
+                key={b}
+                className={`flex-1 py-2 px-4 rounded font-bold ${
+                  bin === b ? "bg-red-700 text-white" : "bg-white text-black"
+                }`}
+                onClick={() => setBin(b)}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-2 font-bold">Select the next 2 dates your bin is emptied:</p>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              className="flex-1 p-3 rounded bg-white text-black"
+              value={dates[0]}
+              onChange={(e) => setDates([e.target.value, dates[1]])}
+            />
+            <input
+              type="date"
+              className="flex-1 p-3 rounded bg-white text-black"
+              value={dates[1]}
+              onChange={(e) => setDates([dates[0], e.target.value])}
+            />
+          </div>
+        </div>
 
         <button
           type="submit"
-          className="bg-red-700 text-white font-bold py-3 px-6 rounded hover:bg-red-600"
+          className="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-3 px-6 rounded"
         >
           Claim My Free Clean
         </button>
