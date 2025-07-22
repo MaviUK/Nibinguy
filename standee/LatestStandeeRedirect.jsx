@@ -1,30 +1,29 @@
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../lib/supabaseClient'
-import slugify from '../../lib/slugify'
+import { useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { supabase } from "../../lib/supabaseClient"
 
 export default function LatestStandeeRedirect() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    async function fetchLatest() {
+    async function redirectToChoicePage() {
       const { data, error } = await supabase
-        .from('standee_location')
-        .select('*')
-        .order('updated_at', { ascending: false })
+        .from("standee_location")
+        .select("*")
+        .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle()
 
       if (error || !data) {
-        console.error('Failed to fetch latest standee:', error)
+        console.error("❌ Failed to fetch latest standee:", error)
         return
       }
 
       navigate(`/standee/${data.current_slug}`)
     }
 
-    fetchLatest()
+    redirectToChoicePage()
   }, [navigate])
 
-  return <p>Redirecting to the latest standee...</p>
+  return <p className="text-white p-6">Redirecting to the standee location...</p>
 }
