@@ -91,9 +91,18 @@ export default function NiBinGuyLandingPage() {
       </section>
 
       {/* WhatsApp & Email Booking Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50" onClick={() => setShowForm(false)}>
-          <div className="bg-white text-black rounded-xl shadow-xl w-11/12 max-w-md p-6 space-y-4 relative" onClick={(e) => e.stopPropagation()}>
+     {showForm && (
+  <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50" onClick={() => setShowForm(false)}>
+    <div
+      className="bg-white text-black rounded-xl shadow-xl w-11/12 max-w-md max-h-[90vh] overflow-y-auto p-6 space-y-4 relative"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        onClick={() => setShowForm(false)}
+        className="sticky top-2 right-4 text-gray-500 hover:text-red-500 text-xl float-right z-10"
+      >
+        &times;
+      </button>
             <button onClick={() => setShowForm(false)} className="absolute top-2 right-4 text-gray-500 hover:text-red-500 text-xl">&times;</button>
             <h2 className="text-2xl font-bold text-center">Book a Bin Clean</h2>
             <input type="text" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
