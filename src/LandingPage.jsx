@@ -204,8 +204,8 @@ export default function NiBinGuyLandingPage() {
           </div>
         </div>
       </section>
-{/* Floating Periodic Table Social Icons */}
-<div className="fixed right-4 top-1/3 flex flex-col gap-1.5 z-50">
+{/* Floating Horizontal Social Icons */}
+<div className="fixed top-4 left-4 flex gap-2 z-50">
   <a href="https://www.facebook.com/nibinguy" target="_blank" rel="noopener noreferrer">
     <img src="/icons/facebook.png" alt="Facebook" className="w-8 h-8 shadow-md hover:scale-110 transition" />
   </a>
@@ -222,6 +222,7 @@ export default function NiBinGuyLandingPage() {
     <img src="/icons/whatsapp.png" alt="WhatsApp" className="w-8 h-8 shadow-md hover:scale-110 transition" />
   </a>
 </div>
+
 
     </div>
   );
