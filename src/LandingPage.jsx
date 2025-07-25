@@ -204,24 +204,6 @@ export default function NiBinGuyLandingPage() {
           </div>
         </div>
       </section>
-{/* Floating Horizontal Social Icons */}
-<div className="fixed top-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-50">
-  <a href="https://www.facebook.com/nibinguy" target="_blank" rel="noopener noreferrer">
-    <img src="/icons/facebook.png" alt="Facebook" className="w-8 h-8 shadow-md hover:scale-110 transition" />
-  </a>
-  <a href="https://www.tiktok.com/@wheeliecleanandy" target="_blank" rel="noopener noreferrer">
-    <img src="/icons/tiktok.png" alt="TikTok" className="w-8 h-8 shadow-md hover:scale-110 transition" />
-  </a>
-  <a href="https://www.instagram.com/YOUR_HANDLE" target="_blank" rel="noopener noreferrer">
-    <img src="/icons/instagram.png" alt="Instagram" className="w-8 h-8 shadow-md hover:scale-110 transition" />
-  </a>
-  <a href="tel:+447555178484">
-    <img src="/icons/phone.png" alt="Call Us" className="w-8 h-8 shadow-md hover:scale-110 transition" />
-  </a>
-  <a href="https://wa.me/447555178484" target="_blank" rel="noopener noreferrer">
-    <img src="/icons/whatsapp.png" alt="WhatsApp" className="w-8 h-8 shadow-md hover:scale-110 transition" />
-  </a>
-</div>
     </div>
   );
 }
