@@ -205,7 +205,7 @@ export default function NiBinGuyLandingPage() {
         </div>
       </section>
 {/* Floating Horizontal Social Icons */}
-<div className="fixed top-4 left-4 flex gap-2 z-50">
+<div className="fixed top-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-50"
   <a href="https://www.facebook.com/nibinguy" target="_blank" rel="noopener noreferrer">
     <img src="/icons/facebook.png" alt="Facebook" className="w-8 h-8 shadow-md hover:scale-110 transition" />
   </a>
