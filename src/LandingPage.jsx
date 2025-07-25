@@ -222,8 +222,6 @@ export default function NiBinGuyLandingPage() {
     <img src="/icons/whatsapp.png" alt="WhatsApp" className="w-8 h-8 shadow-md hover:scale-110 transition" />
   </a>
 </div>
-
-
     </div>
   );
 }
