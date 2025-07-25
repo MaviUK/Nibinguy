@@ -202,6 +202,25 @@ export default function NiBinGuyLandingPage() {
             <h3 className="text-xl font-semibold mb-2">Fully Insured</h3>
             <p>We’re fully insured and compliant — so you can rest easy.</p>
           </div>
+{/* Floating Periodic Table Social Icons */}
+<div className="fixed left-4 bottom-24 flex flex-col gap-3 z-50">
+  <a href="https://www.facebook.com/nibinguy" target="_blank" rel="noopener noreferrer">
+    <img src="/icons/facebook.png" alt="Facebook" className="w-14 h-14 shadow-lg hover:scale-105 transition" />
+  </a>
+  <a href="https://www.tiktok.com/@wheeliecleanandy" target="_blank" rel="noopener noreferrer">
+    <img src="/icons/tiktok.png" alt="TikTok" className="w-14 h-14 shadow-lg hover:scale-105 transition" />
+  </a>
+  <a href="https://www.instagram.com/YOUR_HANDLE" target="_blank" rel="noopener noreferrer">
+    <img src="/icons/instagram.png" alt="Instagram" className="w-14 h-14 shadow-lg hover:scale-105 transition" />
+  </a>
+  <a href="tel:+447555178484">
+    <img src="/icons/phone.png" alt="Call Us" className="w-14 h-14 shadow-lg hover:scale-105 transition" />
+  </a>
+  <a href="https://wa.me/447555178484" target="_blank" rel="noopener noreferrer">
+    <img src="/icons/whatsapp.png" alt="WhatsApp" className="w-14 h-14 shadow-lg hover:scale-105 transition" />
+  </a>
+</div>
+
         </div>
       </section>
     </div>
