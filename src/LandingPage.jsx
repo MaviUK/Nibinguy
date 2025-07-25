@@ -10,7 +10,7 @@ export default function NiBinGuyLandingPage() {
   const handleSend = () => {
     if (!name || !email || !address || bins.some((b) => !b.type)) {
       alert("Please complete all fields before sending.");
-      return;
+      return; 
     }
 
     const binDetails = bins
