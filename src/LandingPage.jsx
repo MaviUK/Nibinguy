@@ -73,9 +73,20 @@ export default function NiBinGuyLandingPage() {
           <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
             Professional wheelie bin cleaning at your home, across <span className="text-green-400">County Down.</span> Sparkling clean & fresh smelling bins without any drama.
           </p>
-          <button onClick={() => setShowForm(true)} className="mt-6 bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
-            Book a Clean
-          </button>
+          <div className="mt-6 flex flex-col sm:flex-row gap-4">
+            <button
+              onClick={() => setShowForm(true)}
+              className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+            >
+              Book a Clean
+            </button>
+            <a
+              href="#customer-portal"
+              className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center"
+            >
+              Customer Portal
+            </a>
+          </div>
         </div>
       </section>
 
