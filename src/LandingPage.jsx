@@ -147,16 +147,6 @@ export default function NiBinGuyLandingPage() {
     + Add Another Bin
   </button>
 )}
-
- {bins.length > 1 && (
-  <button
-    onClick={() => setBins(bins.slice(0, -1))}
-    className="text-sm text-red-600 hover:text-red-800 font-semibold"
-  >
-    − Remove Last Bin
-  </button>
-)}
-
 </div>
             <input type="text" placeholder="Full Address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4" />
             <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
