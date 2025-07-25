@@ -103,7 +103,6 @@ export default function NiBinGuyLandingPage() {
       >
         &times;
       </button>
-            <button onClick={() => setShowForm(false)} className="absolute top-2 right-4 text-gray-500 hover:text-red-500 text-xl">&times;</button>
             <h2 className="text-2xl font-bold text-center">Book a Bin Clean</h2>
             <input type="text" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
             {bins.map((bin, index) => (
