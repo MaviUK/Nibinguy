@@ -12,7 +12,8 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function checkAccessAndFetch() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const user = sessionData?.session?.user
 
       if (!user || user.email !== allowedEmail) {
         navigate("/admin/login")
