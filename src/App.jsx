@@ -6,6 +6,8 @@ import StandeeSpottedClaim from "./standee/StandeeSpottedClaim"
 import StandeePreClaim from "./standee/StandeePreClaim"
 import LatestStandeeRedirect from "./pages/standee/latest"
 import StandeeSpottedClosed from "./standee/StandeeSpottedClosed"
+import AdminLogin from "./admin/AdminLogin"
+import AdminDashboard from "./admin/AdminDashboard"
 
 export default function App() {
   return (
@@ -16,6 +18,11 @@ export default function App() {
       <Route path="/standee/:slug/spotted" element={<StandeeSpottedClaim />} />  {/* I spotted */}
       <Route path="/standee/latest" element={<LatestStandeeRedirect />} />
       <Route path="/standee/:slug/spotted/closed" element={<StandeeSpottedClosed />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin" element={<AdminDashboard />} />
     </Routes>
   )
 }
+
+
+
