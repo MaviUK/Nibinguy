@@ -8,6 +8,7 @@ import LatestStandeeRedirect from "./pages/standee/latest"
 import StandeeSpottedClosed from "./standee/StandeeSpottedClosed"
 import AdminLogin from "./admin/AdminLogin"
 import AdminDashboard from "./admin/AdminDashboard"
+import AuthCallback from "./auth/AuthCallback"
 
 export default function App() {
   return (
