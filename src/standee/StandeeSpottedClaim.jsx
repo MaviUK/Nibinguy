@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { supabase } from "../lib/supabaseClient"
 import { submitClaim } from "../lib/standeeHelpers"
 
 export default function StandeeSpottedClaim() {
   const { slug } = useParams()
+  const navigate = useNavigate()
+
   const [standee, setStandee] = useState(null)
   const [loading, setLoading] = useState(true)
   const [submitted, setSubmitted] = useState(false)
@@ -27,8 +29,10 @@ export default function StandeeSpottedClaim() {
 
       if (error || !data) {
         setClaimError("Standee not found.")
-      } else if ((data.spotted_claims || 0) >= 3) {
-        setClaimError("This standee has reached the claim limit.")
+      } else if ((data.spotted_claims || 0) >= 2) {
+        // ✅ Redirect to the "claims full" page
+        navigate(`/standee/${slug}/spotted/closed`)
+        return
       } else {
         setStandee(data)
       }
@@ -37,7 +41,7 @@ export default function StandeeSpottedClaim() {
     }
 
     fetchStandee()
-  }, [slug])
+  }, [slug, navigate])
 
   const handleDateChange = (value) => {
     setDates([value, getDatePlusDays(value, 14)])
@@ -66,7 +70,9 @@ export default function StandeeSpottedClaim() {
       nominatedAddress: address,
       town: "",
       postcode: "",
-      isSpotted: true
+      isSpotted: true,
+      email,
+      phone
     })
 
     if (response.success) {
