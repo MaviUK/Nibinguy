@@ -10,38 +10,42 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
-  useEffect(() => {
-    async function checkAccessAndFetch() {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+ useEffect(() => {
+  async function checkAccessAndFetch() {
+    // Refresh the session first to make sure it's valid
+    await supabase.auth.refreshSession()
 
-      if (sessionError || !session) {
-        navigate("/admin/login")
-        return
-      }
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
 
-      const userEmail = session.user?.email
-      if (userEmail !== allowedEmail) {
-        navigate("/admin/login")
-        return
-      }
-
-      const { data: locationData } = await supabase
-        .from("standee_location")
-        .select("*")
-        .order("updated_at", { ascending: false })
-
-      const { data: claimData } = await supabase
-        .from("claims")
-        .select("*")
-        .order("claimed_at", { ascending: false })
-
-      setLocations(locationData || [])
-      setClaims(claimData || [])
-      setLoading(false)
+    if (sessionError || !sessionData.session) {
+      navigate("/admin/login")
+      return
     }
 
-    checkAccessAndFetch()
-  }, [navigate])
+    const userEmail = sessionData.session.user.email
+    if (userEmail !== allowedEmail) {
+      navigate("/admin/login")
+      return
+    }
+
+    const { data: locationData } = await supabase
+      .from("standee_location")
+      .select("*")
+      .order("updated_at", { ascending: false })
+
+    const { data: claimData } = await supabase
+      .from("claims")
+      .select("*")
+      .order("claimed_at", { ascending: false })
+
+    setLocations(locationData || [])
+    setClaims(claimData || [])
+    setLoading(false)
+  }
+
+  checkAccessAndFetch()
+}, [navigate])
+
 
   if (loading) return <div className="bg-black text-white p-6">Loading admin dashboard...</div>
 
