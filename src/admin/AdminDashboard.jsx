@@ -11,9 +11,12 @@ export default function AdminDashboard() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    async function checkAccessAndFetch() {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const user = sessionData?.session?.user
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      const user = session?.user
 
       if (!user || user.email !== allowedEmail) {
         navigate("/admin/login")
@@ -35,7 +38,18 @@ export default function AdminDashboard() {
       setLoading(false)
     }
 
-    checkAccessAndFetch()
+    checkSession()
+
+    // ✅ This ensures we re-check if the session updates after load
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user || session.user.email !== allowedEmail) {
+        navigate("/admin/login")
+      }
+    })
+
+    return () => {
+      listener?.subscription.unsubscribe()
+    }
   }, [navigate])
 
   if (loading) return <div className="bg-black text-white p-6">Loading admin dashboard...</div>
@@ -44,7 +58,7 @@ export default function AdminDashboard() {
     <div className="bg-black text-white min-h-screen p-6">
       <h1 className="text-3xl font-bold mb-6">📋 Wheelie Washer Dashboard</h1>
       {locations.map((location) => {
-        const matchedClaims = claims.filter(c => c.slug === location.current_slug)
+        const matchedClaims = claims.filter((c) => c.slug === location.current_slug)
         return (
           <div key={location.id} className="bg-white text-black p-4 mb-6 rounded shadow">
             <h2 className="text-xl font-bold mb-1">{location.current_address}</h2>
