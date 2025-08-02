@@ -20,6 +20,7 @@ export default function App() {
       <Route path="/standee/:slug/spotted/closed" element={<StandeeSpottedClosed />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
     </Routes>
   )
 }
