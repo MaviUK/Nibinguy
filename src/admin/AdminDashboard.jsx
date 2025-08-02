@@ -12,22 +12,23 @@ export default function AdminDashboard() {
 
  useEffect(() => {
   async function checkAccessAndFetch() {
-    // Refresh the session first to make sure it's valid
-    await supabase.auth.refreshSession()
+    // Get updated session
+    const {
+      data: { session },
+      error
+    } = await supabase.auth.getSession()
 
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-
-    if (sessionError || !sessionData.session) {
+    if (error || !session) {
       navigate("/admin/login")
       return
     }
 
-    const userEmail = sessionData.session.user.email
-    if (userEmail !== allowedEmail) {
+    if (session.user.email !== allowedEmail) {
       navigate("/admin/login")
       return
     }
 
+    // Fetch data after auth success
     const { data: locationData } = await supabase
       .from("standee_location")
       .select("*")
@@ -43,8 +44,10 @@ export default function AdminDashboard() {
     setLoading(false)
   }
 
+  // Call immediately
   checkAccessAndFetch()
 }, [navigate])
+
 
 
   if (loading) return <div className="bg-black text-white p-6">Loading admin dashboard...</div>
