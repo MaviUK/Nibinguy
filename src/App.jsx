@@ -5,6 +5,7 @@ import StandeeClaim from "./standee/StandeeClaim"
 import StandeeSpottedClaim from "./standee/StandeeSpottedClaim"
 import StandeePreClaim from "./standee/StandeePreClaim"
 import LatestStandeeRedirect from "./pages/standee/latest"
+import StandeeSpottedClosed from "./standee/StandeeSpottedClosed"
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
       <Route path="/standee/:slug/claim" element={<StandeeClaim />} />   {/* I live here */}
       <Route path="/standee/:slug/spotted" element={<StandeeSpottedClaim />} />  {/* I spotted */}
       <Route path="/standee/latest" element={<LatestStandeeRedirect />} />
+      <Route path="/standee/:slug/spotted/closed" element={<StandeeSpottedClosed />} />
     </Routes>
   )
 }
