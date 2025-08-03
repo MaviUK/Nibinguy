@@ -3,6 +3,10 @@ const { Resend } = require('resend');
 // Initialize Resend with your environment variable
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Utility to decode HTML entities like &lt; and &gt;
+const decodeHtml = (str) =>
+  str.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+
 exports.handler = async (event) => {
   console.log('Resend API Key inside function:', process.env.RESEND_API_KEY);
 
@@ -17,21 +21,21 @@ exports.handler = async (event) => {
     const { name, email, address, phone, bins } = JSON.parse(event.body);
 
     const formattedBins = bins
-      .map((b) => `${b.count} x ${b.type} (${b.frequency})`)
+      .map((b) => `${b.count} x ${b.type} (${decodeHtml(b.frequency)})`)
       .join('<br>');
 
     const response = await resend.emails.send({
       from: 'Ni Bin Guy <noreply@nibing.uy>',
       to: 'aabincleaning@gmail.com',
       subject: '🗑️ New Bin Cleaning Booking',
-     html: `
-  <h2>New Bin Cleaning Booking Received</h2>
-  <p><strong>Name:</strong> ${name}</p>
-  <p><strong>Email:</strong> ${email}</p>
-  <p><strong>Phone:</strong> ${phone}</p>
-  <p><strong>Address:</strong> ${address}</p>
-  <p><strong>Bins:</strong><br>${formattedBins}</p>
-`,
+      html: `
+        <h2>New Bin Cleaning Booking Received</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
+        <p><strong>Address:</strong> ${address}</p>
+        <p><strong>Bins:</strong><br>${formattedBins}</p>
+      `,
     });
 
     console.log('Resend API Response:', response);
