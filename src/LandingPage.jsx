@@ -183,6 +183,34 @@ export default function NiBinGuyLandingPage() {
         </div>
       </section>
 
+{/* The Bins We Clean */}
+<section className="py-16 px-6 bg-[#18181b] text-white text-center">
+  <h2 className="text-3xl font-bold text-green-400 mb-12">The Bins We Clean</h2>
+  <div className="flex flex-wrap justify-center items-end gap-8">
+    <div className="flex flex-col items-center">
+      <img src="/bins/120L.png" alt="120L Bin" className="h-32 mb-2" />
+      <span className="text-sm">120L</span>
+    </div>
+    <div className="flex flex-col items-center">
+      <img src="/bins/240L.png" alt="240L Bin" className="h-36 mb-2" />
+      <span className="text-sm">240L</span>
+    </div>
+    <div className="flex flex-col items-center">
+      <img src="/bins/360L.png" alt="360L Bin" className="h-40 mb-2" />
+      <span className="text-sm">360L</span>
+    </div>
+    <div className="flex flex-col items-center">
+      <img src="/bins/660L.png" alt="660L Bin" className="h-44 mb-2" />
+      <span className="text-sm">660L</span>
+    </div>
+    <div className="flex flex-col items-center">
+      <img src="/bins/1100L.png" alt="1100L Bin" className="h-48 mb-2" />
+      <span className="text-sm">1100L</span>
+    </div>
+  </div>
+</section>
+
+
       {/* Why Clean Your Bin */}
       <section className="py-16 px-6 bg-gradient-to-b from-black via-[#0a0a0a] to-zinc-900 text-white">
         <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
