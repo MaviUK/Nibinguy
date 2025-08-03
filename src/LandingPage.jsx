@@ -9,47 +9,48 @@ export default function NiBinGuyLandingPage() {
   const [phone, setPhone] = useState("");
 
 
-  const handleSend = () => {
-    if (!name || !email || !address || bins.some((b) => !b.type)) {
-      alert("Please complete all fields before sending.");
-      return; 
+ const handleSend = () => {
+  if (!name || !email || !address || !phone || bins.some((b) => !b.type)) {
+    alert("Please complete all fields before sending.");
+    return;
+  }
+
+  const binDetails = bins
+    .filter((b) => b.type !== "")
+    .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
+    .join("%0A");
+
+  const message = `Hi my name is ${name}. I'd like to book a bin clean, please.%0A${binDetails}%0AAddress: ${address}%0AEmail: ${email}%0APhone: ${phone}`;
+  const phoneNumber = "+447555178484";
+  window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
+  setShowForm(false);
+};
+
+const handleEmailSend = async () => {
+  if (!name || !email || !address || !phone || bins.some((b) => !b.type)) {
+    alert("Please complete all fields before sending.");
+    return;
+  }
+
+  try {
+    const res = await fetch("/.netlify/functions/sendBookingEmail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, phone, address, bins }),
+    });
+
+    if (res.ok) {
+      alert("Booking email sent successfully!");
+      setShowForm(false);
+    } else {
+      alert("Failed to send booking email.");
     }
+  } catch (err) {
+    console.error(err);
+    alert("Error sending booking email.");
+  }
+};
 
-    const binDetails = bins
-      .filter((b) => b.type !== "")
-      .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
-      .join("%0A");
-
-    const message = `Hi my name is ${name}. I'd like to book a bin clean, please.%0A${binDetails}%0A${address}%0A${email}`;
-    const phoneNumber = "+447555178484";
-    window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
-    setShowForm(false);
-  };
-
-  const handleEmailSend = async () => {
-    if (!name || !email || !address || bins.some((b) => !b.type)) {
-      alert("Please complete all fields before sending.");
-      return;
-    }
-
-    try {
-      const res = await fetch("/.netlify/functions/sendBookingEmail", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, address, bins }),
-      });
-
-      if (res.ok) {
-        alert("Booking email sent successfully!");
-        setShowForm(false);
-      } else {
-        alert("Failed to send booking email.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error sending booking email.");
-    }
-  };
 
   const handleBinChange = (index, field, value) => {
     const newBins = [...bins];
@@ -155,9 +156,30 @@ export default function NiBinGuyLandingPage() {
   </button>
 )}
 </div>
-            <input type="text" placeholder="Full Address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4" />
-            <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
-            <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
+           <input
+  type="text"
+  placeholder="Full Address"
+  value={address}
+  onChange={(e) => setAddress(e.target.value)}
+  className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
+/>
+
+<input
+  type="tel"
+  placeholder="Contact Number"
+  value={phone}
+  onChange={(e) => setPhone(e.target.value)}
+  className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
+/>
+
+<input
+  type="email"
+  placeholder="Email Address"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
+/>
+
             <button onClick={handleSend} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full">
               Send via WhatsApp
             </button>
