@@ -6,6 +6,8 @@ export default function NiBinGuyLandingPage() {
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
 
   const handleSend = () => {
     if (!name || !email || !address || bins.some((b) => !b.type)) {
@@ -154,6 +156,7 @@ export default function NiBinGuyLandingPage() {
 )}
 </div>
             <input type="text" placeholder="Full Address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4" />
+            <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
             <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
             <button onClick={handleSend} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full">
               Send via WhatsApp
