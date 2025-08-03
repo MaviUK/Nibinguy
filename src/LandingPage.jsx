@@ -187,7 +187,7 @@ export default function NiBinGuyLandingPage() {
 <section className="relative py-16 px-6 bg-[#18181b] text-white text-center">
   <h2 className="text-3xl font-bold text-green-400 mb-12">The Bins We Clean</h2>
 
-  <div className="relative z-20 flex flex-wrap justify-center items-end gap-8">
+  <div className="relative z-20 flex flex-wrap justify-center items-end gap-10 md:gap-16">
     <div className="flex flex-col items-center">
       <img src="/bins/120L.png" alt="120L Bin" className="h-32 mb-2" />
       <span className="text-sm">120L</span>
