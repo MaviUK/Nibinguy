@@ -6,8 +6,6 @@ export default function NiBinGuyLandingPage() {
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-const [showPortal, setShowPortal] = useState(false);
-
 
   const handleSend = () => {
     if (!name || !email || !address || bins.some((b) => !b.type)) {
@@ -17,12 +15,12 @@ const [showPortal, setShowPortal] = useState(false);
 
     const binDetails = bins
       .filter((b) => b.type !== "")
-      .map((b) => ${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency}))
+      .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
       .join("%0A");
 
-    const message = Hi my name is ${name}. I'd like to book a bin clean, please.%0A${binDetails}%0A${address}%0A${email};
+    const message = `Hi my name is ${name}. I'd like to book a bin clean, please.%0A${binDetails}%0A${address}%0A${email}`;
     const phoneNumber = "+447555178484";
-    window.open(https://wa.me/${phoneNumber}?text=${message}, "_blank");
+    window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
     setShowForm(false);
   };
 
@@ -82,12 +80,12 @@ const [showPortal, setShowPortal] = useState(false);
             >
               Book a Clean
             </button>
-          <button
-  onClick={() => setShowPortal(true)}
-  className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
->
-  Customer Portal
-</button>
+            <a
+              href="#customer-portal"
+              className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center"
+            >
+              Customer Portal
+            </a>
           </div>
         </div>
       </section>
