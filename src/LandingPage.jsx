@@ -118,12 +118,12 @@ export default function NiBinGuyLandingPage() {
                   <input type="number" min="1" value={bin.count} onChange={(e) => handleBinChange(index, "count", e.target.value)} className="w-1/3 border border-gray-300 rounded-lg px-4 py-2" />
                 </div>
                 <select value={bin.frequency} onChange={(e) => handleBinChange(index, "frequency", e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2">
-                  <option value="One-off (£12.50)">One-off (£12.50)</option>
                   <option value="4 Weekly (£5)">4 Weekly (£5)</option>
-                  <option value="Commercial 240L 0ne-Off (£12.50)">Commercial 240L 0ne-Off (£12.50)</option>
-                  <option value="Commercial 240L 4 Weekly (£5)">Commercial 240L 4 Weekly (£5)</option>
-                 <option value="Commercial 1100L 0ne-Off (£30)">Commercial 1100L 0ne-Off (£30)</option>
-                  <option value="Commercial 1100L 4 Weekly (£12.50)">Commercial 1100L 4 Weekly (£12.50)</option>
+                  <option value="One-off (£12.50)">One-off (£12.50)</option>
+                  <option value="Commercial <360L 4 Weekly (£5)">Commercial <360L 4 Weekly (£5</option>
+                  <option value="Commercial <360L 0ne-Off (£12.50)">Commercial <360L 0ne-Off (£12.50</option>
+                  <option value="Commercial >660L 4 Weekly (£12.50)">Commercial 1100L 4 Weekly (£12.50)</option>
+                 <option value="Commercial >660L 0ne-Off (£30)">Commercial 1100L 0ne-Off (£30)</option>
                 </select>
               </div>
             ))}
