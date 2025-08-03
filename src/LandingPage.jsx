@@ -236,29 +236,6 @@ export default function NiBinGuyLandingPage() {
           </div>
         </div>
       </section>
-    {/* Pricing Section */}
-<section className="py-16 px-6 bg-black text-white border-t border-zinc-800">
-  <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Our Pricing</h2>
-  <div className="grid md:grid-cols-2 gap-10 max-w-4xl mx-auto">
-    <div className="bg-zinc-800 rounded-2xl p-6 shadow-lg">
-      <h3 className="text-2xl font-bold mb-4 text-green-300">Household Bins</h3>
-      <ul className="text-lg space-y-2">
-        <li><span className="font-semibold">4 Weekly Clean:</span> £5 per bin</li>
-        <li><span className="font-semibold">One-Off Clean:</span> £12.50 per bin</li>
-      </ul>
-    </div>
-    <div className="bg-zinc-800 rounded-2xl p-6 shadow-lg">
-      <h3 className="text-2xl font-bold mb-4 text-green-300">Commercial Bins</h3>
-      <ul className="text-lg space-y-2">
-        <li><span className="font-semibold">240L & under – 4 Weekly:</span> £5</li>
-        <li><span className="font-semibold">240L & under – One-Off:</span> £12.50</li>
-        <li><span className="font-semibold">1100L – 4 Weekly:</span> £15</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-
     </div>
   );
 }
