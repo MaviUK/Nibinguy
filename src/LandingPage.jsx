@@ -6,6 +6,8 @@ export default function NiBinGuyLandingPage() {
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+const [showPortal, setShowPortal] = useState(false);
+
 
   const handleSend = () => {
     if (!name || !email || !address || bins.some((b) => !b.type)) {
