@@ -2,7 +2,9 @@ import React, { useState } from "react";
 
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
-  const [bins, setBins] = useState([{ type: "", count: 1, frequency: "One-off" }]);
+  const [bins, setBins] = useState([
+  { type: "", count: 1, frequency: "4 Weekly (£5)" } // ✅ Match the select value exactly
+]);
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -58,9 +60,10 @@ const handleEmailSend = async () => {
     setBins(newBins);
   };
 
-  const addBinRow = () => {
-    setBins([...bins, { type: "", count: 1, frequency: "One-off" }]);
-  };
+const addBinRow = () => {
+  setBins([...bins, { type: "", count: 1, frequency: "4 Weekly (£5)" }]); // ✅ Match here too
+};
+
 
   return (
     <div className="min-h-screen bg-black text-white font-sans">
