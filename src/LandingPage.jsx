@@ -80,12 +80,12 @@ export default function NiBinGuyLandingPage() {
             >
               Book a Clean
             </button>
-            <a
-              href="#customer-portal"
-              className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center"
-            >
-              Customer Portal
-            </a>
+          <button
+  onClick={() => setShowPortal(true)}
+  className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+>
+  Customer Portal
+</button>
           </div>
         </div>
       </section>
