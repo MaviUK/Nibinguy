@@ -60,32 +60,30 @@ export async function submitClaim({
     return { success: false, error: 'This standee does not exist.' }
   }
 
-  if (!isSpotted) {
-    const updatedHistory = [
-      ...(locationData.history || []),
-      {
-        address: locationData.current_address,
-        slug: locationData.current_slug,
-        timestamp: new Date().toISOString()
-      }
-    ]
-
-    const { error: updateError } = await supabase
-      .from('standee_location')
-      .update({
-        current_address: newFullAddress,
-        current_slug: newSlug,
-        claimed: false,
-        updated_at: new Date().toISOString(),
-        history: updatedHistory
-      })
-      .eq('id', locationData.id)
-
-    if (updateError) {
-      console.error('❌ Standee update error:', updateError)
-      return { success: false, error: updateError.message }
+ if (!isSpotted) {
+  const updatedHistory = [
+    ...(locationData.history || []),
+    {
+      address: locationData.current_address,
+      slug: locationData.current_slug,
+      timestamp: new Date().toISOString()
     }
+  ]
+
+  const { error: updateError } = await supabase
+    .from('standee_location')
+    .update({
+      claimed: true, // ✅ only mark as claimed
+      updated_at: new Date().toISOString(),
+      history: updatedHistory
+    })
+    .eq('id', locationData.id)
+
+  if (updateError) {
+    console.error('❌ Standee update error:', updateError)
+    return { success: false, error: updateError.message }
   }
+}
 
   try {
     if (isSpotted) {
