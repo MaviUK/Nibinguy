@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import AddressAutocomplete from "./components/AddressAutocomplete";
+
 
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
