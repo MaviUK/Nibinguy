@@ -20,7 +20,8 @@ function loadGoogleMaps(apiKey) {
     script.id = "gmaps";
     script.async = true;
     script.defer = true;
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${AIzaSyBL5Zacmc4ZOPjH-2dOtMOqdF1b498mPJ8}&libraries=places`;
+    // Use the variable, not a raw key
+script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
     script.onload = () => resolve(window.google);
     script.onerror = reject;
     document.head.appendChild(script);
