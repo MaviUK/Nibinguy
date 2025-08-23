@@ -150,7 +150,15 @@ export default function NiBinGuyLandingPage() {
   </button>
 )}
 </div>
-            <input type="text" placeholder="Full Address" value={address} onChange={(e) => setAddress(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4" />
+            <AddressAutocomplete
+  value={address}
+  onChange={setAddress}
+  onPlace={(place) => {
+    // optional: extract parts like postcode/town if you track them
+    // const comps = place.address_components || [];
+  }}
+  className="w-full rounded-md border px-3 py-2"
+/>
             <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
             <button onClick={handleSend} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full">
               Send via WhatsApp
