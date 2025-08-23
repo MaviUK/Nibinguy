@@ -1,80 +1,94 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
-/* --- Google Maps loader (on-demand) --- */
-function loadGoogleMaps(apiKey) {
-  return new Promise((resolve, reject) => {
-    // Already loaded?
-    if (window.google?.maps?.places) {
-      resolve(window.google);
-      return;
-    }
-    // Script exists but not yet loaded
-    const existing = document.getElementById("gmaps");
-    if (existing) {
-      existing.onload = () => resolve(window.google);
-      existing.onerror = reject;
-      return;
-    }
-    // Inject script
-    const script = document.createElement("script");
-    script.id = "gmaps";
-    script.async = true;
-    script.defer = true;
-    // Use the variable, not a raw key
-script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.onload = () => resolve(window.google);
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
+const GOOGLE_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY; // <- set this in Netlify & .env
 
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
-  const [bins, setBins] = useState([
-    { type: "", count: 1, frequency: "4 Weekly (£5)" }, // default frequency
-  ]);
+  const [bins, setBins] = useState([{ type: "", count: 1, frequency: "4 Weekly (£5)" }]);
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
-  // 👇 Autocomplete ref + API key
-  const addressRef = useRef(null);
-  const GOOGLE_MAPS_API_KEY = "YOUR_API_KEY_HERE";
+  // --- Places (New) Autocomplete state ---
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggest, setLoadingSuggest] = useState(false);
+  const [placeId, setPlaceId] = useState("");
+  const debounceRef = useRef(null);
 
+  // Debounced autocomplete
   useEffect(() => {
-    let autocomplete;
-    if (!showForm) return;
+    if (!showForm) return;        // only run when modal open
+    if (!query || query.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    if (!GOOGLE_KEY) {
+      console.warn("Missing VITE_GOOGLE_MAPS_API_KEY");
+      return;
+    }
 
-    let cancelled = false;
-    (async () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
       try {
-        const g = await loadGoogleMaps(GOOGLE_MAPS_API_KEY);
-        if (cancelled || !addressRef.current) return;
-
-        autocomplete = new g.maps.places.Autocomplete(addressRef.current, {
-          fields: ["formatted_address", "address_components", "geometry", "place_id"],
-          componentRestrictions: { country: ["gb"] }, // 🇬🇧 limit to UK; add "ie" if needed
-          types: ["address"],
+        setLoadingSuggest(true);
+        const resp = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": GOOGLE_KEY,
+            // Only ask for what we need
+            "X-Goog-FieldMask": "suggestions.placePrediction.placeId,suggestions.placePrediction.text",
+          },
+          body: JSON.stringify({
+            input: query,
+            languageCode: "en",
+            regionCode: "GB",
+            // Optional: locationBias, origin, sessionToken
+          }),
         });
-
-        autocomplete.addListener("place_changed", () => {
-          const place = autocomplete.getPlace();
-          if (!place?.formatted_address) return;
-          setAddress(place.formatted_address);
-          // If you want: store place.place_id or postcode here for your backend/email
-        });
+        const data = await resp.json();
+        const items =
+          data?.suggestions?.map((s) => ({
+            id: s.placePrediction?.placeId,
+            text: s.placePrediction?.text?.text,
+          })) ?? [];
+        setSuggestions(items);
       } catch (e) {
-        console.error("Failed to load Google Maps:", e);
+        console.error("Autocomplete error:", e);
+        setSuggestions([]);
+      } finally {
+        setLoadingSuggest(false);
       }
-    })();
+    }, 250); // debounce
 
-    return () => {
-      // no explicit destroy; listeners are GC’d when input unmounts
-      // flag any async continuation to stop
-      cancelled = true;
-    };
-  }, [showForm, GOOGLE_MAPS_API_KEY]);
+    return () => debounceRef.current && clearTimeout(debounceRef.current);
+  }, [query, showForm]);
+
+  // When a suggestion is clicked, fetch place details for formatted address (and lat/lng if you want)
+  const selectSuggestion = async (id, text) => {
+    try {
+      setSuggestions([]);
+      setPlaceId(id);
+      setQuery(text);
+      // Fetch minimal details
+      const resp = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(id)}`, {
+        headers: {
+          "X-Goog-Api-Key": GOOGLE_KEY,
+          "X-Goog-FieldMask": "id,formattedAddress,location",
+        },
+      });
+      const data = await resp.json();
+      // Use Google's formatted address as your final address
+      setAddress(data?.formattedAddress || text);
+      // If you also want lat/lng: data?.location?.latitude / .longitude
+    } catch (e) {
+      console.error("Place details error:", e);
+      // fallback to raw text
+      setAddress(text);
+    }
+  };
 
   const handleSend = () => {
     if (!name || !email || !address || !phone || bins.some((b) => !b.type)) {
@@ -87,9 +101,12 @@ export default function NiBinGuyLandingPage() {
       .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
       .join("%0A");
 
-    const message = `Hi my name is ${name}. I'd like to book a bin clean, please.%0A${binDetails}%0AAddress: ${encodeURIComponent(
-      address
-    )}%0AEmail: ${encodeURIComponent(email)}%0APhone: ${encodeURIComponent(phone)}`;
+    const message =
+      `Hi my name is ${name}. I'd like to book a bin clean, please.` +
+      `%0A${binDetails}` +
+      `%0AAddress: ${encodeURIComponent(address)}` +
+      `%0AEmail: ${encodeURIComponent(email)}` +
+      `%0APhone: ${encodeURIComponent(phone)}`;
 
     const phoneNumber = "+447555178484";
     window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank");
@@ -106,7 +123,8 @@ export default function NiBinGuyLandingPage() {
       const res = await fetch("/.netlify/functions/sendBookingEmail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, address, bins }),
+        // You can also include placeId here if helpful for routing/deduping
+        body: JSON.stringify({ name, email, phone, address, bins, placeId }),
       });
 
       if (res.ok) {
@@ -138,18 +156,13 @@ export default function NiBinGuyLandingPage() {
         <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0"></div>
         <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-b from-transparent via-[#121212] to-[#18181b] z-10 pointer-events-none" />
         <div className="relative z-20 flex flex-col items-center gap-4">
-          <img
-            src="logo.png"
-            alt="Ni Bin Guy Logo"
-            className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg"
-          />
+          <img src="logo.png" alt="Ni Bin Guy Logo" className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg" />
           <h1 className="text-4xl md:text-6xl font-bold">
             Bin Cleaning, <span className="text-green-400">Done Right</span>
           </h1>
           <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
-            Professional wheelie bin cleaning at your home, across{" "}
-            <span className="text-green-400">County Down.</span> Sparkling clean
-            & fresh smelling bins without any drama.
+            Professional wheelie bin cleaning at your home, across <span className="text-green-400">County Down.</span>{" "}
+            Sparkling clean & fresh smelling bins without any drama.
           </p>
           <div className="mt-6 flex flex-col sm:flex-row gap-4">
             <button
@@ -170,18 +183,12 @@ export default function NiBinGuyLandingPage() {
 
       {/* WhatsApp & Email Booking Modal */}
       {showForm && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50"
-          onClick={() => setShowForm(false)}
-        >
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50" onClick={() => setShowForm(false)}>
           <div
             className="bg-white text-black rounded-xl shadow-xl w-11/12 max-w-md max-h-[90vh] overflow-y-auto p-6 space-y-4 relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              onClick={() => setShowForm(false)}
-              className="sticky top-2 right-4 text-gray-500 hover:text-red-500 text-xl float-right z-10"
-            >
+            <button onClick={() => setShowForm(false)} className="sticky top-2 right-4 text-gray-500 hover:text-red-500 text-xl float-right z-10">
               &times;
             </button>
 
@@ -225,18 +232,10 @@ export default function NiBinGuyLandingPage() {
                 >
                   <option value="4 Weekly (£5)">4 Weekly (£5)</option>
                   <option value="One-off (£12.50)">One-off (£12.50)</option>
-                  <option value="Commercial <360L 4 Weekly (£5)">
-                    Commercial &lt;360L 4 Weekly (£5)
-                  </option>
-                  <option value="Commercial <360L One-Off (£12.50)">
-                    Commercial &lt;360L One-Off (£12.50)
-                  </option>
-                  <option value="Commercial >660L 4 Weekly (£12.50)">
-                    Commercial &gt;660L 4 Weekly (£12.50)
-                  </option>
-                  <option value="Commercial >660L One-Off (£30)">
-                    Commercial &gt;660L One-Off (£30)
-                  </option>
+                  <option value="Commercial <360L 4 Weekly (£5)">Commercial &lt;360L 4 Weekly (£5)</option>
+                  <option value="Commercial <360L One-Off (£12.50)">Commercial &lt;360L One-Off (£12.50)</option>
+                  <option value="Commercial >660L 4 Weekly (£12.50)">Commercial &gt;660L 4 Weekly (£12.50)</option>
+                  <option value="Commercial >660L One-Off (£30)">Commercial &gt;660L One-Off (£30)</option>
                 </select>
               </div>
             ))}
@@ -244,38 +243,49 @@ export default function NiBinGuyLandingPage() {
             <div className="flex items-center justify-between">
               {bins.length > 1 ? (
                 <div className="flex items-center justify-between w-full">
-                  <button
-                    onClick={addBinRow}
-                    className="text-sm text-green-600 hover:text-green-800 font-semibold"
-                  >
+                  <button onClick={addBinRow} className="text-sm text-green-600 hover:text-green-800 font-semibold">
                     + Add Another Bin
                   </button>
-                  <button
-                    onClick={() => setBins(bins.slice(0, -1))}
-                    className="text-sm text-red-600 hover:text-red-800 font-semibold"
-                  >
+                  <button onClick={() => setBins(bins.slice(0, -1))} className="text-sm text-red-600 hover:text-red-800 font-semibold">
                     − Remove Last Bin
                   </button>
                 </div>
               ) : (
-                <button
-                  onClick={addBinRow}
-                  className="text-sm text-green-600 hover:text-green-800 font-semibold"
-                >
+                <button onClick={addBinRow} className="text-sm text-green-600 hover:text-green-800 font-semibold">
                   + Add Another Bin
                 </button>
               )}
             </div>
 
-            {/* 🔎 Google Places-powered address */}
-            <input
-              ref={addressRef}
-              type="text"
-              placeholder="Full Address (start typing…)"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
-            />
+            {/* Places API (New) Autocomplete input + dropdown */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Full Address (start typing…)"
+                value={address || query}
+                onChange={(e) => {
+                  setAddress(""); // clear committed address when typing
+                  setQuery(e.target.value);
+                }}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
+                autoComplete="off"
+              />
+              {showForm && (loadingSuggest || suggestions.length > 0) && (
+                <div className="absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow z-50 max-h-60 overflow-auto">
+                  {loadingSuggest && <div className="px-4 py-2 text-sm text-gray-500">Searching…</div>}
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => selectSuggestion(s.id, s.text)}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm"
+                    >
+                      {s.text}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <input
               type="tel"
@@ -293,16 +303,10 @@ export default function NiBinGuyLandingPage() {
               className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
             />
 
-            <button
-              onClick={handleSend}
-              className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full"
-            >
+            <button onClick={handleSend} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full">
               Send via WhatsApp
             </button>
-            <button
-              onClick={handleEmailSend}
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full"
-            >
+            <button onClick={handleEmailSend} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full">
               Send via Email
             </button>
           </div>
@@ -331,7 +335,6 @@ export default function NiBinGuyLandingPage() {
       {/* The Bins We Clean */}
       <section className="relative py-16 px-6 bg-[#18181b] text-white text-center">
         <h2 className="text-3xl font-bold text-green-400 mb-12">The Bins We Clean</h2>
-
         <div className="relative z-20 flex flex-wrap justify-center items-end gap-12 md:gap-20">
           <div className="flex flex-col items-center">
             <img src="/bins/120L.png" alt="120L Bin" className="h-32 mb-2" />
@@ -354,55 +357,39 @@ export default function NiBinGuyLandingPage() {
             <span className="text-sm">1100L</span>
           </div>
         </div>
-
-        {/* Gradient overlay stays below */}
         <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-b from-[#18181b] to-black pointer-events-none z-10" />
       </section>
 
       {/* Why Clean Your Bin */}
       <section className="py-16 px-6 bg-gradient-to-b from-black via-[#0a0a0a] to-zinc-900 text-white">
-        <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">
-          Why Clean Your Bin?
-        </h2>
+        <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
         <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
           <div className="flex items-start gap-4">
             <img src="/odour.png" alt="Odours icon" className="w-12 h-12 mt-1" />
             <div>
               <h3 className="text-xl font-semibold mb-1">Prevent Nasty Odours</h3>
-              <p className="text-gray-300">
-                Bins can start to smell unpleasant fast. Regular cleaning
-                eliminates those foul smells at the source.
-              </p>
+              <p className="text-gray-300">Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source.</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
             <img src="/bacteria.png" alt="Bacteria icon" className="w-12 h-12 mt-1" />
             <div>
               <h3 className="text-xl font-semibold mb-1">Stop Bacteria Buildup</h3>
-              <p className="text-gray-300">
-                Leftover waste can attract harmful bacteria. Professional bin
-                cleaning keeps your environment safer and more hygienic.
-              </p>
+              <p className="text-gray-300">Leftover waste can attract harmful bacteria. Professional bin cleaning keeps your environment safer and more hygienic.</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
             <img src="/pests.png" alt="Pests icon" className="w-12 h-12 mt-1" />
             <div>
               <h3 className="text-xl font-semibold mb-1">Deter Insects & Vermin</h3>
-              <p className="text-gray-300">
-                Flies, maggots, and rodents are drawn to dirty bins. Keep them
-                away by keeping your bin spotless.
-              </p>
+              <p className="text-gray-300">Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless.</p>
             </div>
           </div>
           <div className="flex items-start gap-4">
             <img src="/family.png" alt="Family icon" className="w-12 h-12 mt-1" />
             <div>
               <h3 className="text-xl font-semibold mb-1">Protect Your Family</h3>
-              <p className="text-gray-300">
-                A clean bin reduces exposure to germs and pathogens, helping keep
-                your household healthier.
-              </p>
+              <p className="text-gray-300">A clean bin reduces exposure to germs and pathogens, helping keep your household healthier.</p>
             </div>
           </div>
         </div>
