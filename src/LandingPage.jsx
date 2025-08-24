@@ -1,9 +1,29 @@
-import React, { useState } from "react";
-import { LoadScript, Autocomplete } from "@react-google-maps/api";
+import React, { useState, useEffect, useRef } from "react";
 
+// Inline loader so you don't need extra files or libraries
+function loadGooglePlaces(apiKey) {
+  return new Promise((resolve, reject) => {
+    if (window.google?.maps?.places) return resolve(window.google);
+
+    const existing = document.querySelector('script[data-gmaps]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(window.google));
+      existing.addEventListener('error', reject);
+      return;
+    }
+
+    const s = document.createElement('script');
+    s.dataset.gmaps = '1';
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    s.async = true;
+    s.defer = true;
+    s.onload = () => resolve(window.google);
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
 
 export default function NiBinGuyLandingPage() {
-const [autocomplete, setAutocomplete] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [bins, setBins] = useState([
     {
@@ -17,6 +37,40 @@ const [autocomplete, setAutocomplete] = useState(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+
+  // Ref for the address input (so we can attach Places Autocomplete)
+  const addressRef = useRef(null);
+
+  // Attach Google Places Autocomplete when the modal opens
+  useEffect(() => {
+    if (!showForm) return; // wait until modal renders
+    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    if (!key) return; // input will still work without autocomplete
+
+    let ac; // Autocomplete instance
+    let cleanup = () => {};
+
+    loadGooglePlaces(key)
+      .then((google) => {
+        if (!addressRef.current) return;
+        ac = new google.maps.places.Autocomplete(addressRef.current, {
+          componentRestrictions: { country: ["gb"] },
+          fields: ["formatted_address", "address_components", "name", "geometry"],
+        });
+        const listener = ac.addListener("place_changed", () => {
+          const place = ac.getPlace();
+          const formatted = place.formatted_address || place.name || "";
+          setAddress(formatted);
+        });
+        cleanup = () => listener.remove();
+      })
+      .catch((e) => {
+        // Silently fail: user still has a normal text input
+        console.warn("Places failed to load:", e);
+      });
+
+    return () => cleanup();
+  }, [showForm]);
 
   const handleSend = () => {
     if (!name || !email || !address || !phone || bins.some((b) => !b.type)) {
@@ -209,32 +263,16 @@ const [autocomplete, setAutocomplete] = useState(null);
               )}
             </div>
 
-           <LoadScript
-  googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
-  libraries={["places"]}
-  loadingElement={<></>}   // 👈 prevents “Loading…” flash
->
-  <Autocomplete
-    onLoad={(ac) => setAutocomplete(ac)}
-    onPlaceChanged={() => {
-      if (!autocomplete) return;
-      const place = autocomplete.getPlace();
-      setAddress(place.formatted_address || "");
-    }}
-  >
-    {/* This input will always render, even if Google fails */}
-    <input
-      type="text"
-      placeholder="Full Address"
-      value={address}
-      onChange={(e) => setAddress(e.target.value)}
-      className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
-      autoComplete="street-address"
-    />
-  </Autocomplete>
-</LoadScript>
-
-
+            {/* Address input: always visible; upgrades to Places when ready */}
+            <input
+              ref={addressRef}
+              type="text"
+              placeholder="Full Address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
+              autoComplete="street-address"
+            />
 
             <input
               type="tel"
