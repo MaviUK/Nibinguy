@@ -29,7 +29,6 @@ exports.handler = async (event) => {
         <p><strong>Name:</strong> ${name}</p>
         <p><strong>Address:</strong> ${address}</p>
         <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
         <p><strong>Bins:</strong><br>${formattedBins}</p>
       `,
     });
