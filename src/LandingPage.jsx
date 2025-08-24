@@ -264,15 +264,17 @@ export default function NiBinGuyLandingPage() {
             </div>
 
             {/* Address input: always visible; upgrades to Places when ready */}
-            <input
-              ref={addressRef}
-              type="text"
-              placeholder="Full Address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
-              autoComplete="street-address"
-            />
+<input
+  ref={addressRef}
+  type="text"
+  placeholder="Full Address"
+  value={address}
+  onChange={(e) => setAddress(e.target.value)}
+  className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
+  autoComplete="off"
+  inputMode="text"
+/>
+
 
             <input
               type="tel"
