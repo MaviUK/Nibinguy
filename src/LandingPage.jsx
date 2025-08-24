@@ -26,17 +26,17 @@ function loadGooglePlaces(apiKey) {
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
   const [bins, setBins] = useState([
-    {
-      type: "",
-      count: 1,
-      frequency: "4 Weekly (£5)",
-    }, // ✅ Match the select value exactly
+    { type: "", count: 1, frequency: "4 Weekly (£5)" },
   ]);
 
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+
+  // ✅ Enforce Google selection
+  const [placeId, setPlaceId] = useState(null);
+  const selectedPlaceRef = useRef(null);
 
   // Ref for the address input (so we can attach Places Autocomplete)
   const addressRef = useRef(null);
@@ -55,10 +55,14 @@ export default function NiBinGuyLandingPage() {
         if (!addressRef.current) return;
         ac = new google.maps.places.Autocomplete(addressRef.current, {
           componentRestrictions: { country: ["gb"] },
-          fields: ["formatted_address", "address_components", "name", "geometry"],
+          // include place_id so we can validate selection
+          fields: ["place_id", "formatted_address", "address_components", "name", "geometry"],
+          types: ["address"],
         });
         const listener = ac.addListener("place_changed", () => {
           const place = ac.getPlace();
+          selectedPlaceRef.current = place;
+          setPlaceId(place.place_id || null);
           const formatted = place.formatted_address || place.name || "";
           setAddress(formatted);
         });
@@ -72,11 +76,21 @@ export default function NiBinGuyLandingPage() {
     return () => cleanup();
   }, [showForm]);
 
+  // Helper that blocks submission unless a Google Place is chosen
+  const requireGoogleAddress = () => {
+    if (!placeId) {
+      alert("Please choose an address from the Google suggestions.");
+      return false;
+    }
+    return true;
+  };
+
   const handleSend = () => {
     if (!name || !email || !address || !phone || bins.some((b) => !b.type)) {
       alert("Please complete all fields before sending.");
       return;
     }
+    if (!requireGoogleAddress()) return;
 
     const binDetails = bins
       .filter((b) => b.type !== "")
@@ -96,12 +110,18 @@ export default function NiBinGuyLandingPage() {
       alert("Please complete all fields before sending.");
       return;
     }
+    if (!requireGoogleAddress()) return;
+
+    // Optional: include placeId/lat/lng; server will ignore extras if unused
+    const loc = selectedPlaceRef.current?.geometry?.location;
+    const lat = loc ? loc.lat() : null;
+    const lng = loc ? loc.lng() : null;
 
     try {
       const res = await fetch("/.netlify/functions/sendBookingEmail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, address, bins }),
+        body: JSON.stringify({ name, email, phone, address, bins, placeId, lat, lng }),
       });
 
       if (res.ok) {
@@ -123,10 +143,7 @@ export default function NiBinGuyLandingPage() {
   };
 
   const addBinRow = () => {
-    setBins([
-      ...bins,
-      { type: "", count: 1, frequency: "4 Weekly (£5)" }, // ✅ Match here too
-    ]);
+    setBins([...bins, { type: "", count: 1, frequency: "4 Weekly (£5)" }]);
   };
 
   return (
@@ -264,17 +281,21 @@ export default function NiBinGuyLandingPage() {
             </div>
 
             {/* Address input: always visible; upgrades to Places when ready */}
-<input
-  ref={addressRef}
-  type="text"
-  placeholder="Full Address"
-  value={address}
-  onChange={(e) => setAddress(e.target.value)}
-  className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
-  autoComplete="off"
-  inputMode="text"
-/>
-
+            <input
+              ref={addressRef}
+              type="text"
+              placeholder="Full Address"
+              value={address}
+              onChange={(e) => {
+                setAddress(e.target.value);
+                // ❗️typing invalidates the Google selection
+                setPlaceId(null);
+                selectedPlaceRef.current = null;
+              }}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
+              autoComplete="off"
+              inputMode="text"
+            />
 
             <input
               type="tel"
@@ -353,7 +374,6 @@ export default function NiBinGuyLandingPage() {
             <span className="text-sm">1100L</span>
           </div>
         </div>
-        {/* Gradient overlay stays below */}
         <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-b from-[#18181b] to-black pointer-events-none z-10" />
       </section>
 
