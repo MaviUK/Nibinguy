@@ -79,7 +79,7 @@ export default function NiBinGuyLandingPage() {
   // Helper that blocks submission unless a Google Place is chosen
   const requireGoogleAddress = () => {
     if (!placeId) {
-      alert("Please choose an address from the Google suggestions.");
+      alert("Please provide your full address through google maps suggestions.");
       return false;
     }
     return true;
