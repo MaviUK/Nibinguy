@@ -1,6 +1,9 @@
 import React, { useState } from "react";
+import { LoadScript, Autocomplete } from "@react-google-maps/api";
+
 
 export default function NiBinGuyLandingPage() {
+const [autocomplete, setAutocomplete] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [bins, setBins] = useState([
     {
@@ -206,13 +209,49 @@ export default function NiBinGuyLandingPage() {
               )}
             </div>
 
-            <input
-              type="text"
-              placeholder="Full Address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
-            />
+            <LoadScript
+  googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
+  libraries={["places"]}
+>
+  <Autocomplete
+    onLoad={(ac) => setAutocomplete(ac)}
+    onPlaceChanged={() => {
+      if (!autocomplete) return;
+      const place = autocomplete.getPlace();
+
+      // Use the formatted address as your single-line address field
+      const formatted = place.formatted_address || place.name || "";
+      setAddress(formatted);
+
+      // OPTIONAL: extract details (postcode, town, etc.)
+      // const comps = Object.fromEntries(
+      //   (place.address_components || []).flatMap(c =>
+      //     c.types.map(t => [t, c.long_name])
+      //   )
+      // );
+      // Example:
+      // const postcode = comps["postal_code"];
+      // const town = comps["postal_town"] || comps["locality"];
+    }}
+    options={{
+      // Make results UK-centric (helps a lot)
+      componentRestrictions: { country: ["gb"] },
+      // Keep payload small (cheaper & faster)
+      fields: ["formatted_address", "address_components", "name", "geometry"],
+      // Optionally bias to NI
+      // bounds: { north: 55.3, south: 53.9, west: -8.2, east: -5.3 },
+    }}
+  >
+    <input
+      type="text"
+      placeholder="Full Address"
+      value={address}
+      onChange={(e) => setAddress(e.target.value)}
+      className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
+      autoComplete="street-address"
+    />
+  </Autocomplete>
+</LoadScript>
 
             <input
               type="tel"
