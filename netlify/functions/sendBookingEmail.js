@@ -27,8 +27,9 @@ exports.handler = async (event) => {
       html: `
         <h2>New Bin Cleaning Booking Received</h2>
         <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
         <p><strong>Address:</strong> ${address}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Phone:</strong> ${phone}</p>
         <p><strong>Bins:</strong><br>${formattedBins}</p>
       `,
     });
