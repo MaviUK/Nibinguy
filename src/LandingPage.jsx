@@ -212,7 +212,7 @@ const [autocomplete, setAutocomplete] = useState(null);
            <LoadScript
   googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY}
   libraries={["places"]}
-  loadingElement={<></>}   // 👈 suppresses the “Loading...” placeholder
+  loadingElement={<></>}   // 👈 prevents “Loading…” flash
 >
   <Autocomplete
     onLoad={(ac) => setAutocomplete(ac)}
@@ -222,15 +222,18 @@ const [autocomplete, setAutocomplete] = useState(null);
       setAddress(place.formatted_address || "");
     }}
   >
+    {/* This input will always render, even if Google fails */}
     <input
       type="text"
       placeholder="Full Address"
       value={address}
       onChange={(e) => setAddress(e.target.value)}
       className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
+      autoComplete="street-address"
     />
   </Autocomplete>
 </LoadScript>
+
 
 
             <input
