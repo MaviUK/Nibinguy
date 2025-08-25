@@ -25,6 +25,10 @@ function loadGooglePlaces(apiKey) {
 
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
+
+  // NEW: contact modal state
+  const [showContactForm, setShowContactForm] = useState(false);
+
   const [bins, setBins] = useState([
     { type: "", count: 1, frequency: "4 Weekly (£5)" },
   ]);
@@ -41,7 +45,11 @@ export default function NiBinGuyLandingPage() {
   // Ref for the address input (so we can attach Places Autocomplete)
   const addressRef = useRef(null);
 
-  // Attach Google Places Autocomplete when the modal opens
+  // constants
+  const phoneNumber = "+447555178484";
+  const phoneDisplay = "07555 178484";
+
+  // Attach Google Places Autocomplete when the booking modal opens
   useEffect(() => {
     if (!showForm) return; // wait until modal renders
     const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -99,7 +107,6 @@ export default function NiBinGuyLandingPage() {
 
     const message = `Hi my name is ${name}. I'd like to book a bin clean, please.%0A${binDetails}%0AAddress: ${address}%0AEmail: ${email}%0APhone: ${phone}`;
 
-    const phoneNumber = "+447555178484";
     const url = `https://wa.me/${phoneNumber}?text=${message}`;
     window.open(url, "_blank");
     setShowForm(false);
@@ -146,6 +153,68 @@ export default function NiBinGuyLandingPage() {
     setBins([...bins, { type: "", count: 1, frequency: "4 Weekly (£5)" }]);
   };
 
+  // ---------- CONTACT FORM: state + handlers ----------
+  const [cName, setCName] = useState("");
+  const [cEmail, setCEmail] = useState("");
+  const [cPhone, setCPhone] = useState("");
+  const [cMessage, setCMessage] = useState("");
+
+  const handleContactWhatsApp = () => {
+    if (!cName || !cEmail || !cPhone || !cMessage) {
+      alert("Please complete all fields before sending.");
+      return;
+    }
+    const msg =
+      `Hi, I'm ${encodeURIComponent(cName)}.%0A` +
+      `Phone: ${encodeURIComponent(cPhone)}%0A` +
+      `Email: ${encodeURIComponent(cEmail)}%0A%0A` +
+      `Message:%0A${encodeURIComponent(cMessage)}`;
+
+    window.open(`https://wa.me/${phoneNumber}?text=${msg}`, "_blank");
+    setShowContactForm(false);
+    setCName(""); setCEmail(""); setCPhone(""); setCMessage("");
+  };
+
+  const handleContactEmail = async () => {
+    if (!cName || !cEmail || !cPhone || !cMessage) {
+      alert("Please complete all fields before sending.");
+      return;
+    }
+    try {
+      const res = await fetch("/.netlify/functions/sendContactEmail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: cName, email: cEmail, phone: cPhone, message: cMessage }),
+      });
+      if (res.ok) {
+        alert("Your message has been sent!");
+        setShowContactForm(false);
+        setCName(""); setCEmail(""); setCPhone(""); setCMessage("");
+      } else {
+        alert("Failed to send your message.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error sending your message.");
+    }
+  };
+
+  const handleCallClick = async () => {
+    const isMobile = /Android|iPhone|iPad|iPod|Windows Phone|Mobi/i.test(navigator.userAgent);
+    if (isMobile) {
+      // opens dialer
+      window.location.href = `tel:${phoneNumber}`;
+    } else {
+      try {
+        await navigator.clipboard.writeText(phoneDisplay);
+        alert(`Phone: ${phoneDisplay}\n(The number has been copied to your clipboard.)`);
+      } catch {
+        alert(`Phone: ${phoneDisplay}`);
+      }
+    }
+  };
+  // ----------------------------------------------------
+
   return (
     <div className="min-h-screen bg-black text-white font-sans">
       {/* Hero Section */}
@@ -166,7 +235,7 @@ export default function NiBinGuyLandingPage() {
 
           <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
             Professional wheelie bin cleaning at your home, across
-            <span className="text-green-400"> County Down.</span> Sparkling clean &
+            <span className="text-green-400"> County Down.</span> Sparkling clean &amp;
             fresh smelling bins without any drama.
           </p>
 
@@ -176,6 +245,14 @@ export default function NiBinGuyLandingPage() {
               className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
             >
               Book a Clean
+            </button>
+
+            {/* NEW: Contact Us button (in between) */}
+            <button
+              onClick={() => setShowContactForm(true)}
+              className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+            >
+              Contact Us
             </button>
 
             <a
@@ -330,6 +407,93 @@ export default function NiBinGuyLandingPage() {
         </div>
       )}
 
+      {/* NEW: Contact Us Modal */}
+      {showContactForm && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50"
+          onClick={() => setShowContactForm(false)}
+        >
+          <div
+            className="bg-white text-black rounded-xl shadow-xl w-11/12 max-w-md max-h-[90vh] overflow-y-auto p-6 space-y-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowContactForm(false)}
+              className="sticky top-2 right-4 text-gray-500 hover:text-red-500 text-xl float-right z-10"
+            >
+              &times;
+            </button>
+
+            <div className="flex items-center justify-center gap-3">
+              <h2 className="text-2xl font-bold text-center">Contact Us</h2>
+
+              {/* Phone icon button */}
+              <button
+                onClick={handleCallClick}
+                className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none"
+                aria-label="Call us"
+                title="Call us"
+              >
+                {/* inline SVG phone icon */}
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.684l1.1 3.3a1 1 0 01-.27 1.06l-1.6 1.6a16 16 0 007.18 7.18l1.6-1.6a1 1 0 011.06-.27l3.3 1.1a1 1 0 01.684.95V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+              </button>
+            </div>
+
+            <input
+              type="text"
+              placeholder="Your Name"
+              value={cName}
+              onChange={(e) => setCName(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2"
+            />
+
+            <input
+              type="tel"
+              placeholder="Contact Number"
+              value={cPhone}
+              onChange={(e) => setCPhone(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2"
+            />
+
+            <input
+              type="email"
+              placeholder="Email Address"
+              value={cEmail}
+              onChange={(e) => setCEmail(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2"
+            />
+
+            <textarea
+              placeholder="Your Message"
+              value={cMessage}
+              onChange={(e) => setCMessage(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 h-28 resize-y"
+            />
+
+            <button
+              onClick={handleContactWhatsApp}
+              className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full"
+            >
+              Send via WhatsApp
+            </button>
+
+            <button
+              onClick={handleContactEmail}
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full"
+            >
+              Send via Email
+            </button>
+
+            {/* Small helper text showing the number on desktop */}
+            <p className="text-center text-sm text-gray-600 mt-2">
+              Prefer to call? Tap the phone icon. On desktop, we’ll show {phoneDisplay}.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* What We Do */}
       <section className="relative py-16 px-6 bg-[#18181b]">
         <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
@@ -404,7 +568,7 @@ export default function NiBinGuyLandingPage() {
           <div className="flex items-start gap-4">
             <img src="/pests.png" alt="Pests icon" className="w-12 h-12 mt-1" />
             <div>
-              <h3 className="text-xl font-semibold mb-1">Deter Insects & Vermin</h3>
+              <h3 className="text-xl font-semibold mb-1">Deter Insects &amp; Vermin</h3>
               <p className="text-gray-300">
                 Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless.
               </p>
@@ -428,7 +592,7 @@ export default function NiBinGuyLandingPage() {
         <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
         <div className="grid md:grid-cols-2 gap-10 max-w-5xl mx-auto">
           <div>
-            <h3 className="text-xl font-semibold mb-2">Local & Trusted</h3>
+            <h3 className="text-xl font-semibold mb-2">Local &amp; Trusted</h3>
             <p>We’re based in Bangor and proud to serve County Down residents with care.</p>
           </div>
           <div>
