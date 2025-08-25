@@ -488,7 +488,7 @@ export default function NiBinGuyLandingPage() {
 
             {/* Small helper text showing the number on desktop */}
             <p className="text-center text-sm text-gray-600 mt-2">
-              Prefer to call? Tap the phone icon. On desktop, we’ll show {phoneDisplay}.
+              Prefer to call? Tap the phone icon.
             </p>
           </div>
         </div>
