@@ -38,11 +38,9 @@ export default function NiBinGuyLandingPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
-  // ✅ Enforce Google selection
+  // ✅ Keep Google Places, but don't require selection
   const [placeId, setPlaceId] = useState(null);
   const selectedPlaceRef = useRef(null);
-
-  // Ref for the address input (so we can attach Places Autocomplete)
   const addressRef = useRef(null);
 
   // constants
@@ -63,7 +61,6 @@ export default function NiBinGuyLandingPage() {
         if (!addressRef.current) return;
         ac = new google.maps.places.Autocomplete(addressRef.current, {
           componentRestrictions: { country: ["gb"] },
-          // include place_id so we can validate selection
           fields: ["place_id", "formatted_address", "address_components", "name", "geometry"],
           types: ["address"],
         });
@@ -77,35 +74,31 @@ export default function NiBinGuyLandingPage() {
         cleanup = () => listener.remove();
       })
       .catch((e) => {
-        // Silently fail: user still has a normal text input
         console.warn("Places failed to load:", e);
       });
 
     return () => cleanup();
   }, [showForm]);
 
-  // Helper that blocks submission unless a Google Place is chosen
-  const requireGoogleAddress = () => {
-    if (!placeId) {
-      alert("Please provide your full address through google maps suggestions.");
-      return false;
-    }
-    return true;
-  };
-
   const handleSend = () => {
     if (!name || !email || !address || !phone || bins.some((b) => !b.type)) {
       alert("Please complete all fields before sending.");
       return;
     }
-    if (!requireGoogleAddress()) return;
+    // No Google selection enforcement — manual address is fine
 
     const binDetails = bins
       .filter((b) => b.type !== "")
       .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
       .join("%0A");
 
-    const message = `Hi my name is ${name}. I'd like to book a bin clean, please.%0A${binDetails}%0AAddress: ${address}%0AEmail: ${email}%0APhone: ${phone}`;
+    const message = `Hi my name is ${encodeURIComponent(
+      name
+    )}. I'd like to book a bin clean, please.%0A${binDetails}%0AAddress: ${encodeURIComponent(
+      address
+    )}%0AEmail: ${encodeURIComponent(email)}%0APhone: ${encodeURIComponent(
+      phone
+    )}`;
 
     const url = `https://wa.me/${phoneNumber}?text=${message}`;
     window.open(url, "_blank");
@@ -117,9 +110,8 @@ export default function NiBinGuyLandingPage() {
       alert("Please complete all fields before sending.");
       return;
     }
-    if (!requireGoogleAddress()) return;
+    // No Google selection enforcement — manual address is fine
 
-    // Optional: include placeId/lat/lng; server will ignore extras if unused
     const loc = selectedPlaceRef.current?.geometry?.location;
     const lat = loc ? loc.lat() : null;
     const lng = loc ? loc.lng() : null;
@@ -202,7 +194,6 @@ export default function NiBinGuyLandingPage() {
   const handleCallClick = async () => {
     const isMobile = /Android|iPhone|iPad|iPod|Windows Phone|Mobi/i.test(navigator.userAgent);
     if (isMobile) {
-      // opens dialer
       window.location.href = `tel:${phoneNumber}`;
     } else {
       try {
@@ -247,7 +238,7 @@ export default function NiBinGuyLandingPage() {
               Book a Clean
             </button>
 
-            {/* NEW: Contact Us button (in between) */}
+            {/* Contact Us button */}
             <button
               onClick={() => setShowContactForm(true)}
               className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
@@ -265,7 +256,7 @@ export default function NiBinGuyLandingPage() {
         </div>
       </section>
 
-      {/* WhatsApp & Email Booking Modal */}
+      {/* Booking Modal (keeps Google Places, no enforcement) */}
       {showForm && (
         <div
           className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50"
@@ -357,7 +348,7 @@ export default function NiBinGuyLandingPage() {
               )}
             </div>
 
-            {/* Address input: always visible; upgrades to Places when ready */}
+            {/* Address input (Autocomplete attached; manual typing also allowed) */}
             <input
               ref={addressRef}
               type="text"
@@ -365,7 +356,7 @@ export default function NiBinGuyLandingPage() {
               value={address}
               onChange={(e) => {
                 setAddress(e.target.value);
-                // ❗️typing invalidates the Google selection
+                // Optional: clear Google selection if the user edits manually
                 setPlaceId(null);
                 selectedPlaceRef.current = null;
               }}
@@ -373,6 +364,9 @@ export default function NiBinGuyLandingPage() {
               autoComplete="off"
               inputMode="text"
             />
+            <p className="text-xs text-gray-500 -mt-2">
+              Tip: pick from suggestions or just type your full address.
+            </p>
 
             <input
               type="tel"
@@ -407,7 +401,7 @@ export default function NiBinGuyLandingPage() {
         </div>
       )}
 
-      {/* NEW: Contact Us Modal */}
+      {/* Contact Us Modal */}
       {showContactForm && (
         <div
           className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50"
@@ -426,15 +420,12 @@ export default function NiBinGuyLandingPage() {
 
             <div className="flex items-center justify-center gap-3">
               <h2 className="text-2xl font-bold text-center">Contact Us</h2>
-
-              {/* Phone icon button */}
               <button
                 onClick={handleCallClick}
                 className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none"
                 aria-label="Call us"
                 title="Call us"
               >
-                {/* inline SVG phone icon */}
                 <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.684l1.1 3.3a1 1 0 01-.27 1.06l-1.6 1.6a16 16 0 007.18 7.18l1.6-1.6a1 1 0 011.06-.27l3.3 1.1a1 1 0 01.684.95V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
@@ -486,7 +477,6 @@ export default function NiBinGuyLandingPage() {
               Send via Email
             </button>
 
-            {/* Small helper text showing the number on desktop */}
             <p className="text-center text-sm text-gray-600 mt-2">
               Prefer to call? Tap the phone icon.
             </p>
