@@ -289,10 +289,18 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
                 <option value="Blue Bin">Blue</option>
               </select>
 
-              <div className="grid grid-cols-2 gap-3">
-                <input required className="input" placeholder="Full name" value={form.name} onChange={(e)=>setForm(f=>({...f,name:e.target.value}))}/>
-                <input type="number" min="1" className="input" placeholder="Bin count" value={form.binCount} onChange={(e)=>setForm(f=>({...f,binCount: parseInt(e.target.value||1,10)}))}/>
-              </div>
+              <input
+  required
+  className="input"
+  placeholder="Full name"
+  value={form.name}
+  onChange={(e)=>setForm(f=>({...f,name:e.target.value}))}
+/>
+
+<div className="text-sm text-neutral-600 -mt-2">
+  Prize: <span className="font-semibold">1 bin</span> clean
+</div>
+
 
               <input required type="email" className="input" placeholder="Email" value={form.email} onChange={(e)=>setForm(f=>({...f,email:e.target.value}))}/>
               <input required className="input" placeholder="Phone" value={form.phone} onChange={(e)=>setForm(f=>({...f,phone:e.target.value}))}/>
