@@ -9,6 +9,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
  * - If you win, a booking modal appears; submit simply thanks the user.
  * - No environment variables. No external requests.
  * - NEW: `autoWin` prop to force a win on STOP for testing (also sets display to 10.00s).
+ * - NEW: Winner form now has Google Places Autocomplete (same as booking modal) and bin selection.
  */
 
 // ------------------------- Helpers -----------------------------------------
@@ -27,6 +28,29 @@ export function computeCentiseconds(startMs, stopMs) {
   return Math.round((stopMs - startMs) / 10);
 }
 
+// Inline loader so you don't need extra files or libraries
+function loadGooglePlaces(apiKey) {
+  return new Promise((resolve, reject) => {
+    if (window.google?.maps?.places) return resolve(window.google);
+
+    const existing = document.querySelector('script[data-gmaps]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(window.google));
+      existing.addEventListener('error', reject);
+      return;
+    }
+
+    const s = document.createElement('script');
+    s.dataset.gmaps = '1';
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+    s.async = true;
+    s.defer = true;
+    s.onload = () => resolve(window.google);
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
 // ------------------------- Component ----------------------------------------
 export default function TenSecondChallenge({ debug = false, title = "10-Second Stop Watch Challenge", autoWin = false }) {
   const [elapsedCs, setElapsedCs] = useState(0); // centiseconds
@@ -38,7 +62,20 @@ export default function TenSecondChallenge({ debug = false, title = "10-Second S
   const [showWinModal, setShowWinModal] = useState(false);
 
   // Booking form (local-only; not sent anywhere)
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", preferred_date: "" });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    preferred_date: "",
+    binType: "",
+    binCount: 1,
+  });
+
+  // Google Places wiring for the winner form
+  const [placeId, setPlaceId] = useState(null);
+  const selectedPlaceRef = useRef(null);
+  const addressRef = useRef(null);
 
   const rafRef = useRef(null);
   const startRef = useRef(0);
@@ -110,6 +147,39 @@ export default function TenSecondChallenge({ debug = false, title = "10-Second S
     setMessage("You nailed 10.00 seconds! 🎉");
     setAlreadyClaimedToday(true);
   }
+
+  // Attach Google Places Autocomplete when the WINNER modal opens
+  useEffect(() => {
+    if (!showWinModal) return; // wait until modal renders
+    const key = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
+    if (!key) return; // input will still work without autocomplete
+
+    let ac; // Autocomplete instance
+    let cleanup = () => {};
+
+    loadGooglePlaces(key)
+      .then((google) => {
+        if (!addressRef.current) return;
+        ac = new google.maps.places.Autocomplete(addressRef.current, {
+          componentRestrictions: { country: ["gb"] },
+          fields: ["place_id", "formatted_address", "address_components", "name", "geometry"],
+          types: ["address"],
+        });
+        const listener = ac.addListener("place_changed", () => {
+          const place = ac.getPlace();
+          selectedPlaceRef.current = place;
+          setPlaceId(place.place_id || null);
+          const formatted = place.formatted_address || place.name || "";
+          setForm((f) => ({ ...f, address: formatted }));
+        });
+        cleanup = () => listener.remove();
+      })
+      .catch((e) => {
+        console.warn("Places failed to load:", e);
+      });
+
+    return () => cleanup();
+  }, [showWinModal]);
 
   function submitBooking(e) {
     e.preventDefault();
@@ -218,10 +288,39 @@ export default function TenSecondChallenge({ debug = false, title = "10-Second S
               <p className="text-sm text-neutral-600 mt-1">Fill this in to book your free clean for {todayKey}’s challenge.</p>
             </div>
             <form onSubmit={submitBooking} className="p-6 flex flex-col gap-4">
-              <input required className="input" placeholder="Full name" value={form.name} onChange={(e)=>setForm(f=>({...f,name:e.target.value}))}/>
+              <select required className="input" value={form.binType} onChange={(e)=>setForm(f=>({...f,binType:e.target.value}))}>
+                <option value="">Select bin type</option>
+                <option value="Black Bin">Black</option>
+                <option value="Brown Bin">Brown</option>
+                <option value="Green Bin">Green</option>
+                <option value="Blue Bin">Blue</option>
+              </select>
+
+              <div className="grid grid-cols-2 gap-3">
+                <input required className="input" placeholder="Full name" value={form.name} onChange={(e)=>setForm(f=>({...f,name:e.target.value}))}/>
+                <input type="number" min="1" className="input" placeholder="Bin count" value={form.binCount} onChange={(e)=>setForm(f=>({...f,binCount: parseInt(e.target.value||1,10)}))}/>
+              </div>
+
               <input required type="email" className="input" placeholder="Email" value={form.email} onChange={(e)=>setForm(f=>({...f,email:e.target.value}))}/>
               <input required className="input" placeholder="Phone" value={form.phone} onChange={(e)=>setForm(f=>({...f,phone:e.target.value}))}/>
-              <input required className="input" placeholder="Address" value={form.address} onChange={(e)=>setForm(f=>({...f,address:e.target.value}))}/>
+
+              {/* Address with Google Places Autocomplete */}
+              <input
+                ref={addressRef}
+                required
+                className="input"
+                placeholder="Address"
+                value={form.address}
+                onChange={(e)=>{
+                  const v = e.target.value;
+                  setForm(f=>({...f,address:v}));
+                  setPlaceId(null);
+                  selectedPlaceRef.current = null;
+                }}
+                autoComplete="off"
+                inputMode="text"
+              />
+
               <label className="text-sm">Preferred cleaning date (optional)</label>
               <input type="date" className="input" value={form.preferred_date} onChange={(e)=>setForm(f=>({...f,preferred_date:e.target.value}))}/>
 
