@@ -1,230 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 
-/**
- * TenSecondChallenge — LOCAL-ONLY (inlined so build won't break on missing imports)
- * - Space/click to start/stop
- * - EXACT win at 10.00s (1000 centiseconds)
- * - One try per device per day (Europe/London)
- * - Booking modal just thanks the user (no backend)
- * - Supports `autoWin` to force a win (used below for testing)
- */
-function getTodayKey() {
-  const fmt = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/London",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const parts = Object.fromEntries(fmt.map((p) => [p.type, p.value]));
-  return `${parts.year}-${parts.month}-${parts.day}`; // YYYY-MM-DD
-}
-function computeCentiseconds(startMs, stopMs) {
-  return Math.round((stopMs - startMs) / 10);
-}
-
-// ⬇️ added autoWin support + removed mobile tap area
-function TenSecondChallenge({ debug = false, autoWin = false }) {
-  const [elapsedCs, setElapsedCs] = useState(0);
-  const [running, setRunning] = useState(false);
-  const [hasTriedToday, setHasTriedToday] = useState(false);
-  const [alreadyClaimedToday, setAlreadyClaimedToday] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [showWinModal, setShowWinModal] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address: "", preferred_date: "" });
-
-  const rafRef = useRef(null);
-  const startRef = useRef(0);
-  const todayKey = useMemo(() => getTodayKey(), []);
-
-  useEffect(() => {
-    const tried = typeof window !== "undefined" ? localStorage.getItem(`tensec_try_${todayKey}`) : null;
-    const win = typeof window !== "undefined" ? localStorage.getItem(`tensec_winner_${todayKey}`) : null;
-    setHasTriedToday(!!tried);
-    setAlreadyClaimedToday(!!win);
-  }, [todayKey]);
-
-  useEffect(() => {
-    const onKeyDown = (e) => {
-      if (e.code === "Space") {
-        e.preventDefault();
-        handleStartStop();
-      }
-    };
-    if (typeof window !== "undefined") window.addEventListener("keydown", onKeyDown);
-    return () => typeof window !== "undefined" && window.removeEventListener("keydown", onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, hasTriedToday, alreadyClaimedToday, autoWin]);
-
-  function tick(now) {
-    const cs = computeCentiseconds(startRef.current, now);
-    setElapsedCs(cs);
-    rafRef.current = requestAnimationFrame(tick);
-  }
-
-  function handleStartStop() {
-    // ⬇️ bypass daily lock while testing
-    if (!autoWin && (hasTriedToday || alreadyClaimedToday)) return;
-
-    if (!running) {
-      setError("");
-      setMessage("");
-      setElapsedCs(0);
-      startRef.current = performance.now();
-      setRunning(true);
-      rafRef.current = requestAnimationFrame(tick);
-    } else {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      const rawFinalCs = computeCentiseconds(startRef.current, performance.now());
-      const finalCs = autoWin ? 1000 : rawFinalCs; // force perfect 10.00s if testing
-      setElapsedCs(finalCs);
-      setRunning(false);
-
-      // Mark a try even in testing so the UI resembles real flow
-      if (typeof window !== "undefined") localStorage.setItem(`tensec_try_${todayKey}`, "1");
-      setHasTriedToday(true);
-
-      if (autoWin || finalCs === 1000) {
-        if (typeof window !== "undefined") localStorage.setItem(`tensec_winner_${todayKey}`, "1");
-        setShowWinModal(true);
-        setMessage("You nailed 10.00 seconds! 🎉");
-        setAlreadyClaimedToday(true);
-      } else {
-        setMessage("So close! Try again tomorrow.");
-      }
-    }
-  }
-
-  function submitBooking(e) {
-    e.preventDefault();
-    setShowWinModal(false);
-    setMessage("Thanks! We'll be in touch to confirm your clean.");
-  }
-
-  const seconds = (elapsedCs / 100).toFixed(2);
-
-  // Dev tests
-  useEffect(() => {
-    if (!debug) return;
-    const cases = [
-      { start: 0, stop: 10000, expect: 1000 },
-      { start: 0, stop: 9999, expect: 1000 },
-      { start: 0, stop: 10005, expect: 1001 },
-      { start: 42, stop: 1042, expect: 100 },
-    ];
-    console.table(
-      cases.map((c) => ({
-        ...c,
-        got: computeCentiseconds(c.start, c.stop),
-        pass: computeCentiseconds(c.start, c.stop) === c.expect,
-      }))
-    );
-  }, [debug]);
-
-  return (
-    <div className="w-full max-w-3xl mx-auto p-4" data-testid="ten-sec-root">
-      <div className="bg-neutral-900 text-white rounded-2xl p-6 md:p-8 shadow-xl border border-neutral-800">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-2xl md:text-3xl font-bold">10-Second Stop Watch Challenge</h2>
-          <div className="text-xs opacity-80">One try per device · Europe/London</div>
-        </div>
-
-        {autoWin && (
-          <div className="mt-3 bg-amber-900/30 border border-amber-700 text-amber-200 text-xs px-3 py-2 rounded-lg" data-testid="test-mode">
-            Testing mode is <strong>ON</strong>: stopping the timer will count as a win and display 10.00s.
-          </div>
-        )}
-
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-          <div className="flex flex-col items-center justify-center bg-black/40 rounded-2xl p-8 border border-neutral-800">
-            <div className="text-sm uppercase tracking-widest opacity-70">Target</div>
-            <div className="text-5xl md:text-6xl font-extrabold">10.00s</div>
-
-            <div className="mt-6 text-sm uppercase tracking-widest opacity-70">Your Time</div>
-            <div className={`text-6xl md:text-7xl font-mono tabular-nums ${seconds === "10.00" ? "text-emerald-400" : ""}`} data-testid="time-display">
-              {seconds}s
-            </div>
-
-            <div className="mt-6 text-xs text-center opacity-70">
-              Press <span className="font-semibold">Space</span> (desktop) or use the <span className="font-semibold">Start/Stop</span> button.
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {/* status banner: show testing banner OR the normal daily-lock states */}
-            {autoWin ? (
-              <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 p-4 rounded-xl">
-                Testing mode: the daily lock is bypassed and you'll win on Stop.
-              </div>
-            ) : alreadyClaimedToday ? (
-              <div className="bg-red-900/30 border border-red-800 text-red-200 p-4 rounded-xl" data-testid="already-claimed">
-                Today's prize has been claimed on this device. Come back tomorrow!
-              </div>
-            ) : hasTriedToday ? (
-              <div className="bg-amber-900/30 border border-amber-800 text-amber-200 p-4 rounded-xl" data-testid="tried-today">
-                You've used your attempt for {todayKey} on this device. Try again tomorrow.
-              </div>
-            ) : (
-              <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 p-4 rounded-xl" data-testid="ready">
-                Ready when you are — hit Space or click the big button below.
-              </div>
-            )}
-
-            <button
-              onClick={handleStartStop}
-              // ⬇️ don't disable while testing
-              disabled={!autoWin && (hasTriedToday || alreadyClaimedToday)}
-              className={`w-full rounded-2xl py-6 text-xl font-semibold shadow-lg border transition active:scale-[0.99]
-                ${running ? "bg-rose-600 hover:bg-rose-500 border-rose-400" : "bg-emerald-600 hover:bg-emerald-500 border-emerald-400"}
-                ${!autoWin && (hasTriedToday || alreadyClaimedToday) ? "opacity-50 cursor-not-allowed" : ""}`}
-              data-testid="start-stop"
-            >
-              {running ? "Stop" : "Start"}
-            </button>
-
-            {message && <div className="text-emerald-300 text-sm" data-testid="message">{message}</div>}
-            {error && <div className="text-red-300 text-sm" data-testid="error">{error}</div>}
-
-            {/* ⬇️ removed the tap-area box */}
-            <p className="text-xs opacity-60">
-              Accuracy uses centiseconds. A win requires your displayed time to read exactly <span className="font-semibold">10.00s</span>.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {showWinModal && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-          <div className="bg-white text-black w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-            <div className="p-6 border-b">
-              <h3 className="text-xl font-bold">You're a winner! 🎉</h3>
-              <p className="text-sm text-neutral-600 mt-1">Fill this in to book your free clean for {todayKey}’s challenge.</p>
-            </div>
-            <form onSubmit={submitBooking} className="p-6 flex flex-col gap-4">
-              <input required className="input" placeholder="Full name" value={form.name} onChange={(e)=>setForm(f=>({...f,name:e.target.value}))}/>
-              <input required type="email" className="input" placeholder="Email" value={form.email} onChange={(e)=>setForm(f=>({...f,email:e.target.value}))}/>
-              <input required className="input" placeholder="Phone" value={form.phone} onChange={(e)=>setForm(f=>({...f,phone:e.target.value}))}/>
-              <input required className="input" placeholder="Address" value={form.address} onChange={(e)=>setForm(f=>({...f,address:e.target.value}))}/>
-              <label className="text-sm">Preferred cleaning date (optional)</label>
-              <input type="date" className="input" value={form.preferred_date} onChange={(e)=>setForm(f=>({...f,preferred_date:e.target.value}))}/>
-
-              <div className="flex gap-3 pt-2">
-                <button type="submit" className="flex-1 bg-black text-white rounded-xl py-3 font-semibold hover:opacity-90 active:opacity-80">Submit</button>
-                <button type="button" onClick={()=>setShowWinModal(false)} className="px-4 py-3 rounded-xl bg-neutral-200 hover:bg-neutral-300">Close</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        .input { @apply w-full rounded-xl border border-neutral-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500; }
-      `}</style>
-    </div>
-  );
-}
-
-// Inline loader so you don't need extra files or libraries
+/* ───────────────── Google Places loader (shared) ───────────────── */
 function loadGooglePlaces(apiKey) {
   return new Promise((resolve, reject) => {
     if (window.google?.maps?.places) return resolve(window.google);
@@ -247,14 +23,325 @@ function loadGooglePlaces(apiKey) {
   });
 }
 
+/**
+ * TenSecondChallenge — LOCAL-ONLY (inlined so build won't break on missing imports)
+ * - Space/click to start/stop
+ * - EXACT win at 10.00s (1000 centiseconds)
+ * - One try per device per day (Europe/London)
+ * - Booking modal just thanks the user (no backend)
+ * - `autoWin` prop (used below in the modal) to force a win for testing
+ * - Winner form uses Google Places + bin selection
+ */
+function getTodayKey() {
+  const fmt = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const parts = Object.fromEntries(fmt.map((p) => [p.type, p.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+function computeCentiseconds(startMs, stopMs) {
+  return Math.round((stopMs - startMs) / 10);
+}
+
+function TenSecondChallenge({ debug = false, autoWin = false }) {
+  const [elapsedCs, setElapsedCs] = useState(0);
+  const [running, setRunning] = useState(false);
+  const [hasTriedToday, setHasTriedToday] = useState(false);
+  const [alreadyClaimedToday, setAlreadyClaimedToday] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [showWinModal, setShowWinModal] = useState(false);
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    preferred_date: "",
+    binType: "",
+    binCount: 1,
+  });
+
+  // Google Places for winner form
+  const winAddressRef = useRef(null);
+  const winSelectedPlaceRef = useRef(null);
+  const [winPlaceId, setWinPlaceId] = useState(null);
+
+  const rafRef = useRef(null);
+  const startRef = useRef(0);
+  const todayKey = useMemo(() => getTodayKey(), []);
+
+  useEffect(() => {
+    const tried = typeof window !== "undefined" ? localStorage.getItem(`tensec_try_${todayKey}`) : null;
+    const win = typeof window !== "undefined" ? localStorage.getItem(`tensec_winner_${todayKey}`) : null;
+    setHasTriedToday(!!tried);
+    setAlreadyClaimedToday(!!win);
+  }, [todayKey]);
+
+  // Spacebar handler — DO NOT trigger when typing in inputs/textarea/contenteditable or when winner modal is open
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.code !== "Space") return;
+
+      const t = e.target;
+      const isTyping =
+        t?.tagName === "INPUT" ||
+        t?.tagName === "TEXTAREA" ||
+        t?.isContentEditable;
+
+      if (isTyping || showWinModal) {
+        // allow normal space character in fields / don’t toggle timer under the winner modal
+        return;
+      }
+
+      e.preventDefault();
+      handleStartStop();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, hasTriedToday, alreadyClaimedToday, showWinModal, autoWin]);
+
+  function tick(now) {
+    const cs = computeCentiseconds(startRef.current, now);
+    setElapsedCs(cs);
+    rafRef.current = requestAnimationFrame(tick);
+  }
+
+  function handleStartStop() {
+    if (!autoWin && (hasTriedToday || alreadyClaimedToday)) return;
+
+    if (!running) {
+      setError("");
+      setMessage("");
+      setElapsedCs(0);
+      startRef.current = performance.now();
+      setRunning(true);
+      rafRef.current = requestAnimationFrame(tick);
+    } else {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      const rawFinalCs = computeCentiseconds(startRef.current, performance.now());
+      const finalCs = autoWin ? 1000 : rawFinalCs;
+      setElapsedCs(finalCs);
+      setRunning(false);
+
+      if (typeof window !== "undefined") localStorage.setItem(`tensec_try_${todayKey}`, "1");
+      setHasTriedToday(true);
+
+      if (autoWin || finalCs === 1000) {
+        if (typeof window !== "undefined") localStorage.setItem(`tensec_winner_${todayKey}`, "1");
+        setShowWinModal(true);
+        setMessage("You nailed 10.00 seconds! 🎉");
+        setAlreadyClaimedToday(true);
+      } else {
+        setMessage("So close! Try again tomorrow.");
+      }
+    }
+  }
+
+  // Attach Google Places to the WINNER form address when modal opens
+  useEffect(() => {
+    if (!showWinModal) return;
+    const key = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
+    if (!key) return; // manual typing still works
+
+    let ac;
+    let cleanup = () => {};
+
+    loadGooglePlaces(key)
+      .then((google) => {
+        if (!winAddressRef.current) return;
+        ac = new google.maps.places.Autocomplete(winAddressRef.current, {
+          componentRestrictions: { country: ["gb"] },
+          fields: ["place_id", "formatted_address", "address_components", "name", "geometry"],
+          types: ["address"],
+        });
+        const listener = ac.addListener("place_changed", () => {
+          const place = ac.getPlace();
+          winSelectedPlaceRef.current = place;
+          setWinPlaceId(place.place_id || null);
+          const formatted = place.formatted_address || place.name || "";
+          setForm((f) => ({ ...f, address: formatted }));
+        });
+        cleanup = () => listener.remove();
+      })
+      .catch((e) => console.warn("Places failed to load (winner):", e));
+
+    return () => cleanup();
+  }, [showWinModal]);
+
+  function submitBooking(e) {
+    e.preventDefault();
+    // Here you could POST to a Netlify function if you want.
+    setShowWinModal(false);
+    setMessage("Thanks! We'll be in touch to confirm your clean.");
+  }
+
+  const seconds = (elapsedCs / 100).toFixed(2);
+
+  // tiny dev checks
+  useEffect(() => {
+    if (!debug) return;
+    const cases = [
+      { start: 0, stop: 10000, expect: 1000 },
+      { start: 0, stop: 9999, expect: 1000 },
+      { start: 0, stop: 10005, expect: 1001 },
+      { start: 42, stop: 1042, expect: 100 },
+    ];
+    console.table(cases.map((c) => ({ ...c, got: computeCentiseconds(c.start, c.stop), pass: computeCentiseconds(c.start, c.stop) === c.expect })));
+  }, [debug]);
+
+  return (
+    <div className="w-full max-w-3xl mx-auto p-4" data-testid="ten-sec-root">
+      <div className="bg-neutral-900 text-white rounded-2xl p-6 md:p-8 shadow-xl border border-neutral-800">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-2xl md:text-3xl font-bold">10-Second Stop Watch Challenge</h2>
+          <div className="text-xs opacity-80">One try per device · Europe/London</div>
+        </div>
+
+        {autoWin && (
+          <div className="mt-3 bg-amber-900/30 border border-amber-700 text-amber-200 text-xs px-3 py-2 rounded-lg" data-testid="test-mode">
+            Testing mode is <strong>ON</strong>: stopping the timer will count as a win and display 10.00s.
+          </div>
+        )}
+
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+          {/* Display */}
+          <div className="flex flex-col items-center justify-center bg-black/40 rounded-2xl p-8 border border-neutral-800">
+            <div className="text-sm uppercase tracking-widest opacity-70">Target</div>
+            <div className="text-5xl md:text-6xl font-extrabold">10.00s</div>
+
+            <div className="mt-6 text-sm uppercase tracking-widest opacity-70">Your Time</div>
+            <div className={`text-6xl md:text-7xl font-mono tabular-nums ${seconds === "10.00" ? "text-emerald-400" : ""}`} data-testid="time-display">
+              {seconds}s
+            </div>
+
+            <div className="mt-6 text-xs text-center opacity-70">
+              Press <span className="font-semibold">Space</span> (desktop) or use the <span className="font-semibold">Start/Stop</span> button.
+            </div>
+          </div>
+
+          {/* Controls */}
+          <div className="flex flex-col gap-4">
+            {autoWin ? (
+              <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 p-4 rounded-xl">
+                Testing mode: the daily lock is bypassed and you'll win on Stop.
+              </div>
+            ) : alreadyClaimedToday ? (
+              <div className="bg-red-900/30 border border-red-800 text-red-200 p-4 rounded-xl" data-testid="already-claimed">
+                Today's prize has been claimed on this device. Come back tomorrow!
+              </div>
+            ) : hasTriedToday ? (
+              <div className="bg-amber-900/30 border border-amber-800 text-amber-200 p-4 rounded-xl" data-testid="tried-today">
+                You've used your attempt for {todayKey} on this device. Try again tomorrow.
+              </div>
+            ) : (
+              <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 p-4 rounded-xl" data-testid="ready">
+                Ready when you are — hit Space or click the big button below.
+              </div>
+            )}
+
+            <button
+              onClick={handleStartStop}
+              disabled={!autoWin && (hasTriedToday || alreadyClaimedToday)}
+              className={`w-full rounded-2xl py-6 text-xl font-semibold shadow-lg border transition active:scale-[0.99]
+                ${running ? "bg-rose-600 hover:bg-rose-500 border-rose-400" : "bg-emerald-600 hover:bg-emerald-500 border-emerald-400"}
+                ${!autoWin && (hasTriedToday || alreadyClaimedToday) ? "opacity-50 cursor-not-allowed" : ""}`}
+              data-testid="start-stop"
+            >
+              {running ? "Stop" : "Start"}
+            </button>
+
+            {message && <div className="text-emerald-300 text-sm" data-testid="message">{message}</div>}
+            {error && <div className="text-red-300 text-sm" data-testid="error">{error}</div>}
+
+            <p className="text-xs opacity-60">
+              Accuracy uses centiseconds. A win requires your displayed time to read exactly <span className="font-semibold">10.00s</span>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Winner Booking Modal */}
+      {showWinModal && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white text-black w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
+            <div className="p-6 border-b">
+              <h3 className="text-xl font-bold">You're a winner! 🎉</h3>
+              <p className="text-sm text-neutral-600 mt-1">Fill this in to book your free clean for {todayKey}’s challenge.</p>
+            </div>
+            <form onSubmit={submitBooking} className="p-6 flex flex-col gap-4">
+              {/* Bin selection */}
+              <select
+                required
+                className="input"
+                value={form.binType}
+                onChange={(e)=>setForm(f=>({...f,binType:e.target.value}))}
+              >
+                <option value="">Select bin type</option>
+                <option value="Black Bin">Black</option>
+                <option value="Brown Bin">Brown</option>
+                <option value="Green Bin">Green</option>
+                <option value="Blue Bin">Blue</option>
+              </select>
+
+              <div className="grid grid-cols-2 gap-3">
+                <input required className="input" placeholder="Full name" value={form.name} onChange={(e)=>setForm(f=>({...f,name:e.target.value}))}/>
+                <input type="number" min="1" className="input" placeholder="Bin count" value={form.binCount} onChange={(e)=>setForm(f=>({...f,binCount: parseInt(e.target.value||1,10)}))}/>
+              </div>
+
+              <input required type="email" className="input" placeholder="Email" value={form.email} onChange={(e)=>setForm(f=>({...f,email:e.target.value}))}/>
+              <input required className="input" placeholder="Phone" value={form.phone} onChange={(e)=>setForm(f=>({...f,phone:e.target.value}))}/>
+
+              {/* Address with Google Places Autocomplete */}
+              <input
+                ref={winAddressRef}
+                required
+                className="input"
+                placeholder="Address"
+                value={form.address}
+                onChange={(e)=>{
+                  const v = e.target.value;
+                  setForm(f=>({...f,address:v}));
+                  setWinPlaceId(null);
+                  winSelectedPlaceRef.current = null;
+                }}
+                autoComplete="off"
+                inputMode="text"
+              />
+
+              <label className="text-sm">Preferred cleaning date (optional)</label>
+              <input type="date" className="input" value={form.preferred_date} onChange={(e)=>setForm(f=>({...f,preferred_date:e.target.value}))}/>
+
+              <div className="flex gap-3 pt-2">
+                <button type="submit" className="flex-1 bg-black text-white rounded-xl py-3 font-semibold hover:opacity-90 active:opacity-80">Submit</button>
+                <button type="button" onClick={()=>setShowWinModal(false)} className="px-4 py-3 rounded-xl bg-neutral-200 hover:bg-neutral-300">Close</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        .input { @apply w-full rounded-xl border border-neutral-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500; }
+      `}</style>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Landing page
+   ──────────────────────────────────────────────────────────────────────────── */
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
   const [showChallenge, setShowChallenge] = useState(false);
 
-  const [bins, setBins] = useState([
-    { type: "", count: 1, frequency: "4 Weekly (£5)" },
-  ]);
+  const [bins, setBins] = useState([{ type: "", count: 1, frequency: "4 Weekly (£5)" }]);
 
   const [address, setAddress] = useState("");
   const [name, setName] = useState("");
@@ -268,6 +355,7 @@ export default function NiBinGuyLandingPage() {
   const phoneNumber = "+447555178484";
   const phoneDisplay = "07555 178484";
 
+  // Booking modal: attach Places
   useEffect(() => {
     if (!showForm) return;
     const key = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
@@ -291,7 +379,7 @@ export default function NiBinGuyLandingPage() {
         });
         cleanup = () => listener.remove();
       })
-      .catch((e) => console.warn("Places failed to load:", e));
+      .catch((e) => console.warn("Places failed to load (booking):", e));
 
     return () => cleanup();
   }, [showForm]);
@@ -347,9 +435,7 @@ export default function NiBinGuyLandingPage() {
     setBins(newBins);
   };
 
-  const addBinRow = () => {
-    setBins([...bins, { type: "", count: 1, frequency: "4 Weekly (£5)" }]);
-  };
+  const addBinRow = () => setBins([...bins, { type: "", count: 1, frequency: "4 Weekly (£5)" }]);
 
   const [cName, setCName] = useState("");
   const [cEmail, setCEmail] = useState("");
@@ -517,7 +603,7 @@ export default function NiBinGuyLandingPage() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowChallenge(false)}>
           <div className="bg-neutral-900 text-white w-11/12 max-w-3xl rounded-2xl shadow-2xl border border-neutral-800 p-4 md:p-6 relative" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setShowChallenge(false)} className="absolute top-3 right-4 text-neutral-400 hover:text-white text-2xl" aria-label="Close">&times;</button>
-            {/* ⬇️ enable testing mode */}
+            {/* Testing mode ON so you can complete the flow */}
             <TenSecondChallenge autoWin />
           </div>
         </div>
