@@ -503,6 +503,73 @@ export default function NiBinGuyLandingPage() {
         </div>
       </section>
 
+      {/* The Process */}
+      <section id="the-process" className="relative py-16 px-6 bg-[#18181b] text-white">
+        <h2 className="text-3xl font-bold text-green-400 mb-10 text-center">The Process</h2>
+
+        <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+          {/* Booking Process */}
+          <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
+            <h3 className="text-xl font-bold">The Booking Process</h3>
+            <ol className="mt-6 space-y-5">
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">1</span>
+                <p>Complete the quick booking form.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">2</span>
+                <p>We’ll reply with your price and the next clean date (right after your bin collection).</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">3</span>
+                <p>Approve the quote to secure your spot in the schedule.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">4</span>
+                <p>You’ll receive an email to set up your payment method.</p>
+              </li>
+            </ol>
+          </div>
+
+          {/* Cleaning Process */}
+          <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
+            <h3 className="text-xl font-bold">The Cleaning Process</h3>
+            <ol className="mt-6 space-y-5">
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">1</span>
+                <p>We remove any leftover waste the bin crew missed.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">2</span>
+                <p>Thorough wash and rinse — inside and out.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">3</span>
+                <p>We dry the interior to prevent residue.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">4</span>
+                <p>Sanitise and deodorise for a fresh finish.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">5</span>
+                <p>Your bin is returned clean and fresh to its usual spot.</p>
+              </li>
+            </ol>
+          </div>
+        </div>
+
+        {/* Optional CTA that opens your existing booking modal */}
+        <div className="mt-12 text-center">
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+          >
+            Book a Clean
+          </button>
+        </div>
+      </section>
+
       {/* The Bins We Clean */}
       <section className="relative py-16 px-6 bg-[#18181b] text-white text-center">
         <h2 className="text-3xl font-bold text-green-400 mb-12">The Bins We Clean</h2>
