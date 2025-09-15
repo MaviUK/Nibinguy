@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 
 /**
  * TenSecondChallenge — LOCAL-ONLY (inlined so build won't break on missing imports)
- * - Space/tap to start/stop
+ * - Space/click to start/stop
  * - EXACT win at 10.00s (1000 centiseconds)
  * - One try per device per day (Europe/London)
  * - Booking modal just thanks the user (no backend)
+ * - Supports `autoWin` to force a win (used below for testing)
  */
 function getTodayKey() {
   const fmt = new Intl.DateTimeFormat("en-GB", {
@@ -20,7 +21,9 @@ function getTodayKey() {
 function computeCentiseconds(startMs, stopMs) {
   return Math.round((stopMs - startMs) / 10);
 }
-function TenSecondChallenge({ debug = false }) {
+
+// ⬇️ added autoWin support + removed mobile tap area
+function TenSecondChallenge({ debug = false, autoWin = false }) {
   const [elapsedCs, setElapsedCs] = useState(0);
   const [running, setRunning] = useState(false);
   const [hasTriedToday, setHasTriedToday] = useState(false);
@@ -51,7 +54,7 @@ function TenSecondChallenge({ debug = false }) {
     if (typeof window !== "undefined") window.addEventListener("keydown", onKeyDown);
     return () => typeof window !== "undefined" && window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, hasTriedToday, alreadyClaimedToday]);
+  }, [running, hasTriedToday, alreadyClaimedToday, autoWin]);
 
   function tick(now) {
     const cs = computeCentiseconds(startRef.current, now);
@@ -60,8 +63,8 @@ function TenSecondChallenge({ debug = false }) {
   }
 
   function handleStartStop() {
-    if (hasTriedToday) return;
-    if (alreadyClaimedToday) return;
+    // ⬇️ bypass daily lock while testing
+    if (!autoWin && (hasTriedToday || alreadyClaimedToday)) return;
 
     if (!running) {
       setError("");
@@ -72,14 +75,16 @@ function TenSecondChallenge({ debug = false }) {
       rafRef.current = requestAnimationFrame(tick);
     } else {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      const finalCs = computeCentiseconds(startRef.current, performance.now());
+      const rawFinalCs = computeCentiseconds(startRef.current, performance.now());
+      const finalCs = autoWin ? 1000 : rawFinalCs; // force perfect 10.00s if testing
       setElapsedCs(finalCs);
       setRunning(false);
 
+      // Mark a try even in testing so the UI resembles real flow
       if (typeof window !== "undefined") localStorage.setItem(`tensec_try_${todayKey}`, "1");
       setHasTriedToday(true);
 
-      if (finalCs === 1000) {
+      if (autoWin || finalCs === 1000) {
         if (typeof window !== "undefined") localStorage.setItem(`tensec_winner_${todayKey}`, "1");
         setShowWinModal(true);
         setMessage("You nailed 10.00 seconds! 🎉");
@@ -107,7 +112,13 @@ function TenSecondChallenge({ debug = false }) {
       { start: 0, stop: 10005, expect: 1001 },
       { start: 42, stop: 1042, expect: 100 },
     ];
-    console.table(cases.map((c) => ({ ...c, got: computeCentiseconds(c.start, c.stop), pass: computeCentiseconds(c.start, c.stop) === c.expect })));
+    console.table(
+      cases.map((c) => ({
+        ...c,
+        got: computeCentiseconds(c.start, c.stop),
+        pass: computeCentiseconds(c.start, c.stop) === c.expect,
+      }))
+    );
   }, [debug]);
 
   return (
@@ -117,6 +128,12 @@ function TenSecondChallenge({ debug = false }) {
           <h2 className="text-2xl md:text-3xl font-bold">10-Second Stop Watch Challenge</h2>
           <div className="text-xs opacity-80">One try per device · Europe/London</div>
         </div>
+
+        {autoWin && (
+          <div className="mt-3 bg-amber-900/30 border border-amber-700 text-amber-200 text-xs px-3 py-2 rounded-lg" data-testid="test-mode">
+            Testing mode is <strong>ON</strong>: stopping the timer will count as a win and display 10.00s.
+          </div>
+        )}
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
           <div className="flex flex-col items-center justify-center bg-black/40 rounded-2xl p-8 border border-neutral-800">
@@ -129,12 +146,17 @@ function TenSecondChallenge({ debug = false }) {
             </div>
 
             <div className="mt-6 text-xs text-center opacity-70">
-              Press <span className="font-semibold">Space</span> (desktop) or tap (mobile) to start/stop.
+              Press <span className="font-semibold">Space</span> (desktop) or use the <span className="font-semibold">Start/Stop</span> button.
             </div>
           </div>
 
           <div className="flex flex-col gap-4">
-            {alreadyClaimedToday ? (
+            {/* status banner: show testing banner OR the normal daily-lock states */}
+            {autoWin ? (
+              <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 p-4 rounded-xl">
+                Testing mode: the daily lock is bypassed and you'll win on Stop.
+              </div>
+            ) : alreadyClaimedToday ? (
               <div className="bg-red-900/30 border border-red-800 text-red-200 p-4 rounded-xl" data-testid="already-claimed">
                 Today's prize has been claimed on this device. Come back tomorrow!
               </div>
@@ -144,37 +166,26 @@ function TenSecondChallenge({ debug = false }) {
               </div>
             ) : (
               <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 p-4 rounded-xl" data-testid="ready">
-                Ready when you are — hit Space or tap the big button below.
+                Ready when you are — hit Space or click the big button below.
               </div>
             )}
 
             <button
               onClick={handleStartStop}
-              disabled={hasTriedToday || alreadyClaimedToday}
+              // ⬇️ don't disable while testing
+              disabled={!autoWin && (hasTriedToday || alreadyClaimedToday)}
               className={`w-full rounded-2xl py-6 text-xl font-semibold shadow-lg border transition active:scale-[0.99]
                 ${running ? "bg-rose-600 hover:bg-rose-500 border-rose-400" : "bg-emerald-600 hover:bg-emerald-500 border-emerald-400"}
-                ${hasTriedToday || alreadyClaimedToday ? "opacity-50 cursor-not-allowed" : ""}`}
+                ${!autoWin && (hasTriedToday || alreadyClaimedToday) ? "opacity-50 cursor-not-allowed" : ""}`}
               data-testid="start-stop"
             >
               {running ? "Stop" : "Start"}
             </button>
 
-            {message && (
-              <div className="text-emerald-300 text-sm" data-testid="message">{message}</div>
-            )}
-            {error && (
-              <div className="text-red-300 text-sm" data-testid="error">{error}</div>
-            )}
+            {message && <div className="text-emerald-300 text-sm" data-testid="message">{message}</div>}
+            {error && <div className="text-red-300 text-sm" data-testid="error">{error}</div>}
 
-            <div
-              onClick={handleStartStop}
-              className={`mt-2 h-44 rounded-2xl border border-dashed border-neutral-700 flex items-center justify-center select-none
-                ${hasTriedToday || alreadyClaimedToday ? "opacity-40" : "cursor-pointer hover:bg-neutral-800/40"}`}
-              data-testid="tap-area"
-            >
-              <span className="text-neutral-400">Tap here on mobile to {running ? "stop" : "start"}</span>
-            </div>
-
+            {/* ⬇️ removed the tap-area box */}
             <p className="text-xs opacity-60">
               Accuracy uses centiseconds. A win requires your displayed time to read exactly <span className="font-semibold">10.00s</span>.
             </p>
@@ -414,7 +425,7 @@ export default function NiBinGuyLandingPage() {
           <div className="mt-6 flex flex-col sm:flex-row gap-4">
             <button onClick={() => setShowForm(true)} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Book a Clean</button>
             <button onClick={() => setShowContactForm(true)} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Contact Us</button>
-            <button onClick={() => setShowChallenge(true)} className="bg-emerald-500 hover:bg-emerald-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">10‑Second Challenge</button>
+            <button onClick={() => setShowChallenge(true)} className="bg-emerald-500 hover:bg-emerald-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">10-Second Challenge</button>
             <a href="#customer-portal" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center">Customer Portal</a>
           </div>
         </div>
@@ -501,12 +512,13 @@ export default function NiBinGuyLandingPage() {
         </div>
       )}
 
-      {/* 10‑Second Challenge Modal */}
+      {/* 10-Second Challenge Modal */}
       {showChallenge && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowChallenge(false)}>
           <div className="bg-neutral-900 text-white w-11/12 max-w-3xl rounded-2xl shadow-2xl border border-neutral-800 p-4 md:p-6 relative" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setShowChallenge(false)} className="absolute top-3 right-4 text-neutral-400 hover:text-white text-2xl" aria-label="Close">&times;</button>
-            <TenSecondChallenge />
+            {/* ⬇️ enable testing mode */}
+            <TenSecondChallenge autoWin />
           </div>
         </div>
       )}
