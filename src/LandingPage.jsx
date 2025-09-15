@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import TenSecondChallenge from "./TenSecondChallenge.jsx"; // ← make sure this path matches your project
 
 // Inline loader so you don't need extra files or libraries
 function loadGooglePlaces(apiKey) {
@@ -25,9 +26,8 @@ function loadGooglePlaces(apiKey) {
 
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
-
-  // NEW: contact modal state
   const [showContactForm, setShowContactForm] = useState(false);
+  const [showChallenge, setShowChallenge] = useState(false); // ← NEW: 10‑Second Challenge modal toggle
 
   const [bins, setBins] = useState([
     { type: "", count: 1, frequency: "4 Weekly (£5)" },
@@ -50,7 +50,7 @@ export default function NiBinGuyLandingPage() {
   // Attach Google Places Autocomplete when the booking modal opens
   useEffect(() => {
     if (!showForm) return; // wait until modal renders
-    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    const key = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
     if (!key) return; // input will still work without autocomplete
 
     let ac; // Autocomplete instance
@@ -238,12 +238,19 @@ export default function NiBinGuyLandingPage() {
               Book a Clean
             </button>
 
-            {/* Contact Us button */}
             <button
               onClick={() => setShowContactForm(true)}
               className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
             >
               Contact Us
+            </button>
+
+            {/* NEW: 10‑Second Challenge button */}
+            <button
+              onClick={() => setShowChallenge(true)}
+              className="bg-emerald-500 hover:bg-emerald-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+            >
+              10‑Second Challenge
             </button>
 
             <a
@@ -480,6 +487,28 @@ export default function NiBinGuyLandingPage() {
             <p className="text-center text-sm text-gray-600 mt-2">
               Prefer to call? Tap the phone icon.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* NEW: 10‑Second Challenge Modal */}
+      {showChallenge && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+          onClick={() => setShowChallenge(false)}
+        >
+          <div
+            className="bg-neutral-900 text-white w-11/12 max-w-3xl rounded-2xl shadow-2xl border border-neutral-800 p-4 md:p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowChallenge(false)}
+              className="absolute top-3 right-4 text-neutral-400 hover:text-white text-2xl"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            <TenSecondChallenge />
           </div>
         </div>
       )}
