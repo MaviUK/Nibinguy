@@ -47,15 +47,6 @@ export default function NiBinGuyLandingPage() {
   const phoneNumber = "+447555178484";
   const phoneDisplay = "07555 178484";
 
-  // -------- GOOGLE REVIEWS STATE --------
-  const [bizPlaceId, setBizPlaceId] = useState(import.meta.env.VITE_GOOGLE_PLACE_ID || null);
-  const [reviews, setReviews] = useState([]);
-  const [placeRating, setPlaceRating] = useState(null);
-  const [totalRatings, setTotalRatings] = useState(null);
-  const [placeUrl, setPlaceUrl] = useState(null);
-  const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [reviewsError, setReviewsError] = useState(null);
-
   // Attach Google Places Autocomplete when the booking modal opens
   useEffect(() => {
     if (!showForm) return; // wait until modal renders
@@ -88,81 +79,6 @@ export default function NiBinGuyLandingPage() {
 
     return () => cleanup();
   }, [showForm]);
-
-  // ------- GOOGLE REVIEWS: LOAD & FETCH -------
-  useEffect(() => {
-    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (!key) return; // graceful: no API key = no reviews section fetch
-
-    let isCancelled = false;
-
-    async function init() {
-      try {
-        setReviewsLoading(true);
-        const google = await loadGooglePlaces(key);
-        if (isCancelled) return;
-
-        const service = new google.maps.places.PlacesService(document.createElement("div"));
-
-        const fetchDetails = (pid) => {
-          service.getDetails(
-            {
-              placeId: pid,
-              fields: [
-                "name",
-                "rating",
-                "user_ratings_total",
-                "reviews",
-                "url"
-              ],
-            },
-            (place, status) => {
-              if (isCancelled) return;
-              if (status !== google.maps.places.PlacesServiceStatus.OK || !place) {
-                setReviewsError("Could not load reviews.");
-                setReviewsLoading(false);
-                return;
-              }
-              setPlaceRating(place.rating || null);
-              setTotalRatings(place.user_ratings_total || null);
-              setReviews(Array.isArray(place.reviews) ? place.reviews : []);
-              setPlaceUrl(place.url || (pid ? `https://www.google.com/maps/place/?q=place_id:${pid}` : null));
-              setReviewsLoading(false);
-            }
-          );
-        };
-
-        if (bizPlaceId) {
-          fetchDetails(bizPlaceId);
-          return;
-        }
-
-        // Fallback: try to look up by name (best effort).
-        const BUSINESS_QUERY = "Ni Bin Guy, Bangor";
-        service.findPlaceFromQuery(
-          { query: BUSINESS_QUERY, fields: ["place_id"] },
-          (results, status) => {
-            if (isCancelled) return;
-            if (status === google.maps.places.PlacesServiceStatus.OK && results?.[0]?.place_id) {
-              const pid = results[0].place_id;
-              setBizPlaceId(pid);
-              fetchDetails(pid);
-            } else {
-              setReviewsError("Business not found. Add VITE_GOOGLE_PLACE_ID for accurate results.");
-              setReviewsLoading(false);
-            }
-          }
-        );
-      } catch (e) {
-        if (isCancelled) return;
-        setReviewsError("Failed to load Google services.");
-        setReviewsLoading(false);
-      }
-    }
-
-    init();
-    return () => { isCancelled = true; };
-  }, [bizPlaceId]);
 
   const handleSend = () => {
     if (!name || !email || !address || !phone || bins.some((b) => !b.type)) {
@@ -289,43 +205,6 @@ export default function NiBinGuyLandingPage() {
     }
   };
   // ----------------------------------------------------
-
-  // Small component to render star rating
-  const Stars = ({ rating = 0 }) => {
-    const full = Math.floor(rating);
-    const half = rating - full >= 0.5;
-    const total = 5;
-    return (
-      <div className="flex items-center gap-1">
-        {Array.from({ length: total }).map((_, i) => {
-          const isFull = i < full;
-          const isHalf = !isFull && i === full && half;
-          return (
-            <svg
-              key={i}
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className={`h-4 w-4 ${isFull || isHalf ? "text-yellow-400" : "text-zinc-600"}`}
-              fill="currentColor"
-            >
-              {isHalf ? (
-                <defs>
-                  <linearGradient id={`half-${i}`} x1="0" x2="1">
-                    <stop offset="50%" stopColor="currentColor" />
-                    <stop offset="50%" stopColor="transparent" />
-                  </linearGradient>
-                </defs>
-              ) : null}
-              <path
-                fill={isHalf ? `url(#half-${i})` : "currentColor"}
-                d="M12 .587l3.668 7.431 8.207 1.194-5.938 5.79 1.402 8.168L12 18.896l-7.339 3.874 1.402-8.168L.125 9.212l8.207-1.194z"
-              />
-            </svg>
-          );
-        })}
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-black text-white font-sans">
@@ -785,98 +664,6 @@ export default function NiBinGuyLandingPage() {
             <h3 className="text-xl font-semibold mb-2">Fully Insured</h3>
             <p>We’re fully insured and compliant — so you can rest easy.</p>
           </div>
-        </div>
-      </section>
-
-      {/* GOOGLE REVIEWS */}
-      <section id="reviews" className="py-16 px-6 bg-[#0b0b0b] text-white">
-        <div className="max-w-6xl mx-auto">
-          <div className="mb-8 text-center">
-            <h2 className="text-3xl font-bold text-green-400">What Customers Say</h2>
-            {placeRating && (
-              <div className="mt-3 flex items-center justify-center gap-3">
-                <Stars rating={placeRating} />
-                <span className="text-white/90 font-semibold">{placeRating.toFixed(1)} / 5</span>
-                {typeof totalRatings === "number" && (
-                  <span className="text-white/60">({totalRatings} reviews)</span>
-                )}
-              </div>
-            )}
-            {!import.meta.env.VITE_GOOGLE_MAPS_API_KEY && (
-              <p className="mt-3 text-sm text-red-300">
-                Add <code className="text-red-200">VITE_GOOGLE_MAPS_API_KEY</code> to show Google reviews.
-              </p>
-            )}
-          </div>
-
-          {reviewsLoading && (
-            <div className="grid md:grid-cols-3 gap-6">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6 animate-pulse">
-                  <div className="h-4 w-1/2 bg-zinc-700 rounded mb-3" />
-                  <div className="h-3 w-2/3 bg-zinc-700 rounded mb-6" />
-                  <div className="h-3 w-full bg-zinc-700 rounded mb-2" />
-                  <div className="h-3 w-11/12 bg-zinc-700 rounded mb-2" />
-                  <div className="h-3 w-10/12 bg-zinc-700 rounded" />
-                </div>
-              ))}
-            </div>
-          )}
-
-          {!reviewsLoading && reviewsError && (
-            <p className="text-center text-red-300">{reviewsError}</p>
-          )}
-
-          {!reviewsLoading && !reviewsError && reviews.length > 0 && (
-            <>
-              <div className="grid md:grid-cols-3 gap-6">
-                {reviews.slice(0, 6).map((r, idx) => (
-                  <div key={idx} className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
-                    <div className="flex items-center gap-3">
-                      {r.profile_photo_url ? (
-                        <img
-                          src={r.profile_photo_url}
-                          alt={r.author_name}
-                          className="h-10 w-10 rounded-full"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-zinc-700" />
-                      )}
-                      <div>
-                        <a
-                          href={r.author_url || "#"}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="font-semibold hover:underline"
-                        >
-                          {r.author_name || "Google User"}
-                        </a>
-                        <div className="flex items-center gap-2 text-sm text-white/70">
-                          <Stars rating={r.rating || 0} />
-                          <span>· {r.relative_time_description || ""}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="mt-4 text-white/90">{r.text}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="text-center mt-10">
-                {placeUrl && (
-                  <a
-                    href={placeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center justify-center rounded-2xl px-6 py-3 text-sm font-semibold text-black bg-green-400 hover:bg-green-300 transition"
-                  >
-                    Read all reviews on Google
-                  </a>
-                )}
-              </div>
-            </>
-          )}
         </div>
       </section>
     </div>
