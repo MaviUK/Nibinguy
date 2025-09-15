@@ -3,11 +3,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 /**
  * TenSecondChallenge.jsx — LOCAL-ONLY VERSION (no backend)
  * ------------------------------------------------------------
- * - Space/tap to start/stop a stopwatch.
+ * - Space/click to start/stop a stopwatch (removed extra mobile tap area).
  * - EXACT win at 10.00s (1000 centiseconds).
  * - One try per device per day (localStorage, Europe/London timezone).
  * - If you win, a booking modal appears; submit simply thanks the user.
  * - No environment variables. No external requests.
+ * - NEW: `autoWin` prop to force a win on STOP for testing (also sets display to 10.00s).
  */
 
 // ------------------------- Helpers -----------------------------------------
@@ -27,7 +28,7 @@ export function computeCentiseconds(startMs, stopMs) {
 }
 
 // ------------------------- Component ----------------------------------------
-export default function TenSecondChallenge({ debug = false, title = "10-Second Stop Watch Challenge" }) {
+export default function TenSecondChallenge({ debug = false, title = "10-Second Stop Watch Challenge", autoWin = false }) {
   const [elapsedCs, setElapsedCs] = useState(0); // centiseconds
   const [running, setRunning] = useState(false);
   const [hasTriedToday, setHasTriedToday] = useState(false);
@@ -62,7 +63,7 @@ export default function TenSecondChallenge({ debug = false, title = "10-Second S
     if (typeof window !== "undefined") window.addEventListener("keydown", onKeyDown);
     return () => typeof window !== "undefined" && window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, hasTriedToday, alreadyClaimedToday]);
+  }, [running, hasTriedToday, alreadyClaimedToday, autoWin]);
 
   function tick(now) {
     const cs = computeCentiseconds(startRef.current, now);
@@ -85,7 +86,8 @@ export default function TenSecondChallenge({ debug = false, title = "10-Second S
     } else {
       // Stop — compute exact value now to avoid rAF lag
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      const finalCs = computeCentiseconds(startRef.current, performance.now());
+      const rawFinalCs = computeCentiseconds(startRef.current, performance.now());
+      const finalCs = autoWin ? 1000 : rawFinalCs; // ← force a perfect 10.00s if testing
       setElapsedCs(finalCs);
       setRunning(false);
 
@@ -93,7 +95,7 @@ export default function TenSecondChallenge({ debug = false, title = "10-Second S
       if (typeof window !== "undefined") localStorage.setItem(`tensec_try_${todayKey}`, "1");
       setHasTriedToday(true);
 
-      if (finalCs === 1000) {
+      if (autoWin || finalCs === 1000) {
         handleLocalWin();
       } else {
         setMessage("So close! Try again tomorrow.");
@@ -144,6 +146,12 @@ export default function TenSecondChallenge({ debug = false, title = "10-Second S
           <div className="text-xs opacity-80">One try per device · Europe/London</div>
         </div>
 
+        {autoWin && (
+          <div className="mt-3 bg-amber-900/30 border border-amber-700 text-amber-200 text-xs px-3 py-2 rounded-lg" data-testid="test-mode">
+            Testing mode is <strong>ON</strong>: stopping the timer will count as a win and display 10.00s.
+          </div>
+        )}
+
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
           {/* Display */}
           <div className="flex flex-col items-center justify-center bg-black/40 rounded-2xl p-8 border border-neutral-800">
@@ -156,7 +164,7 @@ export default function TenSecondChallenge({ debug = false, title = "10-Second S
             </div>
 
             <div className="mt-6 text-xs text-center opacity-70">
-              Press <span className="font-semibold">Space</span> (desktop) or tap (mobile) to start/stop.
+              Press <span className="font-semibold">Space</span> (desktop) or use the <span className="font-semibold">Start/Stop</span> button.
             </div>
           </div>
 
@@ -172,7 +180,7 @@ export default function TenSecondChallenge({ debug = false, title = "10-Second S
               </div>
             ) : (
               <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 p-4 rounded-xl" data-testid="ready">
-                Ready when you are — hit Space or tap the big button below.
+                Ready when you are — hit Space or click the big button below.
               </div>
             )}
 
@@ -193,15 +201,6 @@ export default function TenSecondChallenge({ debug = false, title = "10-Second S
             {error && (
               <div className="text-red-300 text-sm" data-testid="error">{error}</div>
             )}
-
-            <div
-              onClick={handleStartStop}
-              className={`mt-2 h-44 rounded-2xl border border-dashed border-neutral-700 flex items-center justify-center select-none
-                ${hasTriedToday || alreadyClaimedToday ? "opacity-40" : "cursor-pointer hover:bg-neutral-800/40"}`}
-              data-testid="tap-area"
-            >
-              <span className="text-neutral-400">Tap here on mobile to {running ? "stop" : "start"}</span>
-            </div>
 
             <p className="text-xs opacity-60">
               Accuracy uses centiseconds. A win requires your displayed time to read exactly <span className="font-semibold">10.00s</span>.
