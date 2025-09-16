@@ -515,6 +515,8 @@ export default function NiBinGuyLandingPage() {
 
   const missingFields = () => (!name || !email || !address || !phone || bins.some((b) => !b.type));
 
+ const TOS_PREFIX = `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION})`;
+
   const handleSend = () => {
     if (missingFields()) { alert("Please complete all fields before sending."); return; }
     if (!agreeToTerms) { alert("Please view and agree to the Terms of Service before booking."); return; }
@@ -528,8 +530,6 @@ export default function NiBinGuyLandingPage() {
     const url = `https://wa.me/${phoneNumber}?text=${message}`;
     window.open(url, "_blank");
     setShowForm(false);
-
-  const TOS_PREFIX = `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION})`;
   };
 
   const handleEmailSend = async () => {
