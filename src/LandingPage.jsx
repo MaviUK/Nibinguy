@@ -23,15 +23,7 @@ function loadGooglePlaces(apiKey) {
   });
 }
 
-/**
- * TenSecondChallenge — LOCAL-ONLY (inlined so build won't break on missing imports)
- * - Space/click to start/stop
- * - EXACT win at 10.00s (1000 centiseconds)
- * - One try per device per day (Europe/London)
- * - Booking modal just thanks the user (no backend)
- * - `autoWin` prop (used below in the modal) to force a win for testing
- * - Winner form uses Google Places + bin selection
- */
+/* ───────────────── TenSecondChallenge (inline) ───────────────── */
 function getTodayKey() {
   const fmt = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/London",
@@ -55,15 +47,17 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
   const [message, setMessage] = useState("");
   const [showWinModal, setShowWinModal] = useState(false);
 
+  // Winner form (no bin count control — prize is 1 bin)
   const [form, setForm] = useState({
+    binType: "Black Bin", // default so user can submit immediately
     name: "",
     email: "",
     phone: "",
     address: "",
     preferred_date: "",
-    binType: "",
-    binCount: 1,
   });
+  const [winSubmitStatus, setWinSubmitStatus] = useState("idle"); // idle | sending | success | error
+  const [winSubmitErrorText, setWinSubmitErrorText] = useState("");
 
   // Google Places for winner form
   const winAddressRef = useRef(null);
@@ -81,10 +75,11 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
     setAlreadyClaimedToday(!!win);
   }, [todayKey]);
 
-  // Spacebar handler — DO NOT trigger when typing in inputs/textarea/contenteditable or when winner modal is open
+  // Spacebar: don't toggle when typing or when winner modal is open
   useEffect(() => {
     const onKeyDown = (e) => {
-      if (e.code !== "Space") return;
+      const isSpace = e.code === "Space" || e.key === " " || e.key === "Spacebar";
+      if (!isSpace) return;
 
       const t = e.target;
       const isTyping =
@@ -92,11 +87,7 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
         t?.tagName === "TEXTAREA" ||
         t?.isContentEditable;
 
-      if (isTyping || showWinModal) {
-        // allow normal space character in fields / don’t toggle timer under the winner modal
-        return;
-      }
-
+      if (isTyping || showWinModal) return; // let space be typed / or ignore under modal
       e.preventDefault();
       handleStartStop();
     };
@@ -143,15 +134,13 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
     }
   }
 
-  // Attach Google Places to the WINNER form address when modal opens
+  // Attach Places to the winner address when modal opens (falls back to manual entry if no API key)
   useEffect(() => {
     if (!showWinModal) return;
     const key = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
-    if (!key) return; // manual typing still works
+    if (!key) return;
 
-    let ac;
-    let cleanup = () => {};
-
+    let ac; let cleanup = () => {};
     loadGooglePlaces(key)
       .then((google) => {
         if (!winAddressRef.current) return;
@@ -174,11 +163,61 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
     return () => cleanup();
   }, [showWinModal]);
 
-  function submitBooking(e) {
+  async function submitBooking(e) {
     e.preventDefault();
-    // Here you could POST to a Netlify function if you want.
-    setShowWinModal(false);
-    setMessage("Thanks! We'll be in touch to confirm your clean.");
+
+    if (!form.name || !form.email || !form.phone || !form.address || !form.binType) {
+      setError("Please complete all required fields.");
+      return;
+    }
+
+    setError("");
+    setWinSubmitErrorText("");
+    setWinSubmitStatus("sending");
+
+    const loc = winSelectedPlaceRef.current?.geometry?.location;
+    const lat = loc ? loc.lat() : null;
+    const lng = loc ? loc.lng() : null;
+
+    // EXACTLY match your booking payload shape
+    const payload = {
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      address: form.address,
+      bins: [{ type: form.binType, count: 1, frequency: "Prize (Free Clean)" }],
+      placeId: winPlaceId,
+      lat,
+      lng,
+      source: "ten-second-challenge",
+    };
+
+    try {
+      const res = await fetch("/.netlify/functions/sendBookingEmail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+        body: JSON.stringify(payload),
+      });
+
+      let body = null;
+      try { body = await res.json(); } catch { /* ignore non-JSON */ }
+
+      if (res.ok) {
+        setWinSubmitStatus("success");     // swap to success screen
+        setMessage("Thanks! We'll be in touch to confirm your clean.");
+        alert("Winner details submitted. Confirmation email sent.");
+      } else {
+        console.error("Winner email failed:", res.status, body || (await res.text().catch(() => "")));
+        setWinSubmitStatus("error");
+        setError("We couldn't send the email. Please try again or contact us.");
+      }
+    } catch (err) {
+      console.error(err);
+      setWinSubmitStatus("error");
+      setError("Network error sending the email. Please try again.");
+    }
   }
 
   const seconds = (elapsedCs / 100).toFixed(2);
@@ -270,66 +309,95 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
       {showWinModal && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-white text-black w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden">
-            <div className="p-6 border-b">
-              <h3 className="text-xl font-bold">You're a winner! 🎉</h3>
-              <p className="text-sm text-neutral-600 mt-1">Fill this in to book your free clean for {todayKey}’s challenge.</p>
-            </div>
-            <form onSubmit={submitBooking} className="p-6 flex flex-col gap-4">
-              {/* Bin selection */}
-              <select
-                required
-                className="input"
-                value={form.binType}
-                onChange={(e)=>setForm(f=>({...f,binType:e.target.value}))}
-              >
-                <option value="">Select bin type</option>
-                <option value="Black Bin">Black</option>
-                <option value="Brown Bin">Brown</option>
-                <option value="Green Bin">Green</option>
-                <option value="Blue Bin">Blue</option>
-              </select>
-
-              <input
-  required
-  className="input"
-  placeholder="Full name"
-  value={form.name}
-  onChange={(e)=>setForm(f=>({...f,name:e.target.value}))}
-/>
-
-<div className="text-sm text-neutral-600 -mt-2">
-  Prize: <span className="font-semibold">1 bin</span> clean
-</div>
-
-
-              <input required type="email" className="input" placeholder="Email" value={form.email} onChange={(e)=>setForm(f=>({...f,email:e.target.value}))}/>
-              <input required className="input" placeholder="Phone" value={form.phone} onChange={(e)=>setForm(f=>({...f,phone:e.target.value}))}/>
-
-              {/* Address with Google Places Autocomplete */}
-              <input
-                ref={winAddressRef}
-                required
-                className="input"
-                placeholder="Address"
-                value={form.address}
-                onChange={(e)=>{
-                  const v = e.target.value;
-                  setForm(f=>({...f,address:v}));
-                  setWinPlaceId(null);
-                  winSelectedPlaceRef.current = null;
-                }}
-                autoComplete="off"
-                inputMode="text"
-              />
-
-              <label className="text-sm">Preferred cleaning date (optional)</label>
-              <input type="date" className="input" value={form.preferred_date} onChange={(e)=>setForm(f=>({...f,preferred_date:e.target.value}))}/>
-
-              <div className="flex gap-3 pt-2">
-                <button type="submit" className="flex-1 bg-black text-white rounded-xl py-3 font-semibold hover:opacity-90 active:opacity-80">Submit</button>
-                <button type="button" onClick={()=>setShowWinModal(false)} className="px-4 py-3 rounded-xl bg-neutral-200 hover:bg-neutral-300">Close</button>
+            {/* Success screen */}
+            {winSubmitStatus === "success" ? (
+              <div className="p-6">
+                <h3 className="text-xl font-bold">You're all set! 🎉</h3>
+                <p className="text-sm text-neutral-700 mt-2">
+                  Thanks, {form.name}. We’ve received your winner details and sent a confirmation to <strong>{form.email}</strong>.
+                  We’ll be in touch to schedule your free clean.
+                </p>
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => { setShowWinModal(false); setMessage("Thanks! We'll be in touch to confirm your clean."); }}
+                    className="px-5 py-3 rounded-xl bg-black text-white hover:opacity-90"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
-            </form>
+            ) : (
+              <>
+                <div className="p-6 border-b">
+                  <h3 className="text-xl font-bold">You're a winner! 🎉</h3>
+                  <p className="text-sm text-neutral-600 mt-1">
+                    Fill this in to book your free clean for {todayKey}’s challenge.
+                  </p>
+                </div>
+                <form onSubmit={submitBooking} className="p-6 flex flex-col gap-4" noValidate>
+                  {/* Bin type (required). Prize is fixed to 1 bin. */}
+                  <select
+                    required
+                    className="input"
+                    value={form.binType}
+                    onChange={(e)=>setForm(f=>({...f,binType:e.target.value}))}
+                  >
+                    <option value="Black Bin">Black</option>
+                    <option value="Brown Bin">Brown</option>
+                    <option value="Green Bin">Green</option>
+                    <option value="Blue Bin">Blue</option>
+                  </select>
+                  <div className="text-sm text-neutral-600 -mt-2">
+                    Prize: <span className="font-semibold">1 bin</span> clean
+                  </div>
+
+                  <input required className="input" placeholder="Full name" value={form.name} onChange={(e)=>setForm(f=>({...f,name:e.target.value}))}/>
+                  <input required type="email" className="input" placeholder="Email" value={form.email} onChange={(e)=>setForm(f=>({...f,email:e.target.value}))}/>
+                  <input required className="input" placeholder="Phone" value={form.phone} onChange={(e)=>setForm(f=>({...f,phone:e.target.value}))}/>
+
+                  {/* Address with Google Places Autocomplete */}
+                  <input
+                    ref={winAddressRef}
+                    required
+                    className="input"
+                    placeholder="Address"
+                    value={form.address}
+                    onChange={(e)=>{
+                      const v = e.target.value;
+                      setForm(f=>({...f,address:v}));
+                      setWinPlaceId(null);
+                      winSelectedPlaceRef.current = null;
+                    }}
+                    autoComplete="off"
+                    inputMode="text"
+                  />
+
+                  <label className="text-sm">Preferred cleaning date (optional)</label>
+                  <input type="date" className="input" value={form.preferred_date} onChange={(e)=>setForm(f=>({...f,preferred_date:e.target.value}))}/>
+
+                  {error && (
+                    <div className="text-red-600 text-sm">
+                      {error}
+                      {winSubmitStatus === "error" && winSubmitErrorText ? (
+                        <div className="mt-1 text-xs opacity-80">Details: {winSubmitErrorText}</div>
+                      ) : null}
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="submit"
+                      disabled={winSubmitStatus === "sending"}
+                      aria-busy={winSubmitStatus === "sending"}
+                      className="flex-1 bg-black text-white rounded-xl py-3 font-semibold hover:opacity-90 active:opacity-80 disabled:opacity-60"
+                    >
+                      {winSubmitStatus === "sending" ? "Submitting..." : "Submit"}
+                    </button>
+                    <button type="button" onClick={()=>setShowWinModal(false)} className="px-4 py-3 rounded-xl bg-neutral-200 hover:bg-neutral-300">Close</button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -611,7 +679,7 @@ export default function NiBinGuyLandingPage() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowChallenge(false)}>
           <div className="bg-neutral-900 text-white w-11/12 max-w-3xl rounded-2xl shadow-2xl border border-neutral-800 p-4 md:p-6 relative" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setShowChallenge(false)} className="absolute top-3 right-4 text-neutral-400 hover:text-white text-2xl" aria-label="Close">&times;</button>
-            {/* Testing mode ON so you can complete the flow */}
+            {/* autoWin ON so you can test the win flow end-to-end; remove prop to go live */}
             <TenSecondChallenge autoWin />
           </div>
         </div>
@@ -639,30 +707,67 @@ export default function NiBinGuyLandingPage() {
       {/* The Process */}
       <section id="the-process" className="relative py-16 px-6 bg-[#18181b] text-white">
         <h2 className="text-3xl font-bold text-green-400 mb-10 text-center">The Process</h2>
+
         <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+          {/* Booking Process */}
           <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
             <h3 className="text-xl font-bold">The Booking Process</h3>
             <ol className="mt-6 space-y-5">
-              <li className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">1</span><p>Complete the quick booking form.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">2</span><p>We’ll reply with your price and the next clean date (right after your bin collection).</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">3</span><p>Approve the quote to secure your spot in the schedule.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">4</span><p>You’ll receive an email to set up your payment method.</p></li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">1</span>
+                <p>Complete the quick booking form.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">2</span>
+                <p>We’ll reply with your price and the next clean date (right after your bin collection).</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">3</span>
+                <p>Approve the quote to secure your spot in the schedule.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">4</span>
+                <p>You’ll receive an email to set up your payment method.</p>
+              </li>
             </ol>
           </div>
+
+          {/* Cleaning Process */}
           <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
             <h3 className="text-xl font-bold">The Cleaning Process</h3>
             <ol className="mt-6 space-y-5">
-              <li className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">1</span><p>We remove any leftover waste the bin crew missed.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">2</span><p>Thorough wash and rinse — inside and out.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">3</span><p>We dry the interior to prevent residue.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">4</span><p>Sanitise and deodorise for a fresh finish.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">5</span><p>Your bin is returned clean and fresh to its usual spot.</p></li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">1</span>
+                <p>We remove any leftover waste the bin crew missed.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">2</span>
+                <p>Thorough wash and rinse — inside and out.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">3</span>
+                <p>We dry the interior to prevent residue.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">4</span>
+                <p>Sanitise and deodorise for a fresh finish.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">5</span>
+                <p>Your bin is returned clean and fresh to its usual spot.</p>
+              </li>
             </ol>
           </div>
         </div>
 
+        {/* Optional CTA that opens your existing booking modal */}
         <div className="mt-12 text-center">
-          <button onClick={() => setShowForm(true)} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Book a Clean</button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+          >
+            Book a Clean
+          </button>
         </div>
       </section>
 
@@ -670,11 +775,26 @@ export default function NiBinGuyLandingPage() {
       <section className="relative py-16 px-6 bg-[#18181b] text-white text-center">
         <h2 className="text-3xl font-bold text-green-400 mb-12">The Bins We Clean</h2>
         <div className="relative z-20 flex flex-wrap justify-center items-end gap-12 md:gap-20">
-          <div className="flex flex-col items-center"><img src="/bins/120L.png" alt="120L Bin" className="h-32 mb-2" /><span className="text-sm">120L</span></div>
-          <div className="flex flex-col items-center"><img src="/bins/240L.png" alt="240L Bin" className="h-36 mb-2" /><span className="text-sm">240L</span></div>
-          <div className="flex flex-col items-center"><img src="/bins/360L.png" alt="360L Bin" className="h-40 mb-2" /><span className="text-sm">360L</span></div>
-          <div className="flex flex-col items-center"><img src="/bins/660L.png" alt="660L Bin" className="h-44 mb-2" /><span className="text-sm">660L</span></div>
-          <div className="flex flex-col items-center"><img src="/bins/1100L.png" alt="1100L Bin" className="h-48 mb-2" /><span className="text-sm">1100L</span></div>
+          <div className="flex flex-col items-center">
+            <img src="/bins/120L.png" alt="120L Bin" className="h-32 mb-2" />
+            <span className="text-sm">120L</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <img src="/bins/240L.png" alt="240L Bin" className="h-36 mb-2" />
+            <span className="text-sm">240L</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <img src="/bins/360L.png" alt="360L Bin" className="h-40 mb-2" />
+            <span className="text-sm">360L</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <img src="/bins/660L.png" alt="660L Bin" className="h-44 mb-2" />
+            <span className="text-sm">660L</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <img src="/bins/1100L.png" alt="1100L Bin" className="h-48 mb-2" />
+            <span className="text-sm">1100L</span>
+          </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-b from-[#18181b] to-black pointer-events-none z-10" />
       </section>
@@ -683,10 +803,45 @@ export default function NiBinGuyLandingPage() {
       <section className="py-16 px-6 bg-gradient-to-b from-black via-[#0a0a0a] to-zinc-900 text-white">
         <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
         <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
-          <div className="flex items-start gap-4"><img src="/odour.png" alt="Odours icon" className="w-12 h-12 mt-1" /><div><h3 className="text-xl font-semibold mb-1">Prevent Nasty Odours</h3><p className="text-gray-300">Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source.</p></div></div>
-          <div className="flex items-start gap-4"><img src="/bacteria.png" alt="Bacteria icon" className="w-12 h-12 mt-1" /><div><h3 className="text-xl font-semibold mb-1">Stop Bacteria Buildup</h3><p className="text-gray-300">Leftover waste can attract harmful bacteria. Professional bin cleaning keeps your environment safer and more hygienic.</p></div></div>
-          <div className="flex items-start gap-4"><img src="/pests.png" alt="Pests icon" className="w-12 h-12 mt-1" /><div><h3 className="text-xl font-semibold mb-1">Deter Insects &amp; Vermin</h3><p className="text-gray-300">Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless.</p></div></div>
-          <div className="flex items-start gap-4"><img src="/family.png" alt="Family icon" className="w-12 h-12 mt-1" /><div><h3 className="text-xl font-semibold mb-1">Protect Your Family</h3><p className="text-gray-300">A clean bin reduces exposure to germs and pathogens, helping keep your household healthier.</p></div></div>
+          <div className="flex items-start gap-4">
+            <img src="/odour.png" alt="Odours icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Prevent Nasty Odours</h3>
+              <p className="text-gray-300">
+                Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4">
+            <img src="/bacteria.png" alt="Bacteria icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Stop Bacteria Buildup</h3>
+              <p className="text-gray-300">
+                Leftover waste can attract harmful bacteria. Professional bin cleaning keeps your environment safer and more hygienic.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4">
+            <img src="/pests.png" alt="Pests icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Deter Insects &amp; Vermin</h3>
+              <p className="text-gray-300">
+                Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4">
+            <img src="/family.png" alt="Family icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Protect Your Family</h3>
+              <p className="text-gray-300">
+                A clean bin reduces exposure to germs and pathogens, helping keep your household healthier.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -694,10 +849,22 @@ export default function NiBinGuyLandingPage() {
       <section className="py-16 px-6 bg-gradient-to-b from-zinc-900 via-[#1a1a1a] to-black text-white">
         <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
         <div className="grid md:grid-cols-2 gap-10 max-w-5xl mx-auto">
-          <div><h3 className="text-xl font-semibold mb-2">Local &amp; Trusted</h3><p>We’re based in Bangor and proud to serve County Down residents with care.</p></div>
-          <div><h3 className="text-xl font-semibold mb-2">Flexible Plans</h3><p>Whether you want a one-off clean or recurring service, we’ve got options.</p></div>
-          <div><h3 className="text-xl font-semibold mb-2">Affordable Pricing</h3><p>From just £5 per bin — clear pricing with no surprises.</p></div>
-          <div><h3 className="text-xl font-semibold mb-2">Fully Insured</h3><p>We’re fully insured and compliant — so you can rest easy.</p></div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Local &amp; Trusted</h3>
+            <p>We’re based in Bangor and proud to serve County Down residents with care.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Flexible Plans</h3>
+            <p>Whether you want a one-off clean or recurring service, we’ve got options.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Affordable Pricing</h3>
+            <p>From just £5 per bin — clear pricing with no surprises.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Fully Insured</h3>
+            <p>We’re fully insured and compliant — so you can rest easy.</p>
+          </div>
         </div>
       </section>
     </div>
