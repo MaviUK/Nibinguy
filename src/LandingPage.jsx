@@ -314,7 +314,7 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
               <div className="p-6">
                 <h3 className="text-xl font-bold flex items-center gap-2">
   <img
-    src="/favicon.ico"
+    src="/public/logo.png"
     alt="Ni Bin Guy"
     className="w-6 h-6 inline-block"
   />
