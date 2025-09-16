@@ -675,7 +675,7 @@ export default function NiBinGuyLandingPage() {
           <div className="bg-neutral-900 text-white w-11/12 max-w-3xl rounded-2xl shadow-2xl border border-neutral-800 p-4 md:p-6 relative" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setShowChallenge(false)} className="absolute top-3 right-4 text-neutral-400 hover:text-white text-2xl" aria-label="Close">&times;</button>
             {/* autoWin ON so you can test the win flow end-to-end */}
-            <TenSecondChallenge />
+            <TenSecondChallenge autowin/>
           </div>
         </div>
       )}
