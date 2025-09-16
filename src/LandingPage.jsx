@@ -775,7 +775,7 @@ export default function NiBinGuyLandingPage() {
   </div>
 </div>
 
-      )}
+  
 
       {/* Terms of Service Modal */}
       {showTerms && (
