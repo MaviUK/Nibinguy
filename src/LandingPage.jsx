@@ -725,56 +725,30 @@ export default function NiBinGuyLandingPage() {
                 <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
 
                 {/* Terms of Service gating */}
-<div className="mt-4 p-3 rounded-lg border border-gray-300 bg-gray-50">
-  <div className="flex items-center justify-between gap-3">
-    <div className="text-sm text-gray-700">
-      You must view and agree to the{" "}
-      <button type="button" onClick={openTerms} className="underline font-semibold">
-        Terms of Service
-      </button>{" "}
-      to book.
-    </div>
-    <span className="text-[10px] text-gray-500">v{TERMS_VERSION}</span>
-  </div>
-
-  <div className="mt-3 flex items-start gap-2">
-    <input
-      id="agree"
-      type="checkbox"
-      className="mt-1"
-      checked={agreeToTerms}
-      disabled={!canToggleAgree}
-      onChange={(e) => setAgreeToTerms(e.target.checked)}
-      aria-describedby="tos-help"
-    />
-    <label htmlFor="agree" className="text-sm text-gray-800">
-      I’ve read and agree to the Terms of Service, including the
-      <strong> 8 AM bin availability</strong> clause.
-      {!canToggleAgree && (
-        <span id="tos-help" className="block text-xs text-gray-500">
-          (Open the Terms and scroll to the bottom to enable this.)
-        </span>
-      )}
-    </label>
-  </div>
-
-  {/* NEW: Confirm & Agree button (auto-checks the box) */}
-  <div className="mt-2">
-    {!agreeToTerms && (
-      <button
-        type="button"
-        onClick={() => setAgreeToTerms(true)}
-        disabled={!termsScrolledToEnd}
-        className="px-3 py-2 rounded-md text-sm font-semibold bg-black text-white disabled:opacity-50 disabled:cursor-not-allowed"
-        aria-disabled={!termsScrolledToEnd}
-        aria-label="Confirm and agree to the Terms"
-      >
-        Confirm &amp; Agree
-      </button>
-    )}
-  </div>
-</div>
-
+                <div className="mt-4 p-3 rounded-lg border border-gray-300 bg-gray-50">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm text-gray-700">
+                      You must view and agree to the <button type="button" onClick={openTerms} className="underline font-semibold">Terms of Service</button> to book.
+                    </div>
+                    <span className="text-[10px] text-gray-500">v{TERMS_VERSION}</span>
+                  </div>
+                  <div className="mt-3 flex items-start gap-2">
+                    <input
+                      id="agree"
+                      type="checkbox"
+                      className="mt-1"
+                      checked={agreeToTerms}
+                      disabled={!canToggleAgree}
+                      onChange={(e) => setAgreeToTerms(e.target.checked)}
+                    />
+                    <label htmlFor="agree" className="text-sm text-gray-800">
+                      I’ve read and agree to the Terms of Service.
+                      {!canToggleAgree && (
+                        <span className="block text-xs text-gray-500">(Open the Terms and scroll to the bottom to enable this.)</span>
+                      )}
+                    </label>
+                  </div>
+                </div>
 
                 <button onClick={handleSend} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>Send via WhatsApp</button>
                 <button onClick={handleEmailSend} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>Send via Email</button>
@@ -796,9 +770,30 @@ export default function NiBinGuyLandingPage() {
               <div ref={termsScrollRef} className="px-6 py-4 max-h-[70dvh] overflow-y-auto whitespace-pre-line text-sm leading-6">
                 {TERMS_BODY}
               </div>
-              <div className="px-6 py-4 border-t bg-gray-50 text-xs text-gray-600">
-                Scroll to the end to enable agreement.
-              </div>
+              <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between gap-3">
+  <div className="text-xs text-gray-600">
+    Scroll to the end to enable agreement.
+  </div>
+  <div className="flex items-center gap-2">
+    <button
+      type="button"
+      onClick={() => setShowTerms(false)}
+      className="px-4 py-2 rounded-lg bg-neutral-200 hover:bg-neutral-300"
+    >
+      Close
+    </button>
+    <button
+      type="button"
+      onClick={() => { setAgreeToTerms(true); setShowTerms(false); }}
+      disabled={!termsScrolledToEnd}
+      className="px-4 py-2 rounded-lg bg-black text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+      aria-disabled={!termsScrolledToEnd}
+    >
+      Confirm &amp; Agree
+    </button>
+  </div>
+</div>
+
             </div>
           </div>
         </div>
