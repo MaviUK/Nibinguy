@@ -248,8 +248,14 @@ function TenSecondChallenge({ debug = false }) {
     <div className="w-full max-w-3xl mx-auto p-4" data-testid="ten-sec-root">
       <div className="bg-neutral-900 text-white rounded-2xl p-6 md:p-8 shadow-xl border border-neutral-800">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-2xl md:text-3xl font-bold">10-Second Stop Watch Challenge</h2>
- <h2 className="text-2xl md:text-3xl font-bold">Stop the Timer on exactly 10:00 to win a <strong>Free Bin Clean</strong></h2>
+          <div>
+    <h2 className="text-2xl md:text-3xl font-bold leading-tight">
+      10-Second Stop Watch Challenge
+    </h2>
+    <p className="mt-1 text-sm md:text-base text-neutral-300">
+      Stop the timer on exactly <span className="font-semibold">10:00</span> to win a <span className="font-semibold">Free Bin Clean</span>
+    </p>
+  </div>
           <div className="text-xs opacity-80">
             {CHANCES_PER_DAY === 1
               ? "One try per device · Europe/London"
