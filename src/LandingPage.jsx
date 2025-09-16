@@ -395,6 +395,52 @@ function TenSecondChallenge({ debug = false }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
+   Terms of Service (inline modal + gating)
+   ──────────────────────────────────────────────────────────────────────────── */
+const TERMS_VERSION = "September 2025";
+const TERMS_TITLE = "Ni Bin Guy – Terms of Service";
+const TERMS_BODY = `
+We keep our Terms of Service simple and transparent. By booking or receiving a bin clean from Ni Bin Guy, you agree to:
+
+1) Service & Contracts
+• Regular plans have a minimum 12-month term (unless agreed otherwise).
+• One-off cleans have no minimum term.
+• Each bin is a separate contract; adding a bin starts a new term for that bin.
+• Contracts aren’t transferable without our agreement.
+
+2) Bin Availability (8 AM rule)
+• Put bins out or make them accessible by **8 AM** on the scheduled day.
+• If your bin isn’t available and you haven’t told us **before 8 AM that day**, the clean **will still be charged**.
+• We may still charge if access is blocked, refuse wasn’t collected, there’s excessive/unsafe waste, or conditions are unsafe.
+
+3) Cleaning Process
+• Inside & outside cleaned (where safe) using pressurised water and detergent.
+• Some stains may take multiple visits or may not fully remove.
+• Loosened waste may be bagged and left in your bin for disposal.
+• Keep at least 5 m away during cleaning.
+
+4) Payments
+• Payment due within 7 days of each clean.
+• Accepted: Direct Debit, Bank Transfer, Card (no cash).
+• Cancelling a Direct Debit does **not** cancel service — give at least 48 hours’ notice to cancel.
+• Overdue accounts may incur fees and be referred to collections.
+
+5) Customer Responsibilities
+• Keep contact & payment details up to date.
+• Tell us in advance if your bin won’t be available.
+• Zero tolerance for abuse toward staff (including online).
+
+6) Other Terms
+• We may place a small sticker/service tag on your bin.
+• Discounts are discretionary; prices may change outside a fixed term.
+• After the minimum term, plans continue on a rolling 30-day basis (30 days’ notice to cancel).
+
+7) Data & Communication
+• You consent to us storing your details and contacting you about your service.
+• Text reminders are a courtesy; you’re responsible for knowing your schedule.
+`;
+
+/* ────────────────────────────────────────────────────────────────────────────
    Landing page
    ──────────────────────────────────────────────────────────────────────────── */
 export default function NiBinGuyLandingPage() {
@@ -415,6 +461,28 @@ export default function NiBinGuyLandingPage() {
 
   const phoneNumber = "+447555178484";
   const phoneDisplay = "07555 178484";
+
+  // Terms of Service gating state
+  const [showTerms, setShowTerms] = useState(false);
+  const [termsViewed, setTermsViewed] = useState(false);
+  const [termsScrolledToEnd, setTermsScrolledToEnd] = useState(false);
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const termsScrollRef = useRef(null);
+
+  useEffect(() => {
+    if (!showTerms) return;
+    const el = termsScrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 8; // small buffer
+      if (atEnd) setTermsScrolledToEnd(true);
+    };
+    el.addEventListener("scroll", onScroll);
+    return () => el.removeEventListener("scroll", onScroll);
+  }, [showTerms]);
+
+  const openTerms = () => { setShowTerms(true); setTermsViewed(true); };
+  const canToggleAgree = termsViewed && termsScrolledToEnd;
 
   // Booking modal: attach Places
   useEffect(() => {
@@ -445,28 +513,29 @@ export default function NiBinGuyLandingPage() {
     return () => cleanup();
   }, [showForm]);
 
+  const missingFields = () => (!name || !email || !address || !phone || bins.some((b) => !b.type));
+
+  const TOS_PREFIX = `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION}), including the ‘bin not out by 8 AM may be charged’ clause.`;
+
   const handleSend = () => {
-    if (!name || !email || !address || !phone || bins.some((b) => !b.type)) {
-      alert("Please complete all fields before sending.");
-      return;
-    }
+    if (missingFields()) { alert("Please complete all fields before sending."); return; }
+    if (!agreeToTerms) { alert("Please view and agree to the Terms of Service before booking."); return; }
     const binDetails = bins
       .filter((b) => b.type !== "")
       .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
       .join("%0A");
-
-    const message = `Hi my name is ${encodeURIComponent(name)}. I'd like to book a bin clean, please.%0A${binDetails}%0AAddress: ${encodeURIComponent(address)}%0AEmail: ${encodeURIComponent(email)}%0APhone: ${encodeURIComponent(phone)}`;
-
+    const message =
+      `${encodeURIComponent(TOS_PREFIX)}%0A%0AHi my name is ${encodeURIComponent(name)}. I'd like to book a bin clean, please.` +
+      `%0A${binDetails}%0AAddress: ${encodeURIComponent(address)}%0AEmail: ${encodeURIComponent(email)}%0APhone: ${encodeURIComponent(phone)}`;
     const url = `https://wa.me/${phoneNumber}?text=${message}`;
     window.open(url, "_blank");
     setShowForm(false);
   };
 
   const handleEmailSend = async () => {
-    if (!name || !email || !address || !phone || bins.some((b) => !b.type)) {
-      alert("Please complete all fields before sending.");
-      return;
-    }
+    if (missingFields()) { alert("Please complete all fields before sending."); return; }
+    if (!agreeToTerms) { alert("Please view and agree to the Terms of Service before booking."); return; }
+
     const loc = selectedPlaceRef.current?.geometry?.location;
     const lat = loc ? loc.lat() : null;
     const lng = loc ? loc.lng() : null;
@@ -475,11 +544,23 @@ export default function NiBinGuyLandingPage() {
       const res = await fetch("/.netlify/functions/sendBookingEmail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, phone, address, bins, placeId, lat, lng }),
+        body: JSON.stringify({
+          name,
+          email,
+          phone,
+          address,
+          bins,
+          placeId,
+          lat,
+          lng,
+          termsAccepted: true,
+          termsVersion: TERMS_VERSION,
+          termsAcceptanceText: TOS_PREFIX,
+        }),
       });
 
       if (res.ok) {
-        alert("Booking email sent successfully!");
+        alert("Booking email sent successfully! (ToS acceptance included)");
         setShowForm(false);
       } else {
         alert("Failed to send booking email.");
@@ -570,7 +651,12 @@ export default function NiBinGuyLandingPage() {
           </p>
 
           <div className="mt-6 flex flex-col sm:flex-row gap-4">
-            <button onClick={() => setShowForm(true)} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Book a Clean</button>
+            <button
+              onClick={() => { setShowForm(true); setAgreeToTerms(false); setTermsViewed(false); setTermsScrolledToEnd(false); }}
+              className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+            >
+              Book a Clean
+            </button>
             <button onClick={() => setShowContactForm(true)} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Contact Us</button>
             <button
               onClick={() => setShowChallenge(true)}
@@ -638,8 +724,54 @@ export default function NiBinGuyLandingPage() {
                 <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
                 <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
 
-                <button onClick={handleSend} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full">Send via WhatsApp</button>
-                <button onClick={handleEmailSend} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full">Send via Email</button>
+                {/* Terms of Service gating */}
+                <div className="mt-4 p-3 rounded-lg border border-gray-300 bg-gray-50">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm text-gray-700">
+                      You must view and agree to the <button type="button" onClick={openTerms} className="underline font-semibold">Terms of Service</button> to book.
+                    </div>
+                    <span className="text-[10px] text-gray-500">v{TERMS_VERSION}</span>
+                  </div>
+                  <div className="mt-3 flex items-start gap-2">
+                    <input
+                      id="agree"
+                      type="checkbox"
+                      className="mt-1"
+                      checked={agreeToTerms}
+                      disabled={!canToggleAgree}
+                      onChange={(e) => setAgreeToTerms(e.target.checked)}
+                    />
+                    <label htmlFor="agree" className="text-sm text-gray-800">
+                      I’ve read and agree to the Terms of Service, including the <strong>8 AM bin availability</strong> charge clause.
+                      {!canToggleAgree && (
+                        <span className="block text-xs text-gray-500">(Open the Terms and scroll to the bottom to enable this.)</span>
+                      )}
+                    </label>
+                  </div>
+                </div>
+
+                <button onClick={handleSend} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>Send via WhatsApp</button>
+                <button onClick={handleEmailSend} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>Send via Email</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Terms of Service Modal */}
+      {showTerms && (
+        <div className="fixed inset-0 z-[60] bg-black/70" onClick={() => setShowTerms(false)}>
+          <div className="min-h-[100svh] flex items-center justify-center p-3 sm:p-6">
+            <div className="bg-white text-black w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden" onClick={(e)=>e.stopPropagation()}>
+              <div className="px-6 py-4 border-b flex items-center justify-between">
+                <h3 className="text-lg font-bold">{TERMS_TITLE} <span className="text-xs font-normal text-gray-500">(v{TERMS_VERSION})</span></h3>
+                <button onClick={() => setShowTerms(false)} className="text-2xl leading-none text-gray-500 hover:text-black">&times;</button>
+              </div>
+              <div ref={termsScrollRef} className="px-6 py-4 max-h-[70dvh] overflow-y-auto whitespace-pre-line text-sm leading-6">
+                {TERMS_BODY}
+              </div>
+              <div className="px-6 py-4 border-t bg-gray-50 text-xs text-gray-600">
+                Scroll to the end to enable agreement.
               </div>
             </div>
           </div>
