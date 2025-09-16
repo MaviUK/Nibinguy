@@ -163,57 +163,57 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
   }, [showWinModal]);
 
   async function submitBooking(e) {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!form.name || !form.email || !form.phone || !form.address || !form.binType) {
-      setError("Please complete all required fields.");
-      return;
-    }
-
-    setError("");
-    setWinSubmitErrorText("");
-    setWinSubmitStatus("sending");
-
-    const loc = winSelectedPlaceRef.current?.geometry?.location;
-    const lat = loc ? loc.lat() : null;
-    const lng = loc ? loc.lng() : null;
-
-    // IMPORTANT: match booking payload shape exactly
-    const payload = {
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      address: form.address,
-      bins: [{ type: form.binType, count: 1, frequency: "Prize (Free Clean)" }],
-      placeId: winPlaceId,
-      lat,
-      lng,
-      source: "ten-second-challenge",
-    };
-
-    try {
-      const res = await fetch("/.netlify/functions/sendBookingEmail", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.ok) {
-        setWinSubmitStatus("success"); // show confirmation screen
-      } else {
-        const text = await res.text().catch(() => "");
-        console.error("Winner email send failed:", res.status, text);
-        setWinSubmitErrorText(text?.slice(0, 300) || `HTTP ${res.status}`);
-        setWinSubmitStatus("error");
-        setError("We couldn't send the email. Please try again or contact us.");
-      }
-    } catch (err) {
-      console.error(err);
-      setWinSubmitErrorText(String(err).slice(0, 300));
-      setWinSubmitStatus("error");
-      setError("Network error sending the email. Please try again.");
-    }
+  if (!form.name || !form.email || !form.phone || !form.address || !form.binType) {
+    setError("Please complete all required fields.");
+    return;
   }
+
+  setError("");
+  setWinSubmitStatus("sending");
+
+  const loc = winSelectedPlaceRef.current?.geometry?.location;
+  const lat = loc ? loc.lat() : null;
+  const lng = loc ? loc.lng() : null;
+
+  // EXACTLY match the booking payload shape
+  const payload = {
+    name: form.name,
+    email: form.email,
+    phone: form.phone,
+    address: form.address,
+    bins: [{ type: form.binType, count: 1, frequency: "Prize (Free Clean)" }],
+    placeId: winPlaceId,
+    lat,
+    lng,
+    source: "ten-second-challenge",
+  };
+
+  try {
+    const res = await fetch("/.netlify/functions/sendBookingEmail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    // Read body either way so we can show useful info
+    const text = await res.text().catch(() => "");
+    if (res.ok) {
+      setWinSubmitStatus("success");
+      // Optional: audible/visible cue so you 100% see it during testing
+      alert("Winner details submitted. Confirmation email sent.");
+    } else {
+      console.error("Winner email failed:", res.status, text);
+      setError("We couldn't send the email. Please try again or contact us.");
+      setWinSubmitStatus("error");
+    }
+  } catch (err) {
+    console.error(err);
+    setError("Network error sending the email. Please try again.");
+    setWinSubmitStatus("error");
+  }
+}
 
   const seconds = (elapsedCs / 100).toFixed(2);
 
