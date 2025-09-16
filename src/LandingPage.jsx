@@ -742,7 +742,7 @@ export default function NiBinGuyLandingPage() {
                       onChange={(e) => setAgreeToTerms(e.target.checked)}
                     />
                     <label htmlFor="agree" className="text-sm text-gray-800">
-                      I’ve read and agree to the Terms of Service, including the <strong>8 AM bin availability</strong> charge clause.
+                      I’ve read and agree to the Terms of Service.
                       {!canToggleAgree && (
                         <span className="block text-xs text-gray-500">(Open the Terms and scroll to the bottom to enable this.)</span>
                       )}
