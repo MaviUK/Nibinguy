@@ -9,16 +9,14 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
 
   // winner form state (no bin count control — prize is 1 bin)
   const [form, setForm] = useState({
+    binType: "Black Bin", // default so user can submit without changing
     name: "",
     email: "",
     phone: "",
     address: "",
     preferred_date: "",
-    binType: "",
   });
-
-  // winner form submit status: idle | sending | success | error
-  const [winSubmitStatus, setWinSubmitStatus] = useState("idle");
+  const [winSubmitStatus, setWinSubmitStatus] = useState("idle"); // idle | sending | success | error
 
   // Google Places for winner form
   const winAddressRef = useRef(null);
@@ -47,8 +45,7 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
         t?.tagName === "TEXTAREA" ||
         t?.isContentEditable;
 
-      if (isTyping || showWinModal) return;
-
+      if (isTyping || showWinModal) return; // let space be typed in fields / ignore under modal
       e.preventDefault();
       handleStartStop();
     };
@@ -95,15 +92,13 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
     }
   }
 
-  // Attach Places to the winner address when modal opens
+  // Attach Places to the winner address when modal opens (falls back to manual entry if no API key)
   useEffect(() => {
     if (!showWinModal) return;
     const key = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
-    if (!key) return; // manual entry works without it
+    if (!key) return;
 
-    let ac;
-    let cleanup = () => {};
-
+    let ac; let cleanup = () => {};
     loadGooglePlaces(key)
       .then((google) => {
         if (!winAddressRef.current) return;
@@ -129,8 +124,7 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
   async function submitBooking(e) {
     e.preventDefault();
 
-    // minimal validation
-    if (!form.binType || !form.name || !form.email || !form.phone || !form.address) {
+    if (!form.name || !form.email || !form.phone || !form.address) {
       setError("Please complete all required fields.");
       return;
     }
@@ -142,40 +136,38 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
     const lat = loc ? loc.lat() : null;
     const lng = loc ? loc.lng() : null;
 
-    // fixed prize: 1 bin clean
-    const bins = [
-      { type: form.binType, count: 1, frequency: "Prize (Free Clean)" }
-    ];
+    // Match the booking payload exactly (this is important for your function)
+    const payload = {
+      name: form.name,
+      email: form.email,
+      phone: form.phone,
+      address: form.address,
+      bins: [{ type: form.binType, count: 1, frequency: "Prize (Free Clean)" }],
+      placeId: winPlaceId,
+      lat,
+      lng,
+      source: "ten-second-challenge",
+    };
 
     try {
       const res = await fetch("/.netlify/functions/sendBookingEmail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.name,
-          email: form.email,
-          phone: form.phone,
-          address: form.address,
-          bins,
-          placeId: winPlaceId,
-          lat,
-          lng,
-          source: "ten-second-challenge"
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (res.ok) {
-        setWinSubmitStatus("success");
+        setWinSubmitStatus("success"); // show confirmation screen
       } else {
-        const txt = await res.text().catch(() => "");
-        console.error("Winner email failed:", txt);
+        const text = await res.text().catch(() => "");
+        console.error("Winner email send failed:", text);
         setWinSubmitStatus("error");
-        setError("Failed to send the confirmation email. Please try again or contact us.");
+        setError("We couldn't send the email. Please try again or contact us.");
       }
     } catch (err) {
       console.error(err);
       setWinSubmitStatus("error");
-      setError("Error sending the confirmation email. Please try again.");
+      setError("Network error sending the email. Please try again.");
     }
   }
 
@@ -279,7 +271,7 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
                 <div className="mt-6 flex justify-end">
                   <button
                     onClick={() => { setShowWinModal(false); setMessage("Thanks! We'll be in touch to confirm your clean."); }}
-                    className="px-5 py-3 rounded-xl bg-black text-white hover:opacity-90"
+                    className="px-5 py-3 rounded-xl bg黑 text-white hover:opacity-90"
                   >
                     Close
                   </button>
@@ -301,7 +293,6 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
                     value={form.binType}
                     onChange={(e)=>setForm(f=>({...f,binType:e.target.value}))}
                   >
-                    <option value="">Select bin type</option>
                     <option value="Black Bin">Black</option>
                     <option value="Brown Bin">Brown</option>
                     <option value="Green Bin">Green</option>
@@ -355,7 +346,6 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
         </div>
       )}
 
-      {/* Tailwind utility for inputs (kept) */}
       <style>{`
         .input { @apply w-full rounded-xl border border-neutral-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500; }
       `}</style>
