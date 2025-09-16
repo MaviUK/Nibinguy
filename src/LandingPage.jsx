@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 
+/* ───────────────── Config ───────────────── */
+// Allow this many tries per device per day (1 = single daily chance)
+const CHANCES_PER_DAY = 1;
+
 /* ───────────────── Google Places loader (shared) ───────────────── */
 function loadGooglePlaces(apiKey) {
   return new Promise((resolve, reject) => {
@@ -23,7 +27,7 @@ function loadGooglePlaces(apiKey) {
   });
 }
 
-/* ───────────────── TenSecondChallenge (inline) ───────────────── */
+/* ───────────────── TenSecondChallenge ───────────────── */
 function getTodayKey() {
   const fmt = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/London",
@@ -38,18 +42,22 @@ function computeCentiseconds(startMs, stopMs) {
   return Math.round((stopMs - startMs) / 10);
 }
 
-function TenSecondChallenge({ debug = false, autoWin = false }) {
+function TenSecondChallenge({ debug = false }) {
   const [elapsedCs, setElapsedCs] = useState(0);
   const [running, setRunning] = useState(false);
-  const [hasTriedToday, setHasTriedToday] = useState(false);
-  const [alreadyClaimedToday, setAlreadyClaimedToday] = useState(false);
+
+  // attempts per day (counter, not boolean)
+  const [attemptsToday, setAttemptsToday] = useState(0);
+  const triesLeft = Math.max(0, CHANCES_PER_DAY - attemptsToday);
+  const lockedForToday = triesLeft === 0;
+
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showWinModal, setShowWinModal] = useState(false);
 
-  // Winner form (no bin count control — prize is 1 bin)
+  // Winner form (prize is fixed to 1 bin)
   const [form, setForm] = useState({
-    binType: "Black Bin", // default so user can submit immediately
+    binType: "Black Bin",
     name: "",
     email: "",
     phone: "",
@@ -68,11 +76,10 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
   const startRef = useRef(0);
   const todayKey = useMemo(() => getTodayKey(), []);
 
+  // Load today's attempts counter
   useEffect(() => {
-    const tried = typeof window !== "undefined" ? localStorage.getItem(`tensec_try_${todayKey}`) : null;
-    const win = typeof window !== "undefined" ? localStorage.getItem(`tensec_winner_${todayKey}`) : null;
-    setHasTriedToday(!!tried);
-    setAlreadyClaimedToday(!!win);
+    const n = parseInt(localStorage.getItem(`tensec_attempts_${todayKey}`) || "0", 10);
+    setAttemptsToday(Number.isNaN(n) ? 0 : n);
   }, [todayKey]);
 
   // Spacebar: don't toggle when typing or when winner modal is open
@@ -87,15 +94,14 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
         t?.tagName === "TEXTAREA" ||
         t?.isContentEditable;
 
-      if (isTyping || showWinModal) return; // let space be typed / or ignore under modal
+      if (isTyping || showWinModal) return; // let space be typed / ignore under modal
       e.preventDefault();
       handleStartStop();
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, hasTriedToday, alreadyClaimedToday, showWinModal, autoWin]);
+  }, [running, lockedForToday, showWinModal]);
 
   function tick(now) {
     const cs = computeCentiseconds(startRef.current, now);
@@ -104,7 +110,7 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
   }
 
   function handleStartStop() {
-    if (!autoWin && (hasTriedToday || alreadyClaimedToday)) return;
+    if (lockedForToday) return;
 
     if (!running) {
       setError("");
@@ -115,19 +121,18 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
       rafRef.current = requestAnimationFrame(tick);
     } else {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      const rawFinalCs = computeCentiseconds(startRef.current, performance.now());
-      const finalCs = autoWin ? 1000 : rawFinalCs;
+      const finalCs = computeCentiseconds(startRef.current, performance.now());
       setElapsedCs(finalCs);
       setRunning(false);
 
-      if (typeof window !== "undefined") localStorage.setItem(`tensec_try_${todayKey}`, "1");
-      setHasTriedToday(true);
+      // consume an attempt
+      const next = attemptsToday + 1;
+      setAttemptsToday(next);
+      localStorage.setItem(`tensec_attempts_${todayKey}`, String(next));
 
-      if (autoWin || finalCs === 1000) {
-        if (typeof window !== "undefined") localStorage.setItem(`tensec_winner_${todayKey}`, "1");
+      if (finalCs === 1000) {
         setShowWinModal(true);
         setMessage("You nailed 10.00 seconds! 🎉");
-        setAlreadyClaimedToday(true);
       } else {
         setMessage("So close! Try again tomorrow.");
       }
@@ -179,7 +184,6 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
     const lat = loc ? loc.lat() : null;
     const lng = loc ? loc.lng() : null;
 
-    // EXACTLY match your booking payload shape
     const payload = {
       name: form.name,
       email: form.email,
@@ -205,7 +209,7 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
       try { body = await res.json(); } catch { /* ignore non-JSON */ }
 
       if (res.ok) {
-        setWinSubmitStatus("success");     // swap to success screen
+        setWinSubmitStatus("success");
         setMessage("Thanks! We'll be in touch to confirm your clean.");
         alert("Winner details submitted. Confirmation email sent.");
       } else {
@@ -231,7 +235,13 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
       { start: 0, stop: 10005, expect: 1001 },
       { start: 42, stop: 1042, expect: 100 },
     ];
-    console.table(cases.map((c) => ({ ...c, got: computeCentiseconds(c.start, c.stop), pass: computeCentiseconds(c.start, c.stop) === c.expect })));
+    console.table(
+      cases.map((c) => ({
+        ...c,
+        got: computeCentiseconds(c.start, c.stop),
+        pass: computeCentiseconds(c.start, c.stop) === c.expect,
+      }))
+    );
   }, [debug]);
 
   return (
@@ -239,14 +249,12 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
       <div className="bg-neutral-900 text-white rounded-2xl p-6 md:p-8 shadow-xl border border-neutral-800">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-2xl md:text-3xl font-bold">10-Second Stop Watch Challenge</h2>
-          <div className="text-xs opacity-80">One try per device · Europe/London</div>
-        </div>
-
-        {autoWin && (
-          <div className="mt-3 bg-amber-900/30 border border-amber-700 text-amber-200 text-xs px-3 py-2 rounded-lg" data-testid="test-mode">
-            Testing mode is <strong>ON</strong>: stopping the timer will count as a win and display 10.00s.
+          <div className="text-xs opacity-80">
+            {CHANCES_PER_DAY === 1
+              ? "One try per device · Europe/London"
+              : `${CHANCES_PER_DAY} tries per device · Europe/London`}
           </div>
-        )}
+        </div>
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
           {/* Display */}
@@ -266,30 +274,22 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
 
           {/* Controls */}
           <div className="flex flex-col gap-4">
-            {autoWin ? (
-              <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 p-4 rounded-xl">
-                Testing mode: the daily lock is bypassed and you'll win on Stop.
-              </div>
-            ) : alreadyClaimedToday ? (
-              <div className="bg-red-900/30 border border-red-800 text-red-200 p-4 rounded-xl" data-testid="already-claimed">
-                Today's prize has been claimed on this device. Come back tomorrow!
-              </div>
-            ) : hasTriedToday ? (
-              <div className="bg-amber-900/30 border border-amber-800 text-amber-200 p-4 rounded-xl" data-testid="tried-today">
-                You've used your attempt for {todayKey} on this device. Try again tomorrow.
+            {lockedForToday ? (
+              <div className="bg-amber-900/30 border border-amber-800 text-amber-200 p-4 rounded-xl" data-testid="locked">
+                You’ve used your {CHANCES_PER_DAY === 1 ? "attempt" : `${CHANCES_PER_DAY} attempts`} for {todayKey}. Come back tomorrow!
               </div>
             ) : (
               <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 p-4 rounded-xl" data-testid="ready">
-                Ready when you are — hit Space or click the big button below.
+                {triesLeft} attempt{triesLeft === 1 ? "" : "s"} left today.
               </div>
             )}
 
             <button
               onClick={handleStartStop}
-              disabled={!autoWin && (hasTriedToday || alreadyClaimedToday)}
+              disabled={lockedForToday}
               className={`w-full rounded-2xl py-6 text-xl font-semibold shadow-lg border transition active:scale-[0.99]
                 ${running ? "bg-rose-600 hover:bg-rose-500 border-rose-400" : "bg-emerald-600 hover:bg-emerald-500 border-emerald-400"}
-                ${!autoWin && (hasTriedToday || alreadyClaimedToday) ? "opacity-50 cursor-not-allowed" : ""}`}
+                ${lockedForToday ? "opacity-50 cursor-not-allowed" : ""}`}
               data-testid="start-stop"
             >
               {running ? "Stop" : "Start"}
@@ -312,10 +312,10 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
             {/* Success screen */}
             {winSubmitStatus === "success" ? (
               <div className="p-6">
-    <h3 className="text-xl font-bold">You're all set! 🎉</h3>
+                <h3 className="text-xl font-bold">You're all set! 🎉</h3>
                 <p className="text-sm text-neutral-700 mt-2">
-                  Thanks, {form.name}. We’ve received your winner details, you will recieved a confirmation email to accept within the next 24 hours.
-                  Once you accept this your <strong>Free Cleen</strong> will be carried out on the agreed day.
+                  Thanks, {form.name}. We’ve received your winner details and sent a confirmation email.
+                  We’ll be in touch to schedule your free clean.
                 </p>
                 <div className="mt-6 flex justify-end">
                   <button
@@ -410,7 +410,7 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Landing page
+   Landing page (FULL)
    ──────────────────────────────────────────────────────────────────────────── */
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
@@ -588,12 +588,11 @@ export default function NiBinGuyLandingPage() {
             <button onClick={() => setShowForm(true)} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Book a Clean</button>
             <button onClick={() => setShowContactForm(true)} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Contact Us</button>
             <button
-  onClick={() => setShowChallenge(true)}
-  className="bg-[#9b111e] hover:bg-[#7f0e19] text-white font-bold py-3 px-6 rounded-xl shadow-lg transition focus:outline-none focus:ring-2 focus:ring-[#9b111e]/50 active:scale-[0.99]"
->
-  Free Bin Clean
-</button>
-
+              onClick={() => setShowChallenge(true)}
+              className="bg-[#9b111e] hover:bg-[#7f0e19] text-white font-bold py-3 px-6 rounded-xl shadow-lg transition focus:outline-none focus:ring-2 focus:ring-[#9b111e]/50 active:scale-[0.99]"
+            >
+              Free Bin Clean
+            </button>
             <a href="#customer-portal" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center">Customer Portal</a>
           </div>
         </div>
@@ -642,7 +641,16 @@ export default function NiBinGuyLandingPage() {
               )}
             </div>
 
-            <input ref={addressRef} type="text" placeholder="Full Address" value={address} onChange={(e) => { setAddress(e.target.value); setPlaceId(null); selectedPlaceRef.current = null; }} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4" autoComplete="off" inputMode="text" />
+            <input
+              ref={addressRef}
+              type="text"
+              placeholder="Full Address"
+              value={address}
+              onChange={(e) => { setAddress(e.target.value); setPlaceId(null); selectedPlaceRef.current = null; }}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
+              autoComplete="off"
+              inputMode="text"
+            />
             <p className="text-xs text-gray-500 -mt-2">Tip: pick from suggestions or just type your full address.</p>
 
             <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
@@ -685,7 +693,6 @@ export default function NiBinGuyLandingPage() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowChallenge(false)}>
           <div className="bg-neutral-900 text-white w-11/12 max-w-3xl rounded-2xl shadow-2xl border border-neutral-800 p-4 md:p-6 relative" onClick={(e) => e.stopPropagation()}>
             <button onClick={() => setShowChallenge(false)} className="absolute top-3 right-4 text-neutral-400 hover:text-white text-2xl" aria-label="Close">&times;</button>
-            {/* autoWin ON so you can test the win flow end-to-end; remove prop to go live */}
             <TenSecondChallenge />
           </div>
         </div>
