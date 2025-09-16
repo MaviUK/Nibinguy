@@ -312,15 +312,7 @@ function TenSecondChallenge({ debug = false, autoWin = false }) {
             {/* Success screen */}
             {winSubmitStatus === "success" ? (
               <div className="p-6">
-                <h3 className="text-xl font-bold flex items-center gap-2">
-  <img
-    src="/public/logo.png"
-    alt="Ni Bin Guy"
-    className="w-6 h-6 inline-block"
-  />
-  You're all set!
-</h3>
-
+    <h3 className="text-xl font-bold">You're all set! 🎉</h3>
                 <p className="text-sm text-neutral-700 mt-2">
                   Thanks, {form.name}. We’ve received your winner details, you will recieved a confirmation email for you to accept within the next 24 hours.
                   Once you accept this your <strong>Free Cleen</strong> will be done on the agreed day.
