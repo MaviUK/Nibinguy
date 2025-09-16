@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 
 /* ───────────────── Config ───────────────── */
 // Allow this many tries per device per day (1 = single daily chance)
-const CHANCES_PER_DAY = 5;
+const CHANCES_PER_DAY = 10;
 
 /* ───────────────── Google Places loader (shared) ───────────────── */
 function loadGooglePlaces(apiKey) {
