@@ -4,10 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
    Time + Utility Functions
    ========================= */
 const TZ = "Europe/London";
-const pad2 = (n) => String(n).padStart(2, "0");
 // How many attempts per device per day
 const CHANCES_PER_DAY = 10; // ← change this number to whatever you want
-
 
 // Round to nearest centisecond between two high-res timestamps (ms)
 function computeCentiseconds(startMs, stopMs) {
@@ -60,13 +58,9 @@ async function postMetric(kind) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ kind }),
     });
-    const txt = await res.text();
-    console.log("[metrics POST]", kind, res.status, txt);
-  } catch (e) {
-    console.log("[metrics POST error]", kind, e);
-  }
+    await res.text();
+  } catch {}
 }
-
 
 /* =========================
    Component
@@ -74,9 +68,12 @@ async function postMetric(kind) {
 export default function TenSecondChallenge({ debug = false, autoWin = false }) {
   const [elapsedCs, setElapsedCs] = useState(0);
   const [running, setRunning] = useState(false);
+
+  // NEW: counter-based daily attempts
   const [triesToday, setTriesToday] = useState(0);
-const outOfTries = !autoWin && triesToday >= CHANCES_PER_DAY;
-const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
+  const outOfTries = !autoWin && triesToday >= CHANCES_PER_DAY;
+  const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
+
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showWinModal, setShowWinModal] = useState(false);
@@ -102,24 +99,22 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
   const startRef = useRef(0);
   const todayKey = useMemo(() => getTodayKey(), []);
 
-  // Load the "one try per day" flag
- useEffect(() => {
-  if (typeof window === "undefined") return;
-  const raw = localStorage.getItem(`tensec_tries_${todayKey}`);
-  setTriesToday(raw ? parseInt(raw, 10) || 0 : 0);
-}, [todayKey]);
-
+  // Load today's try count
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = localStorage.getItem(`tensec_tries_${todayKey}`);
+    setTriesToday(raw ? parseInt(raw, 10) || 0 : 0);
+  }, [todayKey]);
 
   // Spacebar: ignore while typing or when modal open
   useEffect(() => {
     const onKeyDown = (e) => {
-      const isSpace = e.code === "Space" || e.key === " " || e.key === "Spacebar";
+      const isSpace =
+        e.code === "Space" || e.key === " " || e.key === "Spacebar";
       if (!isSpace) return;
       const t = e.target;
       const isTyping =
-        t?.tagName === "INPUT" ||
-        t?.tagName === "TEXTAREA" ||
-        t?.isContentEditable;
+        t?.tagName === "INPUT" || t?.tagName === "TEXTAREA" || t?.isContentEditable;
       if (isTyping || showWinModal) return;
       e.preventDefault();
       handleStartStop();
@@ -136,13 +131,11 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
   }
 
   function handleStartStop() {
-    // Only enforce one attempt per day (unless autoWin testing)
-    if (!autoWin && hasTriedToday) return;
+    if (outOfTries) return;
 
     if (!running) {
-      // START: record an attempt (skip in autoWin test mode)
+      // START: record an attempt metric (optional)
       if (!autoWin) postMetric("attempt");
-
       setError("");
       setMessage("");
       setElapsedCs(0);
@@ -151,27 +144,29 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
       rafRef.current = requestAnimationFrame(tick);
     } else {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      const rawFinalCs = computeCentiseconds(
-        startRef.current,
-        performance.now()
-      );
+      const rawFinalCs = computeCentiseconds(startRef.current, performance.now());
       const finalCs = autoWin ? 1000 : rawFinalCs;
       setElapsedCs(finalCs);
       setRunning(false);
 
-      // Mark that today's single chance was used
-      if (typeof window !== "undefined")
-        localStorage.setItem(`tensec_try_${todayKey}`, "1");
-      setHasTriedToday(true);
+      // INCREMENT today's tries
+      if (typeof window !== "undefined") {
+        const newTries = triesToday + 1;
+        localStorage.setItem(`tensec_tries_${todayKey}`, String(newTries));
+        setTriesToday(newTries);
+      }
 
       if (finalCs === 1000) {
-        // WIN: record a win (skip in autoWin test mode)
         if (!autoWin) postMetric("win");
-
         setShowWinModal(true);
         setMessage("You nailed 10.00 seconds! 🎉");
       } else {
-        setMessage("So close! Try again tomorrow.");
+        const left = Math.max(0, CHANCES_PER_DAY - (triesToday + 1));
+        setMessage(
+          left > 0
+            ? `So close! ${left} attempt${left === 1 ? "" : "s"} left today.`
+            : "So close! That's your last attempt today — try again tomorrow."
+        );
       }
     }
   }
@@ -207,20 +202,13 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
         });
         cleanup = () => listener.remove();
       })
-      .catch((e) => console.warn("Places failed to load (winner):", e));
-
+      .catch(() => {});
     return () => cleanup();
   }, [showWinModal]);
 
   async function submitBooking(e) {
     e.preventDefault();
-    if (
-      !form.name ||
-      !form.email ||
-      !form.phone ||
-      !form.address ||
-      !form.binType
-    ) {
+    if (!form.name || !form.email || !form.phone || !form.address || !form.binType) {
       setError("Please complete all required fields.");
       return;
     }
@@ -238,9 +226,7 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
       email: form.email,
       phone: form.phone,
       address: form.address,
-      bins: [
-        { type: form.binType, count: 1, frequency: "Prize (Free Clean)" },
-      ],
+      bins: [{ type: form.binType, count: 1, frequency: "Prize (Free Clean)" }],
       placeId: winPlaceId,
       lat,
       lng,
@@ -254,20 +240,18 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       const text = await res.text().catch(() => "");
       if (res.ok) {
         setWinSubmitStatus("success");
         alert("Winner details submitted. Confirmation email sent.");
       } else {
-        console.error("Winner email failed:", res.status, text);
-        setError("We couldn't send the email. Please try again or contact us.");
         setWinSubmitStatus("error");
+        setError("We couldn't send the email. Please try again or contact us.");
+        setWinSubmitErrorText(text || "");
       }
     } catch (err) {
-      console.error(err);
-      setError("Network error sending the email. Please try again.");
       setWinSubmitStatus("error");
+      setError("Network error sending the email. Please try again.");
     }
   }
 
@@ -301,70 +285,59 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
               10-Second Stop Watch Challenge
             </h2>
             <p className="text-xs md:text-sm opacity-80">
-              Stop the timer on exactly <strong>10.00s</strong> to win a free bin
-              clean.
+              Stop the timer on exactly <strong>10.00s</strong> to win a free bin clean.
             </p>
           </div>
           <div className="text-xs opacity-80 text-right">
-            One try per device · Europe/London
+            {CHANCES_PER_DAY === 1
+              ? "1 try per device · Europe/London"
+              : `${CHANCES_PER_DAY} tries per device · Europe/London`}
           </div>
         </div>
 
         {autoWin && (
           <div className="mt-3 bg-amber-900/30 border border-amber-700 text-amber-200 text-xs px-3 py-2 rounded-lg">
-            Testing mode is <strong>ON</strong>: stopping the timer will count as
-            a win and display 10.00s.
+            Testing mode is <strong>ON</strong>: stopping the timer will count as a win and display 10.00s.
           </div>
         )}
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
           {/* Display */}
           <div className="flex flex-col items-center justify-center bg-black/40 rounded-2xl p-8 border border-neutral-800">
-            <div className="text-sm uppercase tracking-widest opacity-70">
-              Target
-            </div>
+            <div className="text-sm uppercase tracking-widest opacity-70">Target</div>
             <div className="text-5xl md:text-6xl font-extrabold">10.00s</div>
 
-            <div className="mt-6 text-sm uppercase tracking-widest opacity-70">
-              Your Time
-            </div>
-            <div
-              className={`text-6xl md:text-7xl font-mono tabular-nums ${
-                seconds === "10.00" ? "text-emerald-400" : ""
-              }`}
-            >
+            <div className="mt-6 text-sm uppercase tracking-widest opacity-70">Your Time</div>
+            <div className={`text-6xl md:text-7xl font-mono tabular-nums ${seconds === "10.00" ? "text-emerald-400" : ""}`}>
               {seconds}s
             </div>
 
             <div className="mt-6 text-xs text-center opacity-70">
-              Press <span className="font-semibold">Space</span> (desktop) or use
-              the <span className="font-semibold">Start/Stop</span> button.
+              Press <span className="font-semibold">Space</span> (desktop) or use the <span className="font-semibold">Start/Stop</span> button.
             </div>
           </div>
 
           {/* Controls */}
           <div className="flex flex-col gap-4">
-            {hasTriedToday ? (
+            {outOfTries ? (
               <div className="bg-amber-900/30 border border-amber-800 text-amber-200 p-4 rounded-xl">
-                You've used your attempt for {todayKey} on this device. Try again
-                tomorrow.
+                You’ve used your {CHANCES_PER_DAY === 1 ? "attempt" : `${CHANCES_PER_DAY} attempts`} for {todayKey}. Come back tomorrow!
               </div>
             ) : (
               <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 p-4 rounded-xl">
                 Ready when you are — hit Space or click the big button below.
+                <div className="mt-1 text-emerald-300/80 text-xs">
+                  {remainingTries} attempt{remainingTries === 1 ? "" : "s"} left today.
+                </div>
               </div>
             )}
 
             <button
               onClick={handleStartStop}
-              disabled={!autoWin && hasTriedToday}
+              disabled={outOfTries}
               className={`w-full rounded-2xl py-6 text-xl font-semibold shadow-lg border transition active:scale-[0.99]
-                ${
-                  running
-                    ? "bg-rose-600 hover:bg-rose-500 border-rose-400"
-                    : "bg-emerald-600 hover:bg-emerald-500 border-emerald-400"
-                }
-                ${!autoWin && hasTriedToday ? "opacity-50 cursor-not-allowed" : ""}`}
+                ${running ? "bg-rose-600 hover:bg-rose-500 border-rose-400" : "bg-emerald-600 hover:bg-emerald-500 border-emerald-400"}
+                ${outOfTries ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {running ? "Stop" : "Start"}
             </button>
@@ -373,8 +346,7 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
             {error && <div className="text-red-300 text-sm">{error}</div>}
 
             <p className="text-xs opacity-60">
-              Accuracy uses centiseconds. A win requires your displayed time to
-              read exactly <span className="font-semibold">10.00s</span>.
+              Accuracy uses centiseconds. A win requires your displayed time to read exactly <span className="font-semibold">10.00s</span>.
             </p>
           </div>
         </div>
@@ -388,9 +360,7 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
               <div className="p-6">
                 <h3 className="text-xl font-bold">You're all set! 🎉</h3>
                 <p className="text-sm text-neutral-700 mt-2">
-                  Thanks, {form.name}. We’ve received your winner details and sent
-                  a confirmation to <strong>{form.email}</strong>. We’ll be in
-                  touch to schedule your free clean.
+                  Thanks, {form.name}. We’ve received your winner details and sent a confirmation to <strong>{form.email}</strong>. We’ll be in touch to schedule your free clean.
                 </p>
                 <div className="mt-6 flex justify-end">
                   <button
@@ -409,22 +379,15 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
                 <div className="p-6 border-b">
                   <h3 className="text-xl font-bold">You're a winner! 🎉</h3>
                   <p className="text-sm text-neutral-600 mt-1">
-                    Fill this in to book your free clean for {todayKey}’s
-                    challenge.
+                    Fill this in to book your free clean for {todayKey}’s challenge.
                   </p>
                 </div>
-                <form
-                  onSubmit={submitBooking}
-                  className="p-6 flex flex-col gap-4"
-                  noValidate
-                >
+                <form onSubmit={submitBooking} className="p-6 flex flex-col gap-4" noValidate>
                   <select
                     required
                     className="input"
                     value={form.binType}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, binType: e.target.value }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, binType: e.target.value }))}
                   >
                     <option value="Black Bin">Black</option>
                     <option value="Brown Bin">Brown</option>
@@ -435,34 +398,9 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
                     Prize: <span className="font-semibold">1 bin</span> clean
                   </div>
 
-                  <input
-                    required
-                    className="input"
-                    placeholder="Full name"
-                    value={form.name}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, name: e.target.value }))
-                    }
-                  />
-                  <input
-                    required
-                    type="email"
-                    className="input"
-                    placeholder="Email"
-                    value={form.email}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, email: e.target.value }))
-                    }
-                  />
-                  <input
-                    required
-                    className="input"
-                    placeholder="Phone"
-                    value={form.phone}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, phone: e.target.value }))
-                    }
-                  />
+                  <input required className="input" placeholder="Full name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+                  <input required type="email" className="input" placeholder="Email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+                  <input required className="input" placeholder="Phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
 
                   <input
                     ref={winAddressRef}
@@ -480,28 +418,19 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
                     inputMode="text"
                   />
 
-                  <label className="text-sm">
-                    Preferred cleaning date (optional)
-                  </label>
+                  <label className="text-sm">Preferred cleaning date (optional)</label>
                   <input
                     type="date"
                     className="input"
                     value={form.preferred_date}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        preferred_date: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => setForm((f) => ({ ...f, preferred_date: e.target.value }))}
                   />
 
                   {error && (
                     <div className="text-red-600 text-sm">
                       {error}
                       {winSubmitStatus === "error" && winSubmitErrorText ? (
-                        <div className="mt-1 text-xs opacity-80">
-                          Details: {winSubmitErrorText}
-                        </div>
+                        <div className="mt-1 text-xs opacity-80">Details: {winSubmitErrorText}</div>
                       ) : null}
                     </div>
                   )}
@@ -513,15 +442,9 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
                       aria-busy={winSubmitStatus === "sending"}
                       className="flex-1 bg-black text-white rounded-xl py-3 font-semibold hover:opacity-90 active:opacity-80 disabled:opacity-60"
                     >
-                      {winSubmitStatus === "sending"
-                        ? "Submitting..."
-                        : "Submit"}
+                      {winSubmitStatus === "sending" ? "Submitting..." : "Submit"}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowWinModal(false)}
-                      className="px-4 py-3 rounded-xl bg-neutral-200 hover:bg-neutral-300"
-                    >
+                    <button type="button" onClick={() => setShowWinModal(false)} className="px-4 py-3 rounded-xl bg-neutral-200 hover:bg-neutral-300">
                       Close
                     </button>
                   </div>
@@ -532,8 +455,6 @@ const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
         </div>
       )}
 
-      {/* If your project uses Tailwind with JIT, @apply here is fine.
-          Otherwise replace `.input` with the expanded classes inline. */}
       <style>{`
         .input { @apply w-full rounded-xl border border-neutral-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500; }
       `}</style>
