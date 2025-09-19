@@ -65,7 +65,6 @@ async function postMetric(kind) {
   }
 }
 
-
 /* =========================
    Component
    ========================= */
@@ -96,6 +95,7 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
 
   const rafRef = useRef(null);
   const startRef = useRef(0);
+  const attemptPostedRef = useRef(false);
   const todayKey = useMemo(() => getTodayKey(), []);
 
   // Load the "one try per day" flag
@@ -142,7 +142,10 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
 
     if (!running) {
       // START: record an attempt (skip in autoWin test mode)
-      if (!autoWin) postMetric("attempt");
+      if (!autoWin) {
+        postMetric("attempt");
+        attemptPostedRef.current = true;
+      }
 
       setError("");
       setMessage("");
@@ -157,6 +160,10 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
 
       setElapsedCs(finalCs);
       setRunning(false);
+
+      // Backstop: if start POST didn't happen for any reason
+      if (!autoWin && !attemptPostedRef.current) postMetric("attempt");
+      attemptPostedRef.current = false;
 
       // Mark that today's single chance was used
       if (typeof window !== "undefined") {
@@ -510,8 +517,7 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
         </div>
       )}
 
-      {/* If your project uses Tailwind with JIT, @apply here is fine.
-          Otherwise replace `.input` with the expanded classes inline. */}
+      {/* Tailwind @apply helper */}
       <style>{`
         .input { @apply w-full rounded-xl border border-neutral-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500; }
       `}</style>
