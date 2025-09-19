@@ -50,17 +50,20 @@ function loadGooglePlaces(apiKey) {
    Metrics (Netlify Function)
    ========================= */
 // fire-and-forget; don’t block UI if it fails
-async function postMetric(kind /* "attempt" | "win" */) {
+async function postMetric(kind) {
   try {
-    await fetch("/.netlify/functions/tensec-metrics", {
+    const res = await fetch("/.netlify/functions/tensec-metrics", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ kind }),
     });
-  } catch {
-    // silent fail; you can console.warn if you want
+    const txt = await res.text();
+    console.log("[metrics POST]", kind, res.status, txt);
+  } catch (e) {
+    console.log("[metrics POST error]", kind, e);
   }
 }
+
 
 /* =========================
    Component
