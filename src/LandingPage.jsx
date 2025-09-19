@@ -1,3 +1,7 @@
+// at top of Landing page file
+import TenSecondChallenge from "../path/to/TenSecondChallenge.jsx";
+
+
 import React, { useState, useEffect, useRef, useMemo } from "react";
 
 /* ───────────────── Google Places loader (shared) ───────────────── */
