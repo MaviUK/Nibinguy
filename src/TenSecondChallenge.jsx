@@ -58,11 +58,13 @@ async function postMetric(kind) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ kind }),
     });
-    await res.text(); // ignore body
-  } catch {
-    // no-op
+    const txt = await res.text();
+    console.log("[metrics POST]", kind, res.status, txt);
+  } catch (e) {
+    console.log("[metrics POST error]", kind, e);
   }
 }
+
 
 /* =========================
    Component
