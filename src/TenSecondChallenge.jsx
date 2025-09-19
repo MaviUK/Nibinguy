@@ -6,7 +6,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 const TZ = "Europe/London";
 const pad2 = (n) => String(n).padStart(2, "0");
 // How many attempts per device per day
-const CHANCES_PER_DAY = 3; // ← change this number to whatever you want
+const CHANCES_PER_DAY = 10; // ← change this number to whatever you want
 
 
 // Round to nearest centisecond between two high-res timestamps (ms)
