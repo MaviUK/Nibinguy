@@ -24,7 +24,7 @@ function loadGooglePlaces(apiKey) {
 }
 
 /* ───────────────── TenSecondChallenge (inline) ───────────────── */
-const CHANCES_PER_DAY = 1; // ← change this to set attempts allowed per device, per day
+const CHANCES_PER_DAY = 10; // ← change this to set attempts allowed per device, per day
 
 function getTodayKey() {
   const fmt = new Intl.DateTimeFormat("en-GB", {
