@@ -1,8 +1,5 @@
-// at top of Landing page file
-import TenSecondChallenge from "../path/to/TenSecondChallenge.jsx";
-
-
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import TenSecondChallenge from "./TenSecondChallenge.jsx"; // ← uses the metrics-enabled component
 
 /* ───────────────── Google Places loader (shared) ───────────────── */
 function loadGooglePlaces(apiKey) {
@@ -25,377 +22,6 @@ function loadGooglePlaces(apiKey) {
     s.onerror = reject;
     document.head.appendChild(s);
   });
-}
-
-/* ───────────────── TenSecondChallenge (inline) ───────────────── */
-const CHANCES_PER_DAY = 10; // ← change this to set attempts allowed per device, per day
-
-function getTodayKey() {
-  const fmt = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/London",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const parts = Object.fromEntries(fmt.map((p) => [p.type, p.value]));
-  return `${parts.year}-${parts.month}-${parts.day}`;
-}
-function computeCentiseconds(startMs, stopMs) {
-  return Math.round((stopMs - startMs) / 10);
-}
-
-function TenSecondChallenge({ debug = false }) {
-  const [elapsedCs, setElapsedCs] = useState(0);
-  const [running, setRunning] = useState(false);
-  const [triesCount, setTriesCount] = useState(0);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [showWinModal, setShowWinModal] = useState(false);
-
-  // Winner form (prize is always 1 bin)
-  const [form, setForm] = useState({
-    binType: "Black Bin",
-    name: "",
-    email: "",
-    phone: "",
-    address: "",
-    preferred_date: "",
-  });
-  const [winSubmitStatus, setWinSubmitStatus] = useState("idle"); // idle | sending | success | error
-  const [winSubmitErrorText, setWinSubmitErrorText] = useState("");
-
-  // Google Places for winner form
-  const winAddressRef = useRef(null);
-  const winSelectedPlaceRef = useRef(null);
-  const [winPlaceId, setWinPlaceId] = useState(null);
-
-  const rafRef = useRef(null);
-  const startRef = useRef(0);
-  const todayKey = useMemo(() => getTodayKey(), []);
-  const triesKey = `tensec_tries_${todayKey}`;
-
-  useEffect(() => {
-    const raw = typeof window !== "undefined" ? localStorage.getItem(triesKey) : null;
-    const n = raw ? Math.max(0, parseInt(raw, 10) || 0) : 0;
-    setTriesCount(n);
-  }, [triesKey]);
-
-  // Spacebar: don't toggle when typing or when winner modal is open
-  useEffect(() => {
-    const onKeyDown = (e) => {
-      const isSpace = e.code === "Space" || e.key === " " || e.key === "Spacebar";
-      if (!isSpace) return;
-      const t = e.target;
-      const isTyping = t?.tagName === "INPUT" || t?.tagName === "TEXTAREA" || t?.isContentEditable;
-      if (isTyping || showWinModal) return;
-      e.preventDefault();
-      handleStartStop();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [running, showWinModal, triesCount]);
-
-  function tick(now) {
-    const cs = computeCentiseconds(startRef.current, now);
-    setElapsedCs(cs);
-    rafRef.current = requestAnimationFrame(tick);
-  }
-
-  function saveTries(next) {
-    setTriesCount(next);
-    try { localStorage.setItem(triesKey, String(next)); } catch {}
-  }
-
-  function handleStartStop() {
-    if (!running && triesCount >= CHANCES_PER_DAY) return; // out of attempts
-
-    if (!running) {
-      setError("");
-      setMessage("");
-      setElapsedCs(0);
-      startRef.current = performance.now();
-      setRunning(true);
-      rafRef.current = requestAnimationFrame(tick);
-    } else {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      const finalCs = computeCentiseconds(startRef.current, performance.now());
-      setElapsedCs(finalCs);
-      setRunning(false);
-
-      // consume an attempt (win or lose)
-      const next = Math.min(CHANCES_PER_DAY, triesCount + 1);
-      saveTries(next);
-
-      if (finalCs === 1000) {
-        setShowWinModal(true);
-        setMessage("You nailed 10.00 seconds! 🎉");
-      } else {
-        const left = Math.max(0, CHANCES_PER_DAY - next);
-        setMessage(left > 0 ? `So close! You have ${left} ${left === 1 ? "try" : "tries"} left today.` : "So close! Try again tomorrow.");
-      }
-    }
-  }
-
-  // Attach Places when modal opens (optional)
-  useEffect(() => {
-    if (!showWinModal) return;
-    const key = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
-    if (!key) return;
-    let ac; let cleanup = () => {};
-    loadGooglePlaces(key)
-      .then((google) => {
-        if (!winAddressRef.current) return;
-        ac = new google.maps.places.Autocomplete(winAddressRef.current, {
-          componentRestrictions: { country: ["gb"] },
-          fields: ["place_id", "formatted_address", "address_components", "name", "geometry"],
-          types: ["address"],
-        });
-        const listener = ac.addListener("place_changed", () => {
-          const place = ac.getPlace();
-          winSelectedPlaceRef.current = place;
-          setWinPlaceId(place.place_id || null);
-          const formatted = place.formatted_address || place.name || "";
-          setForm((f) => ({ ...f, address: formatted }));
-        });
-        cleanup = () => listener.remove();
-      })
-      .catch((e) => console.warn("Places failed to load (winner):", e));
-    return () => cleanup();
-  }, [showWinModal]);
-
-  async function submitBooking(e) {
-    e.preventDefault();
-    if (!form.name || !form.email || !form.phone || !form.address || !form.binType) {
-      setError("Please complete all required fields.");
-      return;
-    }
-    setError("");
-    setWinSubmitErrorText("");
-    setWinSubmitStatus("sending");
-
-    const loc = winSelectedPlaceRef.current?.geometry?.location;
-    const lat = loc ? loc.lat() : null;
-    const lng = loc ? loc.lng() : null;
-
-    const payload = {
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      address: form.address,
-      bins: [{ type: form.binType, count: 1, frequency: "Prize (Free Clean)" }],
-      placeId: winPlaceId,
-      lat,
-      lng,
-      source: "ten-second-challenge",
-    };
-
-    try {
-      const res = await fetch("/.netlify/functions/sendBookingEmail", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        cache: "no-store",
-        body: JSON.stringify(payload),
-      });
-
-      let body = null;
-      try { body = await res.json(); } catch { /* ignore non-JSON */ }
-
-      if (res.ok) {
-        setWinSubmitStatus("success");
-      } else {
-        console.error("Winner email failed:", res.status, body || (await res.text().catch(() => "")));
-        setWinSubmitStatus("error");
-        setError("We couldn't send the email. Please try again or contact us.");
-      }
-    } catch (err) {
-      console.error(err);
-      setWinSubmitStatus("error");
-      setError("Network error sending the email. Please try again.");
-    }
-  }
-
-  const seconds = (elapsedCs / 100).toFixed(2);
-  const triesLeft = Math.max(0, CHANCES_PER_DAY - triesCount);
-
-  // tiny dev checks
-  useEffect(() => {
-    if (!debug) return;
-    const cases = [
-      { start: 0, stop: 10000, expect: 1000 },
-      { start: 0, stop: 9999, expect: 1000 },
-      { start: 0, stop: 10005, expect: 1001 },
-      { start: 42, stop: 1042, expect: 100 },
-    ];
-    // eslint-disable-next-line no-console
-    console.table(cases.map((c) => ({ ...c, got: computeCentiseconds(c.start, c.stop), pass: computeCentiseconds(c.start, c.stop) === c.expect })));
-  }, [debug]);
-
-  return (
-    <div className="w-full max-w-3xl mx-auto p-4" data-testid="ten-sec-root">
-      <div className="bg-neutral-900 text-white rounded-2xl p-6 md:p-8 shadow-xl border border-neutral-800">
-        {/* Title + subtitle + attempts info */}
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold">10-Second Stop Watch Challenge</h2>
-            <p className="text-sm md:text-base opacity-80 mt-1">
-              Stop the timer on exactly <span className="font-semibold">10.00s</span> to win a free bin clean.
-            </p>
-          </div>
-          <div className="text-xs opacity-80 md:text-right">
-            {CHANCES_PER_DAY === 1 ? "1 try per device · Europe/London" : `${CHANCES_PER_DAY} tries per device · Europe/London`}
-          </div>
-        </div>
-
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-          {/* Display */}
-          <div className="flex flex-col items-center justify-center bg-black/40 rounded-2xl p-8 border border-neutral-800">
-            <div className="text-sm uppercase tracking-widest opacity-70">Target</div>
-            <div className="text-5xl md:text-6xl font-extrabold">10.00s</div>
-
-            <div className="mt-6 text-sm uppercase tracking-widest opacity-70">Your Time</div>
-            <div className={`text-6xl md:text-7xl font-mono tabular-nums ${seconds === "10.00" ? "text-emerald-400" : ""}`} data-testid="time-display">
-              {seconds}s
-            </div>
-
-            <div className="mt-6 text-xs text-center opacity-70">
-              Press <span className="font-semibold">Space</span> (desktop) or use the <span className="font-semibold">Start/Stop</span> button.
-            </div>
-          </div>
-
-          {/* Controls */}
-          <div className="flex flex-col gap-4">
-            {triesCount >= CHANCES_PER_DAY ? (
-              <div className="bg-amber-900/30 border border-amber-800 text-amber-200 p-4 rounded-xl" data-testid="tried-today">
-                You’ve used your {CHANCES_PER_DAY} {CHANCES_PER_DAY === 1 ? "attempt" : "attempts"} for {todayKey}. Come back tomorrow!
-              </div>
-            ) : (
-              <div className="bg-emerald-900/30 border border-emerald-800 text-emerald-200 p-4 rounded-xl" data-testid="ready">
-                {triesLeft} {triesLeft === 1 ? "try" : "tries"} left today — hit Space or click the big button below.
-              </div>
-            )}
-
-            <button
-              onClick={handleStartStop}
-              disabled={!running && triesCount >= CHANCES_PER_DAY}
-              className={`w-full rounded-2xl py-6 text-xl font-semibold shadow-lg border transition active:scale-[0.99]
-                ${running ? "bg-rose-600 hover:bg-rose-500 border-rose-400" : "bg-emerald-600 hover:bg-emerald-500 border-emerald-400"}
-                ${!running && triesCount >= CHANCES_PER_DAY ? "opacity-50 cursor-not-allowed" : ""}`}
-              data-testid="start-stop"
-            >
-              {running ? "Stop" : "Start"}
-            </button>
-
-            {message && <div className="text-emerald-300 text-sm" data-testid="message">{message}</div>}
-            {error && <div className="text-red-300 text-sm" data-testid="error">{error}</div>}
-
-            <p className="text-xs opacity-60">
-              Accuracy uses centiseconds. A win requires your displayed time to read exactly <span className="font-semibold">10.00s</span>.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Winner Booking Modal — mobile-friendly */}
-      {showWinModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/70 overflow-y-auto overscroll-contain"
-          onClick={() => setShowWinModal(false)}
-          style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
-        >
-          <div className="min-h-[100svh] flex items-center justify-center p-3 sm:p-6">
-            <div
-              className="bg-white text-black w-full max-w-lg rounded-2xl shadow-2xl overflow-auto"
-              onClick={(e) => e.stopPropagation()}
-              style={{ maxHeight: 'min(90dvh, 680px)' }}
-            >
-              {winSubmitStatus === "success" ? (
-                <div className="p-6">
-                  <h3 className="text-xl font-bold">You're all set! 🎉</h3>
-                  <p className="text-sm text-neutral-700 mt-2">
-                    Thanks, {form.name}. We’ve received your winner details and sent a confirmation to <strong>{form.email}</strong>.
-                    We’ll be in touch to schedule your free clean.
-                  </p>
-                  <div className="mt-6 flex justify-end">
-                    <button
-                      onClick={() => { setShowWinModal(false); setMessage("Thanks! We'll be in touch to confirm your clean."); }}
-                      className="px-5 py-3 rounded-xl bg-black text-white hover:opacity-90"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="p-6 border-b">
-                    <h3 className="text-xl font-bold">You're a winner! 🎉</h3>
-                    <p className="text-sm text-neutral-600 mt-1">Fill this in to book your free clean for {todayKey}’s challenge.</p>
-                  </div>
-                  <form onSubmit={submitBooking} className="p-6 flex flex-col gap-4" noValidate>
-                    <select required className="input" value={form.binType} onChange={(e)=>setForm(f=>({...f,binType:e.target.value}))}>
-                      <option value="Black Bin">Black</option>
-                      <option value="Brown Bin">Brown</option>
-                      <option value="Green Bin">Green</option>
-                      <option value="Blue Bin">Blue</option>
-                    </select>
-                    <div className="text-sm text-neutral-600 -mt-2">Prize: <span className="font-semibold">1 bin</span> clean</div>
-
-                    <input required className="input" placeholder="Full name" value={form.name} onChange={(e)=>setForm(f=>({...f,name:e.target.value}))}/>
-                    <input required type="email" className="input" placeholder="Email" value={form.email} onChange={(e)=>setForm(f=>({...f,email:e.target.value}))}/>
-                    <input required className="input" placeholder="Phone" value={form.phone} onChange={(e)=>setForm(f=>({...f,phone:e.target.value}))}/>
-
-                    <input
-                      ref={winAddressRef}
-                      required
-                      className="input"
-                      placeholder="Address"
-                      value={form.address}
-                      onChange={(e)=>{
-                        const v = e.target.value;
-                        setForm(f=>({...f,address:v}));
-                        setWinPlaceId(null);
-                        winSelectedPlaceRef.current = null;
-                      }}
-                      autoComplete="off"
-                      inputMode="text"
-                    />
-
-                    <label className="text-sm">Preferred cleaning date (optional)</label>
-                    <input type="date" className="input" value={form.preferred_date} onChange={(e)=>setForm(f=>({...f,preferred_date:e.target.value}))}/>
-
-                    {error && (
-                      <div className="text-red-600 text-sm">
-                        {error}
-                        {winSubmitStatus === "error" && winSubmitErrorText ? (
-                          <div className="mt-1 text-xs opacity-80">Details: {winSubmitErrorText}</div>
-                        ) : null}
-                      </div>
-                    )}
-
-                    <div className="flex gap-3 pt-2">
-                      <button
-                        type="submit"
-                        disabled={winSubmitStatus === "sending"}
-                        aria-busy={winSubmitStatus === "sending"}
-                        className="flex-1 bg-black text-white rounded-xl py-3 font-semibold hover:opacity-90 active:opacity-80 disabled:opacity-60"
-                      >
-                        {winSubmitStatus === "sending" ? "Submitting..." : "Submit"}
-                      </button>
-                      <button type="button" onClick={()=>setShowWinModal(false)} className="px-4 py-3 rounded-xl bg-neutral-200 hover:bg-neutral-300">Close</button>
-                    </div>
-                  </form>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        .input { @apply w-full rounded-xl border border-neutral-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500; }
-      `}</style>
-    </div>
-  );
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -444,9 +70,6 @@ We keep our Terms of Service simple and transparent. By booking or receiving a b
 • Text reminders are a courtesy; you’re responsible for knowing your schedule.
 `;
 
-/* ────────────────────────────────────────────────────────────────────────────
-   Landing page
-   ──────────────────────────────────────────────────────────────────────────── */
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
@@ -478,7 +101,7 @@ export default function NiBinGuyLandingPage() {
     const el = termsScrollRef.current;
     if (!el) return;
     const onScroll = () => {
-      const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 8; // small buffer
+      const atEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 8;
       if (atEnd) setTermsScrolledToEnd(true);
     };
     el.addEventListener("scroll", onScroll);
@@ -517,9 +140,10 @@ export default function NiBinGuyLandingPage() {
     return () => cleanup();
   }, [showForm]);
 
-  const missingFields = () => (!name || !email || !address || !phone || bins.some((b) => !b.type));
+  const missingFields = () =>
+    (!name || !email || !address || !phone || bins.some((b) => !b.type));
 
- const TOS_PREFIX = `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION})`;
+  const TOS_PREFIX = `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION})`;
 
   const handleSend = () => {
     if (missingFields()) { alert("Please complete all fields before sending."); return; }
@@ -593,7 +217,11 @@ export default function NiBinGuyLandingPage() {
       alert("Please complete all fields before sending.");
       return;
     }
-    const msg = `Hi, I'm ${encodeURIComponent(cName)}.%0APhone: ${encodeURIComponent(cPhone)}%0AEmail: ${encodeURIComponent(cEmail)}%0A%0AMessage:%0A${encodeURIComponent(cMessage)}`;
+    const msg =
+      `Hi, I'm ${encodeURIComponent(cName)}.` +
+      `%0APhone: ${encodeURIComponent(cPhone)}` +
+      `%0AEmail: ${encodeURIComponent(cEmail)}` +
+      `%0A%0AMessage:%0A${encodeURIComponent(cMessage)}`;
     window.open(`https://wa.me/${phoneNumber}?text=${msg}`, "_blank");
     setShowContactForm(false);
     setCName(""); setCEmail(""); setCPhone(""); setCMessage("");
@@ -647,7 +275,9 @@ export default function NiBinGuyLandingPage() {
         <div className="relative z-20 flex flex-col items-center gap-4">
           <img src="logo.png" alt="Ni Bin Guy Logo" className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg" />
 
-          <h1 className="text-4xl md:text-6xl font-bold">Bin Cleaning, <span className="text-green-400">Done Right</span></h1>
+          <h1 className="text-4xl md:text-6xl font-bold">
+            Bin Cleaning, <span className="text-green-400">Done Right</span>
+          </h1>
 
           <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
             Professional wheelie bin cleaning at your home, across
@@ -661,14 +291,21 @@ export default function NiBinGuyLandingPage() {
             >
               Book a Clean
             </button>
-            <button onClick={() => setShowContactForm(true)} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Contact Us</button>
+            <button
+              onClick={() => setShowContactForm(true)}
+              className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+            >
+              Contact Us
+            </button>
             <button
               onClick={() => setShowChallenge(true)}
               className="bg-[#9b111e] hover:bg-[#7f0e19] text-white font-bold py-3 px-6 rounded-xl shadow-lg transition focus:outline-none focus:ring-2 focus:ring-[#9b111e]/50 active:scale-[0.99]"
             >
               Free Bin Clean
             </button>
-            <a href="#customer-portal" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center">Customer Portal</a>
+            <a href="#customer-portal" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center">
+              Customer Portal
+            </a>
           </div>
         </div>
       </section>
@@ -722,7 +359,16 @@ export default function NiBinGuyLandingPage() {
                   )}
                 </div>
 
-                <input ref={addressRef} type="text" placeholder="Full Address" value={address} onChange={(e) => { setAddress(e.target.value); setPlaceId(null); selectedPlaceRef.current = null; }} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4" autoComplete="off" inputMode="text" />
+                <input
+                  ref={addressRef}
+                  type="text"
+                  placeholder="Full Address"
+                  value={address}
+                  onChange={(e) => { setAddress(e.target.value); setPlaceId(null); selectedPlaceRef.current = null; }}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
+                  autoComplete="off"
+                  inputMode="text"
+                />
                 <p className="text-xs text-gray-500 -mt-2">Tip: pick from suggestions or just type your full address.</p>
 
                 <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
@@ -754,8 +400,12 @@ export default function NiBinGuyLandingPage() {
                   </div>
                 </div>
 
-                <button onClick={handleSend} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>Send via WhatsApp</button>
-                <button onClick={handleEmailSend} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>Send via Email</button>
+                <button onClick={handleSend} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
+                  Send via WhatsApp
+                </button>
+                <button onClick={handleEmailSend} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
+                  Send via Email
+                </button>
               </div>
             </div>
           </div>
@@ -775,30 +425,22 @@ export default function NiBinGuyLandingPage() {
                 {TERMS_BODY}
               </div>
               <div className="px-6 py-4 border-t bg-gray-50 flex items-center justify-between gap-3">
-  <div className="text-xs text-gray-600">
-    Scroll to the end to enable agreement.
-  </div>
-  <div className="flex items-center gap-2">
-    <button
-      type="button"
-      onClick={() => setShowTerms(false)}
-      className="px-4 py-2 rounded-lg bg-neutral-200 hover:bg-neutral-300"
-    >
-      Close
-    </button>
-    <button
-  type="button"
-  onClick={() => { setAgreeToTerms(true); setShowTerms(false); }}
-  disabled={!termsScrolledToEnd}
-  className="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-black font-semibold disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-400"
-  aria-disabled={!termsScrolledToEnd}
->
-  Confirm &amp; Agree
-</button>
-
-  </div>
-</div>
-
+                <div className="text-xs text-gray-600">Scroll to the end to enable agreement.</div>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => setShowTerms(false)} className="px-4 py-2 rounded-lg bg-neutral-200 hover:bg-neutral-300">
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAgreeToTerms(true); setShowTerms(false); }}
+                    disabled={!termsScrolledToEnd}
+                    className="px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600 text-black font-semibold disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-400"
+                    aria-disabled={!termsScrolledToEnd}
+                  >
+                    Confirm &amp; Agree
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -838,7 +480,7 @@ export default function NiBinGuyLandingPage() {
         </div>
       )}
 
-      {/* 10-Second Challenge Modal — mobile-friendly */}
+      {/* 10-Second Challenge Modal — uses imported component */}
       {showChallenge && (
         <div
           className="fixed inset-0 bg-black/80 overflow-y-auto overscroll-contain z-50"
