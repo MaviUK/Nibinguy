@@ -5,6 +5,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
    ========================= */
 const TZ = "Europe/London";
 const pad2 = (n) => String(n).padStart(2, "0");
+// How many attempts per device per day
+const CHANCES_PER_DAY = 3; // ← change this number to whatever you want
+
 
 // Round to nearest centisecond between two high-res timestamps (ms)
 function computeCentiseconds(startMs, stopMs) {
@@ -71,7 +74,9 @@ async function postMetric(kind) {
 export default function TenSecondChallenge({ debug = false, autoWin = false }) {
   const [elapsedCs, setElapsedCs] = useState(0);
   const [running, setRunning] = useState(false);
-  const [hasTriedToday, setHasTriedToday] = useState(false); // single attempt per device/day
+  const [triesToday, setTriesToday] = useState(0);
+const outOfTries = !autoWin && triesToday >= CHANCES_PER_DAY;
+const remainingTries = Math.max(0, CHANCES_PER_DAY - triesToday);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showWinModal, setShowWinModal] = useState(false);
@@ -98,13 +103,12 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
   const todayKey = useMemo(() => getTodayKey(), []);
 
   // Load the "one try per day" flag
-  useEffect(() => {
-    const tried =
-      typeof window !== "undefined"
-        ? localStorage.getItem(`tensec_try_${todayKey}`)
-        : null;
-    setHasTriedToday(!!tried);
-  }, [todayKey]);
+ useEffect(() => {
+  if (typeof window === "undefined") return;
+  const raw = localStorage.getItem(`tensec_tries_${todayKey}`);
+  setTriesToday(raw ? parseInt(raw, 10) || 0 : 0);
+}, [todayKey]);
+
 
   // Spacebar: ignore while typing or when modal open
   useEffect(() => {
@@ -123,7 +127,7 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, hasTriedToday, showWinModal, autoWin]);
+  }, [running, triesToday, showWinModal, autoWin]);
 
   function tick(now) {
     const cs = computeCentiseconds(startRef.current, now);
