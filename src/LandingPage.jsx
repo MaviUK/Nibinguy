@@ -1,6 +1,5 @@
-// src/LandingPage.jsx
 import React, { useState, useEffect, useRef } from "react";
-import TenSecondChallenge from "./TenSecondChallenge.jsx";
+import TenSecondChallenge from "./TenSecondChallenge.jsx"; // ← uses the metrics-enabled component
 
 /* ───────────────── Google Places loader (shared) ───────────────── */
 function loadGooglePlaces(apiKey) {
@@ -25,7 +24,9 @@ function loadGooglePlaces(apiKey) {
   });
 }
 
-/* ───────────────── Terms of Service (inline) ───────────────── */
+/* ────────────────────────────────────────────────────────────────────────────
+   Terms of Service (inline modal + gating)
+   ──────────────────────────────────────────────────────────────────────────── */
 const TERMS_VERSION = "September 2025";
 const TERMS_TITLE = "Ni Bin Guy – Terms of Service";
 const TERMS_BODY = `
@@ -69,9 +70,6 @@ We keep our Terms of Service simple and transparent. By booking or receiving a b
 • Text reminders are a courtesy; you’re responsible for knowing your schedule.
 `;
 
-// The exact sentence that goes into WhatsApp + email payloads and ToS logs
-const TOS_LINE = `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION}), including the 8 AM bin availability clause.`;
-
 export default function NiBinGuyLandingPage() {
   const [showForm, setShowForm] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
@@ -91,7 +89,7 @@ export default function NiBinGuyLandingPage() {
   const phoneNumber = "+447555178484";
   const phoneDisplay = "07555 178484";
 
-  // ToS state
+  // Terms of Service gating state
   const [showTerms, setShowTerms] = useState(false);
   const [termsViewed, setTermsViewed] = useState(false);
   const [termsScrolledToEnd, setTermsScrolledToEnd] = useState(false);
@@ -113,7 +111,7 @@ export default function NiBinGuyLandingPage() {
   const openTerms = () => { setShowTerms(true); setTermsViewed(true); };
   const canToggleAgree = termsViewed && termsScrolledToEnd;
 
-  // Attach Places when booking modal opens
+  // Booking modal: attach Places
   useEffect(() => {
     if (!showForm) return;
     const key = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
@@ -142,84 +140,55 @@ export default function NiBinGuyLandingPage() {
     return () => cleanup();
   }, [showForm]);
 
-  const missingFields = () => (!name || !email || !address || !phone || bins.some((b) => !b.type));
+  const missingFields = () =>
+    (!name || !email || !address || !phone || bins.some((b) => !b.type));
 
-  /* ───────────────── ToS logging helper ───────────────── */
-  const logTos = (channel, extra = {}) => {
-    const loc = selectedPlaceRef.current?.geometry?.location;
-    const lat = loc ? loc.lat() : null;
-    const lng = loc ? loc.lng() : null;
-    const isoNow = new Date().toISOString();
+  const TOS_PREFIX = `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION})`;
 
-    // fire-and-forget; don’t block the UI
-    fetch("/.netlify/functions/tos-log", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        channel,
-        name, email, phone, address, bins, placeId, lat, lng,
-        termsAccepted: true,
-        termsVersion: TERMS_VERSION,
-        termsTimestamp: isoNow,
-        termsAcceptanceText: TOS_LINE,
-        ...extra,
-      }),
-    }).catch(() => {});
-    return isoNow;
-  };
-
-  /* ───────────────── WhatsApp booking ───────────────── */
   const handleSend = () => {
     if (missingFields()) { alert("Please complete all fields before sending."); return; }
-    if (!agreeToTerms) { alert("Please view & agree to the Terms first."); return; }
-
-    const isoNow = logTos("whatsapp"); // logs ToS to Blobs
-
+    if (!agreeToTerms) { alert("Please view and agree to the Terms of Service before booking."); return; }
     const binDetails = bins
       .filter((b) => b.type !== "")
       .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
       .join("%0A");
-
     const message =
-      `${encodeURIComponent(TOS_LINE)}%0AConfirmed: ${encodeURIComponent(isoNow)}` +
-      `%0A%0AHi my name is ${encodeURIComponent(name)}. I'd like to book a bin clean, please.` +
+      `${encodeURIComponent(TOS_PREFIX)}%0A%0AHi my name is ${encodeURIComponent(name)}. I'd like to book a bin clean, please.` +
       `%0A${binDetails}%0AAddress: ${encodeURIComponent(address)}%0AEmail: ${encodeURIComponent(email)}%0APhone: ${encodeURIComponent(phone)}`;
-
     const url = `https://wa.me/${phoneNumber}?text=${message}`;
     window.open(url, "_blank");
     setShowForm(false);
   };
 
-  /* ───────────────── Email booking ───────────────── */
   const handleEmailSend = async () => {
     if (missingFields()) { alert("Please complete all fields before sending."); return; }
-    if (!agreeToTerms) { alert("Please view & agree to the Terms first."); return; }
+    if (!agreeToTerms) { alert("Please view and agree to the Terms of Service before booking."); return; }
 
     const loc = selectedPlaceRef.current?.geometry?.location;
     const lat = loc ? loc.lat() : null;
     const lng = loc ? loc.lng() : null;
-
-    const isoNow = new Date().toISOString();
 
     try {
       const res = await fetch("/.netlify/functions/sendBookingEmail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name, email, phone, address, bins, placeId, lat, lng,
-          source: "website",
+          name,
+          email,
+          phone,
+          address,
+          bins,
+          placeId,
+          lat,
+          lng,
           termsAccepted: true,
           termsVersion: TERMS_VERSION,
-          termsTimestamp: isoNow,
-          termsAcceptanceText: TOS_LINE,
+          termsAcceptanceText: TOS_PREFIX,
         }),
       });
 
-      // Also log ToS to Blobs (channel=email)
-      logTos("email", { termsTimestamp: isoNow });
-
       if (res.ok) {
-        alert("Booking email sent successfully! (ToS included)");
+        alert("Booking email sent successfully! (ToS acceptance included)");
         setShowForm(false);
       } else {
         alert("Failed to send booking email.");
@@ -230,12 +199,12 @@ export default function NiBinGuyLandingPage() {
     }
   };
 
-  /* ───────────────── Misc UI helpers ───────────────── */
   const handleBinChange = (index, field, value) => {
     const newBins = [...bins];
     newBins[index][field] = field === "count" ? parseInt(value || 0, 10) : value;
     setBins(newBins);
   };
+
   const addBinRow = () => setBins([...bins, { type: "", count: 1, frequency: "4 Weekly (£5)" }]);
 
   const [cName, setCName] = useState("");
@@ -244,7 +213,10 @@ export default function NiBinGuyLandingPage() {
   const [cMessage, setCMessage] = useState("");
 
   const handleContactWhatsApp = () => {
-    if (!cName || !cEmail || !cPhone || !cMessage) { alert("Please complete all fields before sending."); return; }
+    if (!cName || !cEmail || !cPhone || !cMessage) {
+      alert("Please complete all fields before sending.");
+      return;
+    }
     const msg =
       `Hi, I'm ${encodeURIComponent(cName)}.` +
       `%0APhone: ${encodeURIComponent(cPhone)}` +
@@ -256,7 +228,10 @@ export default function NiBinGuyLandingPage() {
   };
 
   const handleContactEmail = async () => {
-    if (!cName || !cEmail || !cPhone || !cMessage) { alert("Please complete all fields before sending."); return; }
+    if (!cName || !cEmail || !cPhone || !cMessage) {
+      alert("Please complete all fields before sending.");
+      return;
+    }
     try {
       const res = await fetch("/.netlify/functions/sendContactEmail", {
         method: "POST",
@@ -292,17 +267,23 @@ export default function NiBinGuyLandingPage() {
 
   return (
     <div className="min-h-screen bg-black text-white font-sans">
-      {/* Hero */}
+      {/* Hero Section */}
       <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-black">
-        <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0" />
+        <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0"></div>
         <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-b from-transparent via-[#121212] to-[#18181b] z-10 pointer-events-none" />
+
         <div className="relative z-20 flex flex-col items-center gap-4">
           <img src="logo.png" alt="Ni Bin Guy Logo" className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg" />
-          <h1 className="text-4xl md:text-6xl font-bold">Bin Cleaning, <span className="text-green-400">Done Right</span></h1>
+
+          <h1 className="text-4xl md:text-6xl font-bold">
+            Bin Cleaning, <span className="text-green-400">Done Right</span>
+          </h1>
+
           <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
             Professional wheelie bin cleaning at your home, across
             <span className="text-green-400"> County Down.</span> Sparkling clean &amp; fresh smelling bins without any drama.
           </p>
+
           <div className="mt-6 flex flex-col sm:flex-row gap-4">
             <button
               onClick={() => { setShowForm(true); setAgreeToTerms(false); setTermsViewed(false); setTermsScrolledToEnd(false); }}
@@ -310,7 +291,10 @@ export default function NiBinGuyLandingPage() {
             >
               Book a Clean
             </button>
-            <button onClick={() => setShowContactForm(true)} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
+            <button
+              onClick={() => setShowContactForm(true)}
+              className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+            >
               Contact Us
             </button>
             <button
@@ -390,17 +374,14 @@ export default function NiBinGuyLandingPage() {
                 <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
                 <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
 
-                {/* Terms gating */}
+                {/* Terms of Service gating */}
                 <div className="mt-4 p-3 rounded-lg border border-gray-300 bg-gray-50">
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-sm text-gray-700">
-                      You must view and agree to the{" "}
-                      <button type="button" onClick={openTerms} className="underline font-semibold">Terms of Service</button>{" "}
-                      to book.
+                      You must view and agree to the <button type="button" onClick={openTerms} className="underline font-semibold">Terms of Service</button> to book.
                     </div>
                     <span className="text-[10px] text-gray-500">v{TERMS_VERSION}</span>
                   </div>
-
                   <div className="mt-3 flex items-start gap-2">
                     <input
                       id="agree"
@@ -409,47 +390,20 @@ export default function NiBinGuyLandingPage() {
                       checked={agreeToTerms}
                       disabled={!canToggleAgree}
                       onChange={(e) => setAgreeToTerms(e.target.checked)}
-                      aria-describedby="tos-help"
                     />
                     <label htmlFor="agree" className="text-sm text-gray-800">
-                      I’ve read and agree to the Terms of Service, including the <strong>8 AM bin availability</strong> clause.
+                      I’ve read and agree to the Terms of Service.
                       {!canToggleAgree && (
-                        <span id="tos-help" className="block text-xs text-gray-500">
-                          (Open the Terms and scroll to the bottom to enable this.)
-                        </span>
+                        <span className="block text-xs text-gray-500">(Open the Terms and scroll to the bottom to enable this.)</span>
                       )}
                     </label>
                   </div>
-
-                  {/* Confirm & Agree button */}
-                  <div className="mt-2">
-                    {!agreeToTerms && (
-                      <button
-                        type="button"
-                        onClick={() => setAgreeToTerms(true)}
-                        disabled={!termsScrolledToEnd}
-                        className="px-3 py-2 rounded-md text-sm font-semibold bg-green-500 hover:bg-green-600 text-black disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-disabled={!termsScrolledToEnd}
-                        aria-label="Confirm and agree to the Terms"
-                      >
-                        Confirm &amp; Agree
-                      </button>
-                    )}
-                  </div>
                 </div>
 
-                <button
-                  onClick={handleSend}
-                  className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
-                  disabled={!agreeToTerms}
-                >
+                <button onClick={handleSend} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
                   Send via WhatsApp
                 </button>
-                <button
-                  onClick={handleEmailSend}
-                  className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
-                  disabled={!agreeToTerms}
-                >
+                <button onClick={handleEmailSend} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
                   Send via Email
                 </button>
               </div>
@@ -458,15 +412,13 @@ export default function NiBinGuyLandingPage() {
         </div>
       )}
 
-      {/* Terms Modal */}
+      {/* Terms of Service Modal */}
       {showTerms && (
         <div className="fixed inset-0 z-[60] bg-black/70" onClick={() => setShowTerms(false)}>
           <div className="min-h-[100svh] flex items-center justify-center p-3 sm:p-6">
             <div className="bg-white text-black w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden" onClick={(e)=>e.stopPropagation()}>
               <div className="px-6 py-4 border-b flex items-center justify-between">
-                <h3 className="text-lg font-bold">
-                  {TERMS_TITLE} <span className="text-xs font-normal text-gray-500">(v{TERMS_VERSION})</span>
-                </h3>
+                <h3 className="text-lg font-bold">{TERMS_TITLE} <span className="text-xs font-normal text-gray-500">(v{TERMS_VERSION})</span></h3>
                 <button onClick={() => setShowTerms(false)} className="text-2xl leading-none text-gray-500 hover:text-black">&times;</button>
               </div>
               <div ref={termsScrollRef} className="px-6 py-4 max-h-[70dvh] overflow-y-auto whitespace-pre-line text-sm leading-6">
@@ -494,7 +446,7 @@ export default function NiBinGuyLandingPage() {
         </div>
       )}
 
-      {/* Contact Modal */}
+      {/* Contact Us Modal */}
       {showContactForm && (
         <div className="fixed inset-0 bg-black bg-opacity-80 overflow-y-auto overscroll-contain z-50" onClick={() => setShowContactForm(false)}>
           <div className="min-h-[100svh] flex justify-center items-center p-4">
@@ -528,7 +480,7 @@ export default function NiBinGuyLandingPage() {
         </div>
       )}
 
-      {/* 10-Second Challenge */}
+      {/* 10-Second Challenge Modal — uses imported component */}
       {showChallenge && (
         <div
           className="fixed inset-0 bg-black/80 overflow-y-auto overscroll-contain z-50"
@@ -554,9 +506,18 @@ export default function NiBinGuyLandingPage() {
       <section className="relative py-16 px-6 bg-[#18181b]">
         <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
         <div className="grid md:grid-cols-3 gap-6 text-center">
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg"><h3 className="text-xl font-bold mb-2">Domestic Bins</h3><p>We clean green, black, and blue bins right outside your home.</p></div>
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg"><h3 className="text-xl font-bold mb-2">Commercial Contracts</h3><p>Need regular bin cleaning? We handle your business waste too.</p></div>
-          <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg"><h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3><p>We use biodegradable products and minimal water waste.</p></div>
+          <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+            <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
+            <p>We clean green, black, and blue bins right outside your home.</p>
+          </div>
+          <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+            <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
+            <p>Need regular bin cleaning? We handle your business waste too.</p>
+          </div>
+          <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+            <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
+            <p>We use biodegradable products and minimal water waste.</p>
+          </div>
         </div>
       </section>
 
@@ -567,20 +528,48 @@ export default function NiBinGuyLandingPage() {
           <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
             <h3 className="text-xl font-bold">The Booking Process</h3>
             <ol className="mt-6 space-y-5">
-              <li className="flex gap-4"><span className="flex h-8 w-8 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">1</span><p>Complete the quick booking form.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">2</span><p>We’ll reply with your price and the next clean date (right after your bin collection).</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">3</span><p>Approve the quote to secure your spot in the schedule.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">4</span><p>You’ll receive an email to set up your payment method.</p></li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">1</span>
+                <p>Complete the quick booking form.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">2</span>
+                <p>We’ll reply with your price and the next clean date (right after your bin collection).</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">3</span>
+                <p>Approve the quote to secure your spot in the schedule.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">4</span>
+                <p>You’ll receive an email to set up your payment method.</p>
+              </li>
             </ol>
           </div>
+
           <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
             <h3 className="text-xl font-bold">The Cleaning Process</h3>
             <ol className="mt-6 space-y-5">
-              <li className="flex gap-4"><span className="flex h-8 w-8 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">1</span><p>We remove any leftover waste the bin crew missed.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">2</span><p>Thorough wash and rinse — inside and out.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">3</span><p>We dry the interior to prevent residue.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">4</span><p>Sanitise and deodorise for a fresh finish.</p></li>
-              <li className="flex gap-4"><span className="flex h-8 w-8 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">5</span><p>Your bin is returned clean and fresh to its usual spot.</p></li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">1</span>
+                <p>We remove any leftover waste the bin crew missed.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">2</span>
+                <p>Thorough wash and rinse — inside and out.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">3</span>
+                <p>We dry the interior to prevent residue.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">4</span>
+                <p>Sanitise and deodorise for a fresh finish.</p>
+              </li>
+              <li className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">5</span>
+                <p>Your bin is returned clean and fresh to its usual spot.</p>
+              </li>
             </ol>
           </div>
         </div>
@@ -592,44 +581,69 @@ export default function NiBinGuyLandingPage() {
         </div>
       </section>
 
-      {/* Bins */}
+      {/* The Bins We Clean */}
       <section className="relative py-16 px-6 bg-[#18181b] text-white text-center">
         <h2 className="text-3xl font-bold text-green-400 mb-12">The Bins We Clean</h2>
         <div className="relative z-20 flex flex-wrap justify-center items-end gap-12 md:gap-20">
-          {[
-            ["120L","/bins/120L.png","h-32"],
-            ["240L","/bins/240L.png","h-36"],
-            ["360L","/bins/360L.png","h-40"],
-            ["660L","/bins/660L.png","h-44"],
-            ["1100L","/bins/1100L.png","h-48"],
-          ].map(([label,src,h])=>(
-            <div key={label} className="flex flex-col items-center">
-              <img src={src} alt={`${label} Bin`} className={`${h} mb-2`} />
-              <span className="text-sm">{label}</span>
-            </div>
-          ))}
+          <div className="flex flex-col items-center">
+            <img src="/bins/120L.png" alt="120L Bin" className="h-32 mb-2" />
+            <span className="text-sm">120L</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <img src="/bins/240L.png" alt="240L Bin" className="h-36 mb-2" />
+            <span className="text-sm">240L</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <img src="/bins/360L.png" alt="360L Bin" className="h-40 mb-2" />
+            <span className="text-sm">360L</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <img src="/bins/660L.png" alt="660L Bin" className="h-44 mb-2" />
+            <span className="text-sm">660L</span>
+          </div>
+          <div className="flex flex-col items-center">
+            <img src="/bins/1100L.png" alt="1100L Bin" className="h-48 mb-2" />
+            <span className="text-sm">1100L</span>
+          </div>
         </div>
         <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-b from-[#18181b] to-black pointer-events-none z-10" />
       </section>
 
-      {/* Why clean */}
+      {/* Why Clean Your Bin */}
       <section className="py-16 px-6 bg-gradient-to-b from-black via-[#0a0a0a] to-zinc-900 text-white">
         <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
         <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
-          {[
-            ["/odour.png","Prevent Nasty Odours","Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source."],
-            ["/bacteria.png","Stop Bacteria Buildup","Leftover waste can attract harmful bacteria. Professional bin cleaning keeps your environment safer and more hygienic."],
-            ["/pests.png","Deter Insects & Vermin","Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless."],
-            ["/family.png","Protect Your Family","A clean bin reduces exposure to germs and pathogens, helping keep your household healthier."],
-          ].map(([icon,title,desc])=>(
-            <div key={title} className="flex items-start gap-4">
-              <img src={icon} alt={`${title} icon`} className="w-12 h-12 mt-1" />
-              <div>
-                <h3 className="text-xl font-semibold mb-1">{title}</h3>
-                <p className="text-gray-300">{desc}</p>
-              </div>
+          <div className="flex items-start gap-4">
+            <img src="/odour.png" alt="Odours icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Prevent Nasty Odours</h3>
+              <p className="text-gray-300">Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source.</p>
             </div>
-          ))}
+          </div>
+
+          <div className="flex items-start gap-4">
+            <img src="/bacteria.png" alt="Bacteria icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Stop Bacteria Buildup</h3>
+              <p className="text-gray-300">Leftover waste can attract harmful bacteria. Professional bin cleaning keeps your environment safer and more hygienic.</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4">
+            <img src="/pests.png" alt="Pests icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Deter Insects &amp; Vermin</h3>
+              <p className="text-gray-300">Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless.</p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-4">
+            <img src="/family.png" alt="Family icon" className="w-12 h-12 mt-1" />
+            <div>
+              <h3 className="text-xl font-semibold mb-1">Protect Your Family</h3>
+              <p className="text-gray-300">A clean bin reduces exposure to germs and pathogens, helping keep your household healthier.</p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -637,10 +651,22 @@ export default function NiBinGuyLandingPage() {
       <section className="py-16 px-6 bg-gradient-to-b from-zinc-900 via-[#1a1a1a] to-black text-white">
         <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
         <div className="grid md:grid-cols-2 gap-10 max-w-5xl mx-auto">
-          <div><h3 className="text-xl font-semibold mb-2">Local &amp; Trusted</h3><p>We’re based in Bangor and proud to serve County Down residents with care.</p></div>
-          <div><h3 className="text-xl font-semibold mb-2">Flexible Plans</h3><p>Whether you want a one-off clean or recurring service, we’ve got options.</p></div>
-          <div><h3 className="text-xl font-semibold mb-2">Affordable Pricing</h3><p>From just £5 per bin — clear pricing with no surprises.</p></div>
-          <div><h3 className="text-xl font-semibold mb-2">Fully Insured</h3><p>We’re fully insured and compliant — so you can rest easy.</p></div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Local &amp; Trusted</h3>
+            <p>We’re based in Bangor and proud to serve County Down residents with care.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Flexible Plans</h3>
+            <p>Whether you want a one-off clean or recurring service, we’ve got options.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Affordable Pricing</h3>
+            <p>From just £5 per bin — clear pricing with no surprises.</p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Fully Insured</h3>
+            <p>We’re fully insured and compliant — so you can rest easy.</p>
+          </div>
         </div>
       </section>
     </div>
