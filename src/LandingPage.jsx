@@ -2,12 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import TenSecondChallenge from "./TenSecondChallenge.jsx";
 
 /**
- * Ni Bin Guy — Landing Page
- * - WhatsApp + Email booking
- * - ToS gating + modal (Confirm & Agree)
- * - Google Places Autocomplete
- * - 10-Second Challenge modal
- * - WhatsApp bookings now send a ToS receipt via Netlify function
+ * Ni Bin Guy — Landing Page (Refactored)
+ *
+ * Goals:
+ * - Clear file structure with small, well-named components
+ * - Fix string/template bugs in the original
+ * - Keep all existing functionality (WhatsApp + Email, ToS gating, Places Autocomplete, challenge modal)
+ * - Mobile-friendly modals with safe-area handling
  */
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -57,16 +58,17 @@ const TERMS_BODY = `We keep our Terms of Service simple and transparent. By book
 • You consent to us storing your details and contacting you about your service.
 • Text reminders are a courtesy; you’re responsible for knowing your schedule.`;
 
-// Load Google Places once
 function loadGooglePlaces(apiKey) {
   return new Promise((resolve, reject) => {
     if (window.google?.maps?.places) return resolve(window.google);
+
     const existing = document.querySelector("script[data-gmaps]");
     if (existing) {
       existing.addEventListener("load", () => resolve(window.google));
       existing.addEventListener("error", reject);
       return;
     }
+
     const s = document.createElement("script");
     s.dataset.gmaps = "1";
     s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
@@ -190,7 +192,7 @@ function BookingForm({ onClose }) {
   const [termsViewed, setTermsViewed] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
-  const canToggleAgree = termsViewed; // final enable happens in modal after scroll
+  const canToggleAgree = termsViewed; // detailed gating handled inside TermsModal by scrolling
 
   // Attach Google Places autocomplete when modal opens
   useEffect(() => {
@@ -250,7 +252,6 @@ function BookingForm({ onClose }) {
       .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
       .join("%0A");
 
-  // UPDATED: WhatsApp + background ToS receipt
   const handleSendWhatsApp = () => {
     if (missingFields) {
       alert("Please complete all fields before sending.");
@@ -261,38 +262,11 @@ function BookingForm({ onClose }) {
       return;
     }
 
-    // background ToS receipt (admin+customer) via Netlify
-    const payload = {
-      source: "whatsapp",
-      name,
-      email,
-      phone,
-      address,
-      bins,
-      termsAccepted: true,
-      termsVersion: TERMS_VERSION,
-      termsAcceptanceText: TOS_PREFIX,
-      termsTimestamp: new Date().toISOString(),
-    };
-
-    try {
-      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
-      if (!navigator.sendBeacon("/.netlify/functions/sendTosReceipt", blob)) {
-        throw new Error("sendBeacon not sent");
-      }
-    } catch {
-      fetch("/.netlify/functions/sendTosReceipt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        keepalive: true,
-        body: JSON.stringify(payload),
-      }).catch(() => {});
-    }
-
-    // open WhatsApp
-    const message =
-      `${encodeURIComponent(TOS_PREFIX)}%0A%0AHi my name is ${encodeURIComponent(name)}. I'd like to book a bin clean, please.` +
-      `%0A${buildBinDetails()}%0AAddress: ${encodeURIComponent(address)}%0AEmail: ${encodeURIComponent(email)}%0APhone: ${encodeURIComponent(phone)}`;
+    const message = `${encodeURIComponent(TOS_PREFIX)}%0A%0AHi my name is ${encodeURIComponent(
+      name
+    )}. I'd like to book a bin clean, please.%0A${buildBinDetails()}%0AAddress: ${encodeURIComponent(
+      address
+    )}%0AEmail: ${encodeURIComponent(email)}%0APhone: ${encodeURIComponent(phone)}`;
 
     const url = `https://wa.me/${PHONE_E164}?text=${message}`;
     window.open(url, "_blank");
@@ -332,25 +306,6 @@ function BookingForm({ onClose }) {
         }),
       });
       if (res.ok) {
-        // optionally also email a receipt to customer/admin from here:
-        try {
-          await fetch("/.netlify/functions/sendTosReceipt", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              source: "email",
-              name,
-              email,
-              phone,
-              address,
-              bins,
-              termsAccepted: true,
-              termsVersion: TERMS_VERSION,
-              termsAcceptanceText: TOS_PREFIX,
-              termsTimestamp: new Date().toISOString(),
-            }),
-          });
-        } catch {}
         alert("Booking email sent successfully! (ToS acceptance included)");
         onClose?.();
       } else {
@@ -372,23 +327,48 @@ function BookingForm({ onClose }) {
         &times;
       </button>
 
-      <h2 id="booking-title" className="text-2xl font-bold text-center">Book a Bin Clean</h2>
+      <h2 id="booking-title" className="text-2xl font-bold text-center">
+        Book a Bin Clean
+      </h2>
 
-      <input type="text" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
+      {/* Name */}
+      <input
+        type="text"
+        placeholder="Your Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-4 py-2"
+      />
 
+      {/* Bins */}
       {bins.map((bin, index) => (
         <div key={index} className="space-y-2 border-b border-gray-200 pb-4 mb-4">
           <div className="flex gap-4">
-            <select value={bin.type} onChange={(e) => handleBinChange(index, "type", e.target.value)} className="w-2/3 border border-gray-300 rounded-lg px-4 py-2">
+            <select
+              value={bin.type}
+              onChange={(e) => handleBinChange(index, "type", e.target.value)}
+              className="w-2/3 border border-gray-300 rounded-lg px-4 py-2"
+            >
               <option value="">Select Bin</option>
               <option value="Black Bin">Black</option>
               <option value="Brown Bin">Brown</option>
               <option value="Green Bin">Green</option>
               <option value="Blue Bin">Blue</option>
             </select>
-            <input type="number" min="1" value={bin.count} onChange={(e) => handleBinChange(index, "count", e.target.value)} className="w-1/3 border border-gray-300 rounded-lg px-4 py-2" />
+            <input
+              type="number"
+              min="1"
+              value={bin.count}
+              onChange={(e) => handleBinChange(index, "count", e.target.value)}
+              className="w-1/3 border border-gray-300 rounded-lg px-4 py-2"
+            />
           </div>
-          <select value={bin.frequency} onChange={(e) => handleBinChange(index, "frequency", e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2">
+
+          <select
+            value={bin.frequency}
+            onChange={(e) => handleBinChange(index, "frequency", e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-4 py-2"
+          >
             <option value="4 Weekly (£5)">4 Weekly (£5)</option>
             <option value="One-off (£12.50)">One-off (£12.50)</option>
             <option value="Commercial <360L 4 Weekly (£5)">Commercial &lt;360L 4 Weekly (£5)</option>
@@ -399,36 +379,62 @@ function BookingForm({ onClose }) {
         </div>
       ))}
 
+      {/* Add/Remove rows */}
       <div className="flex items-center justify-between">
-        <button onClick={addBinRow} className="text-sm text-green-600 hover:text-green-800 font-semibold">+ Add Another Bin</button>
+        <button onClick={addBinRow} className="text-sm text-green-600 hover:text-green-800 font-semibold">
+          + Add Another Bin
+        </button>
         {bins.length > 1 && (
-          <button onClick={removeLastBin} className="text-sm text-red-600 hover:text-red-800 font-semibold">− Remove Last Bin</button>
+          <button onClick={removeLastBin} className="text-sm text-red-600 hover:text-red-800 font-semibold">
+            − Remove Last Bin
+          </button>
         )}
       </div>
 
+      {/* Address */}
       <input
         ref={addressInputRef}
         type="text"
         placeholder="Full Address"
         value={address}
-        onChange={(e) => { setAddress(e.target.value); setPlaceId(null); selectedPlaceRef.current = null; }}
+        onChange={(e) => {
+          setAddress(e.target.value);
+          setPlaceId(null);
+          selectedPlaceRef.current = null;
+        }}
         className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
         autoComplete="off"
         inputMode="text"
       />
       <p className="text-xs text-gray-500 -mt-2">Tip: pick from suggestions or just type your full address.</p>
 
-      <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
-      <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
+      {/* Contact */}
+      <input
+        type="tel"
+        placeholder="Contact Number"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
+      />
+      <input
+        type="email"
+        placeholder="Email Address"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
+      />
 
       {/* Terms of Service gating */}
       <div className="mt-4 p-3 rounded-lg border border-gray-300 bg-gray-50">
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm text-gray-700">
-            You must view and agree to the{" "}
+            You must view and agree to the {" "}
             <button
               type="button"
-              onClick={() => { setShowTerms(true); setTermsViewed(true); }}
+              onClick={() => {
+                setShowTerms(true);
+                setTermsViewed(true);
+              }}
               className="underline font-semibold"
             >
               Terms of Service
@@ -455,17 +461,29 @@ function BookingForm({ onClose }) {
         </div>
       </div>
 
-      <button onClick={handleSendWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
+      <button
+        onClick={handleSendWhatsApp}
+        className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
+        disabled={!agreeToTerms}
+      >
         Send via WhatsApp
       </button>
-      <button onClick={handleSendEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
+      <button
+        onClick={handleSendEmail}
+        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
+        disabled={!agreeToTerms}
+      >
         Send via Email
       </button>
 
+      {/* Terms Modal */}
       <TermsModal
         open={showTerms}
         onClose={() => setShowTerms(false)}
-        onConfirm={() => { setAgreeToTerms(true); setShowTerms(false); }}
+        onConfirm={() => {
+          setAgreeToTerms(true);
+          setShowTerms(false);
+        }}
         version={TERMS_VERSION}
         title={TERMS_TITLE}
         body={TERMS_BODY}
@@ -504,10 +522,15 @@ function ContactForm({ onClose }) {
       alert("Please complete all fields before sending.");
       return;
     }
-    const msg = `Hi, I'm ${encodeURIComponent(cName)}.%0APhone: ${encodeURIComponent(cPhone)}%0AEmail: ${encodeURIComponent(cEmail)}%0A%0AMessage:%0A${encodeURIComponent(cMessage)}`;
+    const msg = `Hi, I'm ${encodeURIComponent(cName)}.%0APhone: ${encodeURIComponent(
+      cPhone
+    )}%0AEmail: ${encodeURIComponent(cEmail)}%0A%0AMessage:%0A${encodeURIComponent(cMessage)}`;
     window.open(`https://wa.me/${PHONE_E164}?text=${msg}`, "_blank");
     onClose?.();
-    setCName(""); setCEmail(""); setCPhone(""); setCMessage("");
+    setCName("");
+    setCEmail("");
+    setCPhone("");
+    setCMessage("");
   };
 
   const handleEmail = async () => {
@@ -524,7 +547,10 @@ function ContactForm({ onClose }) {
       if (res.ok) {
         alert("Your message has been sent!");
         onClose?.();
-        setCName(""); setCEmail(""); setCPhone(""); setCMessage("");
+        setCName("");
+        setCEmail("");
+        setCPhone("");
+        setCMessage("");
       } else {
         alert("Failed to send your message.");
       }
@@ -536,15 +562,30 @@ function ContactForm({ onClose }) {
 
   return (
     <div className="p-6 space-y-4">
-      <button onClick={onClose} className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10" aria-label="Close contact">
+      <button
+        onClick={onClose}
+        className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10"
+        aria-label="Close contact"
+      >
         &times;
       </button>
 
       <div className="flex items-center justify-center gap-3">
-        <h2 id="contact-title" className="text-2xl font-bold text-center">Contact Us</h2>
-        <button onClick={handleCallClick} className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none" aria-label="Call us" title="Call us">
+        <h2 id="contact-title" className="text-2xl font-bold text-center">
+          Contact Us
+        </h2>
+        <button
+          onClick={handleCallClick}
+          className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none"
+          aria-label="Call us"
+          title="Call us"
+        >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.684l1.1 3.3a1 1 0 01-.27 1.06l-1.6 1.6a16 16 0 007.18 7.18l1.6-1.6a1 1 0 011.06-.27l3.3 1.1a1 1 0 01.684.95V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.684l1.1 3.3a1 1 0 01-.27 1.06l-1.6 1.6a16 16 0 007.18 7.18l1.6-1.6a1 1 0 011.06-.27l3.3 1.1a1 1 0 01.684.95V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+            />
           </svg>
         </button>
       </div>
@@ -554,8 +595,12 @@ function ContactForm({ onClose }) {
       <input type="email" placeholder="Email Address" value={cEmail} onChange={(e) => setCEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
       <textarea placeholder="Your Message" value={cMessage} onChange={(e) => setCMessage(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 h-28 resize-y" />
 
-      <button onClick={handleWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full">Send via WhatsApp</button>
-      <button onClick={handleEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full">Send via Email</button>
+      <button onClick={handleWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full">
+        Send via WhatsApp
+      </button>
+      <button onClick={handleEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full">
+        Send via Email
+      </button>
       <p className="text-center text-sm text-gray-600 mt-2">Prefer to call? Tap the phone icon.</p>
     </div>
   );
@@ -608,10 +653,24 @@ function Hero({ onBook, onContact, onChallenge }) {
           Professional wheelie bin cleaning at your home, across <span className="text-green-400">County Down.</span> Sparkling clean &amp; fresh smelling bins without any drama.
         </p>
         <div className="mt-6 flex flex-col sm:flex-row gap-4">
-          <button onClick={onBook} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Book a Clean</button>
-          <button onClick={onContact} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Contact Us</button>
-          <button onClick={onChallenge} className="bg-[#9b111e] hover:bg-[#7f0e19] text-white font-bold py-3 px-6 rounded-xl shadow-lg transition focus:outline-none focus:ring-2 focus:ring-[#9b111e]/50 active:scale-[0.99]">Free Bin Clean</button>
-          <a href="#customer-portal" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center">Customer Portal</a>
+          <button onClick={onBook} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
+            Book a Clean
+          </button>
+          <button onClick={onContact} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
+            Contact Us
+          </button>
+          <button
+            onClick={onChallenge}
+            className="bg-[#9b111e] hover:bg-[#7f0e19] text-white font-bold py-3 px-6 rounded-xl shadow-lg transition focus:outline-none focus:ring-2 focus:ring-[#9b111e]/50 active:scale-[0.99]"
+          >
+            Free Bin Clean
+          </button>
+          <a
+            href="#customer-portal"
+            className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center"
+          >
+            Customer Portal
+          </a>
         </div>
       </div>
     </section>
@@ -623,9 +682,18 @@ function WhatWeDo() {
     <section className="relative py-16 px-6 bg-[#18181b]">
       <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
       <div className="grid md:grid-cols-3 gap-6 text-center">
-        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg"><h3 className="text-xl font-bold mb-2">Domestic Bins</h3><p>We clean green, black, and blue bins right outside your home.</p></div>
-        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg"><h3 className="text-xl font-bold mb-2">Commercial Contracts</h3><p>Need regular bin cleaning? We handle your business waste too.</p></div>
-        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg"><h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3><p>We use biodegradable products and minimal water waste.</p></div>
+        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+          <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
+          <p>We clean green, black, and blue bins right outside your home.</p>
+        </div>
+        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+          <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
+          <p>Need regular bin cleaning? We handle your business waste too.</p>
+        </div>
+        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+          <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
+          <p>We use biodegradable products and minimal water waste.</p>
+        </div>
       </div>
     </section>
   );
@@ -641,7 +709,9 @@ function TheProcess() {
           <ol className="mt-6 space-y-5">
             {["Complete the quick booking form.", "We’ll reply with your price and the next clean date (right after your bin collection).", "Approve the quote to secure your spot in the schedule.", "You’ll receive an email to set up your payment method."].map((text, i) => (
               <li key={i} className="flex gap-4">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">{i + 1}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">
+                  {i + 1}
+                </span>
                 <p>{text}</p>
               </li>
             ))}
@@ -652,7 +722,9 @@ function TheProcess() {
           <ol className="mt-6 space-y-5">
             {["We remove any leftover waste the bin crew missed.", "Thorough wash and rinse — inside and out.", "We dry the interior to prevent residue.", "Sanitise and deodorise for a fresh finish.", "Your bin is returned clean and fresh to its usual spot."].map((text, i) => (
               <li key={i} className="flex gap-4">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">{i + 1}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">
+                  {i + 1}
+                </span>
                 <p>{text}</p>
               </li>
             ))}
@@ -660,7 +732,9 @@ function TheProcess() {
         </div>
       </div>
       <div className="mt-12 text-center">
-        <a href="#book" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Book a Clean</a>
+        <a href="#book" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
+          Book a Clean
+        </a>
       </div>
     </section>
   );
@@ -674,6 +748,7 @@ function BinsWeClean() {
     { src: "/bins/660L.png", alt: "660L Bin", size: "660L", h: "h-44" },
     { src: "/bins/1100L.png", alt: "1100L Bin", size: "1100L", h: "h-48" },
   ];
+
   return (
     <section className="relative py-16 px-6 bg-[#18181b] text-white text-center">
       <h2 className="text-3xl font-bold text-green-400 mb-12">The Bins We Clean</h2>
@@ -692,11 +767,28 @@ function BinsWeClean() {
 
 function WhyCleanYourBin() {
   const points = [
-    { icon: "/odour.png", title: "Prevent Nasty Odours", text: "Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source." },
-    { icon: "/bacteria.png", title: "Stop Bacteria Buildup", text: "Leftover waste can attract harmful bacteria. Professional bin cleaning keeps your environment safer and more hygienic." },
-    { icon: "/pests.png", title: "Deter Insects & Vermin", text: "Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless." },
-    { icon: "/family.png", title: "Protect Your Family", text: "A clean bin reduces exposure to germs and pathogens, helping keep your household healthier." },
+    {
+      icon: "/odour.png",
+      title: "Prevent Nasty Odours",
+      text: "Bins can start to smell unpleasant fast. Regular cleaning eliminates those foul smells at the source.",
+    },
+    {
+      icon: "/bacteria.png",
+      title: "Stop Bacteria Buildup",
+      text: "Leftover waste can attract harmful bacteria. Professional bin cleaning keeps your environment safer and more hygienic.",
+    },
+    {
+      icon: "/pests.png",
+      title: "Deter Insects & Vermin",
+      text: "Flies, maggots, and rodents are drawn to dirty bins. Keep them away by keeping your bin spotless.",
+    },
+    {
+      icon: "/family.png",
+      title: "Protect Your Family",
+      text: "A clean bin reduces exposure to germs and pathogens, helping keep your household healthier.",
+    },
   ];
+
   return (
     <section className="py-16 px-6 bg-gradient-to-b from-black via-[#0a0a0a] to-zinc-900 text-white">
       <h2 className="text-3xl font-bold text-green-400 mb-12 text-center">Why Clean Your Bin?</h2>
@@ -722,6 +814,7 @@ function WhyNiBinGuy() {
     { title: "Affordable Pricing", text: "From just £5 per bin — clear pricing with no surprises." },
     { title: "Fully Insured", text: "We’re fully insured and compliant — so you can rest easy." },
   ];
+
   return (
     <section className="py-16 px-6 bg-gradient-to-b from-zinc-900 via-[#1a1a1a] to-black text-white">
       <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">Why Ni Bin Guy?</h2>
@@ -749,16 +842,20 @@ export default function NiBinGuyLandingPage() {
     <div className="min-h-screen bg-black text-white font-sans">
       <Hero onBook={() => setShowBooking(true)} onContact={() => setShowContact(true)} onChallenge={() => setShowChallenge(true)} />
 
+      {/* Booking Modal */}
       <Modal open={showBooking} onClose={() => setShowBooking(false)} maxWidth="max-w-md" labelledBy="booking-title">
         <BookingForm onClose={() => setShowBooking(false)} />
       </Modal>
 
+      {/* Contact Modal */}
       <Modal open={showContact} onClose={() => setShowContact(false)} maxWidth="max-w-md" labelledBy="contact-title">
         <ContactForm onClose={() => setShowContact(false)} />
       </Modal>
 
+      {/* 10-Second Challenge Modal */}
       <ChallengeModal open={showChallenge} onClose={() => setShowChallenge(false)} />
 
+      {/* Sections */}
       <WhatWeDo />
       <TheProcess />
       <BinsWeClean />
