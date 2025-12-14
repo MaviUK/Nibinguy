@@ -21,6 +21,82 @@ const TERMS_VERSION_DEFAULT = "September 2025";
 const escapeHtml = (s) => String(s ?? "")
   .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 
+const fmtGBP = (n) => {
+  const x = Math.round((Number(n) || 0) * 100) / 100;
+  return `£${x % 1 === 0 ? x.toFixed(0) : x.toFixed(2)}`;
+};
+
+function buildPricingBlocks(pricing, discountCode) {
+  const code = (discountCode || "").trim();
+  const hasPricing = pricing && Array.isArray(pricing.lines) && pricing.lines.length > 0;
+
+  if (!hasPricing) {
+    const text =
+`Pricing:
+(No pricing breakdown provided)
+
+Discount Code: ${code || "None"}`;
+    const html = `
+      <h3 style="margin:16px 0 6px">Pricing</h3>
+      <p style="margin:0 0 8px;color:#6b7280">(No pricing breakdown provided)</p>
+      <p style="margin:0"><strong>Discount Code:</strong> ${escapeHtml(code || "None")}</p>
+    `;
+    return { text, html, applied: false };
+  }
+
+  const lines = pricing.lines;
+  const anyDiscounted = lines.some((l) => !!l.discounted);
+  const applied = !!code && anyDiscounted;
+
+  const textLines = lines.map((l) => {
+    const type = String(l.type || "").replace(" Bin", "");
+    const planLabel = l.planLabel || "";
+    const each = fmtGBP(l.unitPrice);
+    const total = fmtGBP(l.lineTotal);
+    const badge = l.discounted ? " (discounted)" : "";
+    return `${l.count}x ${type} — ${planLabel} @ ${each}${badge} = ${total}`;
+  });
+
+  const subtotal = fmtGBP(pricing.subtotal);
+  const total = fmtGBP(pricing.total);
+
+  const text =
+`Pricing:
+${textLines.join("\n")}
+
+Subtotal: ${subtotal}
+Total: ${total}
+
+Discount Code: ${code || "None"}${code ? (applied ? " (applied)" : " (not applied)") : ""}`;
+
+  const htmlLines = lines.map((l) => {
+    const type = escapeHtml(String(l.type || "").replace(" Bin", ""));
+    const planLabel = escapeHtml(l.planLabel || "");
+    const each = escapeHtml(fmtGBP(l.unitPrice));
+    const totalLine = escapeHtml(fmtGBP(l.lineTotal));
+    const badge = l.discounted ? ` <span style="color:#059669;font-weight:700">(discounted)</span>` : "";
+    return `<div style="margin:0 0 6px">${escapeHtml(String(l.count || 1))}x <strong>${type}</strong> — ${planLabel} @ ${each}${badge} = <strong>${totalLine}</strong></div>`;
+  }).join("");
+
+  const html = `
+    <h3 style="margin:16px 0 6px">Pricing</h3>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px">
+      ${htmlLines}
+      <div style="margin-top:10px;border-top:1px solid #e5e7eb;padding-top:10px;display:flex;justify-content:space-between">
+        <div style="color:#374151">Subtotal</div>
+        <div style="font-weight:700">${escapeHtml(subtotal)}</div>
+      </div>
+      <div style="margin-top:6px;display:flex;justify-content:space-between">
+        <div style="color:#111827;font-weight:700">Total</div>
+        <div style="font-weight:800">${escapeHtml(total)}</div>
+      </div>
+    </div>
+    <p style="margin:10px 0 0"><strong>Discount Code:</strong> ${escapeHtml(code || "None")}${code ? (applied ? " <span style='color:#059669;font-weight:700'>(applied)</span>" : " <span style='color:#dc2626;font-weight:700'>(not applied)</span>") : ""}</p>
+  `;
+
+  return { text, html, applied };
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
@@ -30,16 +106,31 @@ exports.handler = async (event) => {
     const {
       name="", email="", phone="", address="",
       bins=[], source="whatsapp",
+
+      // NEW: discount + pricing from UI
+      discountCode = null,
+      pricing = null,
+
       termsAccepted = true,
       termsVersion = TERMS_VERSION_DEFAULT,
       termsAcceptanceText = `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION_DEFAULT}).`,
       termsTimestamp = new Date().toISOString(),
     } = JSON.parse(event.body || "{}");
 
-    const binsText = (Array.isArray(bins) ? bins : [])
-      .filter(b => b && b.type)
-      .map(b => `${b.count || 1} x ${b.type} (${b.frequency || ""})`)
+    const filteredBins = (Array.isArray(bins) ? bins : [])
+      .filter(b => b && b.type);
+
+    // Support both old `frequency` and new `planId`
+    const binsText = filteredBins
+      .map(b => {
+        const planOrFreq = b.planId ? `plan: ${b.planId}` : (b.frequency || "");
+        return `${b.count || 1} x ${b.type} (${planOrFreq})`;
+      })
       .join("\n") || "(none provided)";
+
+    const binsHtml = escapeHtml(binsText).replace(/\n/g,"<br>");
+
+    const pricingBlocks = buildPricingBlocks(pricing, discountCode);
 
     // ADMIN email
     await resend.emails.send({
@@ -57,6 +148,8 @@ Address: ${address}
 Bins:
 ${binsText}
 
+${pricingBlocks.text}
+
 — TERMS —
 Accepted: ${termsAccepted ? "yes" : "no"}
 Version: ${termsVersion}
@@ -69,7 +162,10 @@ Source: ${source}`,
         <p><strong>Email:</strong> ${escapeHtml(email)}</p>
         <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
         <p><strong>Address:</strong> ${escapeHtml(address)}</p>
-        <p><strong>Bins:</strong><br>${escapeHtml(binsText).replace(/\n/g,"<br>")}</p>
+        <p><strong>Bins:</strong><br>${binsHtml}</p>
+
+        ${pricingBlocks.html}
+
         <hr>
         <p><strong>TERMS</strong> <span style="color:#6b7280">(v${escapeHtml(termsVersion)})</span></p>
         <p><em>${escapeHtml(termsAcceptanceText)}</em></p>
@@ -83,15 +179,18 @@ Source: ${source}`,
       await resend.emails.send({
         from: FROM_DEFAULT,
         to: email,
-        subject: `Your Ni Bin Guy booking & Terms confirmation (v${termsVersion})`,
+        subject: `Your Ni Bin Guy booking, pricing & Terms confirmation (v${termsVersion})`,
         text:
 `Thanks ${name},
 
-We’ve received your WhatsApp booking. Here is your summary and your Terms confirmation.
+We’ve received your WhatsApp booking. Here is your summary (including pricing) and your Terms confirmation.
 
 Address: ${address}
+
 Bins:
 ${binsText}
+
+${pricingBlocks.text}
 
 Terms:
 Accepted: ${termsAccepted ? "yes" : "no"}
@@ -100,34 +199,3 @@ Confirmed: ${termsTimestamp}
 
 We’ll be in touch to confirm your schedule.`,
         html: `
-          <h2>Thanks, ${escapeHtml(name)} — we’ve received your WhatsApp booking</h2>
-          <p><strong>Address:</strong> ${escapeHtml(address)}</p>
-          <p><strong>Bins:</strong><br>${escapeHtml(binsText).replace(/\n/g,"<br>")}</p>
-          <h3>Terms confirmation</h3>
-          <p>Version: <strong>${escapeHtml(termsVersion)}</strong><br>
-             Confirmed: <strong>${escapeHtml(termsTimestamp)}</strong></p>
-          <p><em>${escapeHtml(termsAcceptanceText)}</em></p>
-        `
-      });
-    }
-
-    // Optional: log to Blobs
-    if (getStoreSafe) {
-      try {
-        const store = getStoreSafe("tos-confirmations");
-        const key = `${termsTimestamp}__${(email || phone || "unknown").replace(/[^a-z0-9@.+_-]/gi,"_")}.json`;
-        await store.setJSON(key, {
-          channel: "whatsapp",
-          name, email, phone, address, bins,
-          termsAccepted, termsVersion, termsAcceptanceText, termsTimestamp,
-          createdAt: new Date().toISOString(),
-        });
-      } catch (e) { console.warn("Blobs log skipped:", e.message); }
-    }
-
-    return { statusCode: 200, body: JSON.stringify({ ok: true }) };
-  } catch (e) {
-    console.error("sendTosReceipt error:", e);
-    return { statusCode: 500, body: JSON.stringify({ error: "Failed" }) };
-  }
-};
