@@ -314,7 +314,6 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
              Ballywalter, Carrowdore, 
              Greyabbery, Cloughey & Portavogie</P>
               clean.
-            </p>
           </div>
           <div className="text-xs opacity-80 text-right">
             One try per device · Europe/London
