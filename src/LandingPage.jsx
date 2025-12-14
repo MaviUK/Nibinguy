@@ -102,27 +102,15 @@ const PLANS = [
 
 // Discount rules (edit these whenever you want)
 const DISCOUNT_CODES = {
-  // 10% off domestic regular + one-off
-  NIB10: {
+  Fresh20: {
     type: "percent",
-    value: 10,
-    appliesTo: ["domestic_4w", "domestic_oneoff"],
-  },
-
-  // £2 off one-off domestic only
-  OFF2: {
-    type: "fixed",
-    value: 2,
-    appliesTo: ["domestic_oneoff"],
-  },
-
-  // Free domestic 4-weekly only (sets unit price to £0)
-  FREE4W: {
-    type: "free",
-    value: 0,
+    value: 20,
     appliesTo: ["domestic_4w"],
+    expiresAt: "2025-12-31T23:59:59Z", // 👈 expiry (UTC)
+    // startsAt: "2025-12-01T00:00:00Z", // optional
   },
 };
+
 
 function normalizeCode(code) {
   return (code || "").trim().toUpperCase();
@@ -144,6 +132,14 @@ function computeDiscountedUnitPrice(basePrice, planId, code) {
 
   const rule = DISCOUNT_CODES[c];
   if (!rule) return { unitPrice: basePrice, discounted: false, reason: "Invalid code" };
+
+   const now = Date.now();
+if (rule.startsAt && now < Date.parse(rule.startsAt)) {
+  return { unitPrice: basePrice, discounted: false, reason: "Code not active yet" };
+}
+if (rule.expiresAt && now > Date.parse(rule.expiresAt)) {
+  return { unitPrice: basePrice, discounted: false, reason: "Code expired" };
+}
 
   if (!rule.appliesTo.includes(planId)) {
     return { unitPrice: basePrice, discounted: false, reason: "Code not valid for this clean" };
@@ -172,6 +168,14 @@ function validateCodeAgainstSelection(bins, code) {
 
   const rule = DISCOUNT_CODES[c];
   if (!rule) return { state: "invalid", message: "That code isn’t valid." };
+
+   const now = Date.now();
+if (rule.startsAt && now < Date.parse(rule.startsAt)) {
+  return { state: "invalid", message: "That code isn’t active yet." };
+}
+if (rule.expiresAt && now > Date.parse(rule.expiresAt)) {
+  return { state: "invalid", message: "That code has expired." };
+}
 
   // valid overall if it applies to at least one selected plan
   const appliesToAtLeastOne = bins.some((b) => !!b.planId && rule.appliesTo.includes(b.planId));
