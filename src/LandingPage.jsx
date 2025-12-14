@@ -14,6 +14,11 @@ import TenSecondChallenge from "./TenSecondChallenge.jsx";
  * - Discount validation (client-side)
  * - Discounted prices shown in dropdown
  * - Total + breakdown included in WhatsApp + Email payload/message
+ *
+ * UPDATED (Snow):
+ * - Canvas snowfall (constant, natural)
+ * - Snow accumulates at the bottom
+ * - On/Off toggle + persisted in localStorage
  */
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -106,7 +111,7 @@ const DISCOUNT_CODES = {
     type: "percent",
     value: 20,
     appliesTo: ["domestic_4w"],
-    expiresAt: "2025-12-31T23:59:59Z", // 👈 expiry (UTC)
+    expiresAt: "2025-12-31T23:59:59Z", // expiry (UTC)
     // startsAt: "2025-12-01T00:00:00Z", // optional
   },
 };
@@ -184,72 +189,241 @@ function validateCodeAgainstSelection(bins, code) {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
-   Snow Effect + Toggle
+   Snow (Canvas) + Toggle
    ──────────────────────────────────────────────────────────────────────────── */
-
 const SNOW_STORAGE_KEY = "nbg_snow_enabled";
 
-function SnowEffect({ enabled = true }) {
+function SnowCanvas({ enabled = true }) {
+  const canvasRef = useRef(null);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Respect reduced motion
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if (reduceMotion) return;
+
+    const ctx = canvas.getContext("2d", { alpha: true });
+    let running = true;
+
+    const DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+
+    let W = 0;
+    let H = 0;
+
+    // Flakes
+    let flakes = [];
+    let targetFlakeCount = 0;
+
+    // Bank (accumulation)
+    let bank = [];
+    let bankStep = 3;
+    let maxBankRise = 150; // how high the buildup can get
+    let baseBank = 18;     // starting drift height
+
+    // Wind
+    let wind = 0;
+    let windTarget = 0;
+
+    const rand = (min, max) => min + Math.random() * (max - min);
+
+    function resize() {
+      const parent = canvas.parentElement;
+      W = Math.floor(parent?.clientWidth || window.innerWidth);
+      H = Math.floor(parent?.clientHeight || window.innerHeight);
+
+      canvas.width = Math.floor(W * DPR);
+      canvas.height = Math.floor(H * DPR);
+      canvas.style.width = `${W}px`;
+      canvas.style.height = `${H}px`;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+      bankStep = Math.max(2, Math.floor(W / 520));
+      const cols = Math.ceil(W / bankStep) + 3;
+      bank = new Array(cols).fill(baseBank);
+
+      const area = W * H;
+      targetFlakeCount = Math.round(Math.min(1500, Math.max(450, area / 1900)));
+      flakes = makeFlakes(targetFlakeCount);
+    }
+
+    function newFlake(spawnAnywhere = false) {
+      const r = Math.pow(Math.random(), 2) * 2.4 + 0.55; // 0.55..~3
+      const vy = 26 + r * 42 + rand(0, 28);
+      return {
+        x: rand(0, W),
+        y: spawnAnywhere ? rand(0, H) : rand(-H * 0.25, -10),
+        r,
+        vy,
+        vx: rand(-10, 10),
+        drift: rand(0.6, 1.65),
+        wobble: rand(0, Math.PI * 2),
+        wobbleSpeed: rand(0.9, 2.0),
+        alpha: Math.min(1, 0.25 + r / 2.9),
+      };
+    }
+
+    function makeFlakes(n) {
+      const arr = [];
+      for (let i = 0; i < n; i++) arr.push(newFlake(true));
+      return arr;
+    }
+
+    function bankHeightAt(x) {
+      const i = Math.max(0, Math.min(bank.length - 2, Math.floor(x / bankStep)));
+      const t = x / bankStep - i;
+      const a = bank[i] ?? baseBank;
+      const b = bank[i + 1] ?? baseBank;
+      return a + (b - a) * t;
+    }
+
+    function depositAt(x, amount) {
+      const i = Math.max(0, Math.min(bank.length - 1, Math.floor(x / bankStep)));
+      const cap = baseBank + maxBankRise;
+
+      const addTo = (idx, v) => {
+        if (idx < 0 || idx >= bank.length) return;
+        bank[idx] = Math.min(cap, bank[idx] + v);
+      };
+
+      addTo(i, amount * 0.60);
+      addTo(i - 1, amount * 0.26);
+      addTo(i + 1, amount * 0.26);
+      addTo(i - 2, amount * 0.12);
+      addTo(i + 2, amount * 0.12);
+    }
+
+    function smoothBank() {
+      const next = bank.slice();
+      for (let i = 1; i < bank.length - 1; i++) {
+        next[i] = (bank[i - 1] + bank[i] * 2 + bank[i + 1]) / 4;
+      }
+      bank = next;
+    }
+
+    function drawBank() {
+      ctx.save();
+
+      // Powdery fill
+      ctx.fillStyle = "rgba(255,255,255,0.82)";
+      ctx.shadowColor = "rgba(255,255,255,0.28)";
+      ctx.shadowBlur = 14;
+
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      for (let i = 0; i < bank.length; i++) {
+        const x = i * bankStep;
+        const y = H - bank[i];
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      ctx.fill();
+
+      // Soft top edge highlight
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "rgba(255,255,255,0.28)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < bank.length; i++) {
+        const x = i * bankStep;
+        const y = H - bank[i];
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    let last = performance.now();
+
+    function tick(now) {
+      if (!running) return;
+      const dt = Math.min(0.033, (now - last) / 1000);
+      last = now;
+
+      ctx.clearRect(0, 0, W, H);
+
+      // Wind slowly meanders
+      windTarget += rand(-0.14, 0.14);
+      windTarget = Math.max(-22, Math.min(22, windTarget));
+      wind += (windTarget - wind) * 0.012;
+
+      // Keep density stable
+      if (flakes.length < targetFlakeCount) flakes.push(newFlake(false));
+      if (flakes.length > targetFlakeCount) flakes.pop();
+
+      // Draw flakes (behind accumulation)
+      for (let i = 0; i < flakes.length; i++) {
+        const f = flakes[i];
+
+        f.wobble += f.wobbleSpeed * dt;
+        const wob = Math.sin(f.wobble) * (0.7 + f.r * 0.7);
+
+        const vx = (f.vx + wind) * f.drift;
+        f.x += (vx + wob) * dt;
+        f.y += f.vy * dt;
+
+        // Wrap x
+        if (f.x < -30) f.x = W + 30;
+        if (f.x > W + 30) f.x = -30;
+
+        // Collision with snow bank
+        const bankH = bankHeightAt(f.x);
+        const floorY = H - bankH;
+
+        if (f.y + f.r >= floorY) {
+          // Deposit: larger flakes add slightly more
+          const deposit = Math.min(1.55, 0.40 + f.r * 0.42);
+          depositAt(f.x, deposit);
+          flakes[i] = newFlake(false);
+          continue;
+        }
+
+        // Flake draw
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255,255,255,${f.alpha})`;
+        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Smooth & draw bank so it looks like “landing”
+      smoothBank();
+      drawBank();
+
+      rafRef.current = requestAnimationFrame(tick);
+    }
+
+    const onResize = () => resize();
+
+    resize();
+    window.addEventListener("resize", onResize);
+
+    if (enabled) {
+      cancelAnimationFrame(rafRef.current);
+      last = performance.now();
+      rafRef.current = requestAnimationFrame(tick);
+    } else {
+      cancelAnimationFrame(rafRef.current);
+      ctx.clearRect(0, 0, W, H);
+    }
+
+    return () => {
+      running = false;
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [enabled]);
+
   if (!enabled) return null;
 
   return (
-    <>
-      {/* Falling snow */}
-      <div className="pointer-events-none fixed inset-0 z-[5] overflow-hidden" aria-hidden="true">
-        <div className="nbg-snow" />
-      </div>
-
-      {/* “Landing / buildup” drift at the bottom */}
-      <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-[6]" aria-hidden="true">
-        <div className="nbg-snow-drift" />
-      </div>
-
-      <style>{`
-        .nbg-snow {
-          position: absolute;
-          inset: 0;
-          background-image:
-            radial-gradient(circle, rgba(255,255,255,0.95) 1px, transparent 1.6px),
-            radial-gradient(circle, rgba(255,255,255,0.75) 1px, transparent 1.8px),
-            radial-gradient(circle, rgba(255,255,255,0.55) 1px, transparent 2px);
-          background-size: 160px 160px, 220px 220px, 320px 320px;
-          background-position: 0 0, 60px 40px, 120px 140px;
-          animation: nbgSnowFall 14s linear infinite;
-          filter: drop-shadow(0 0 1px rgba(255,255,255,0.25));
-          opacity: 0.9;
-        }
-
-        @keyframes nbgSnowFall {
-          0%   { transform: translateY(-20%); }
-          100% { transform: translateY(20%); }
-        }
-
-        .nbg-snow-drift {
-          height: 120px;
-          width: 100%;
-          background:
-            radial-gradient(60px 18px at 8% 80%, rgba(255,255,255,0.95) 35%, transparent 70%),
-            radial-gradient(80px 22px at 22% 88%, rgba(255,255,255,0.95) 35%, transparent 70%),
-            radial-gradient(70px 20px at 40% 78%, rgba(255,255,255,0.95) 35%, transparent 70%),
-            radial-gradient(90px 26px at 58% 90%, rgba(255,255,255,0.95) 35%, transparent 70%),
-            radial-gradient(70px 20px at 76% 82%, rgba(255,255,255,0.95) 35%, transparent 70%),
-            radial-gradient(85px 24px at 92% 88%, rgba(255,255,255,0.95) 35%, transparent 70%),
-            linear-gradient(to top, rgba(255,255,255,0.92), rgba(255,255,255,0.0));
-          opacity: 0.22;
-          filter: blur(0.2px);
-          animation: nbgDriftWobble 6s ease-in-out infinite;
-        }
-
-        @keyframes nbgDriftWobble {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(2px); }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .nbg-snow, .nbg-snow-drift { animation: none !important; }
-        }
-      `}</style>
-    </>
+    <div className="pointer-events-none fixed inset-0 z-[5]" aria-hidden="true">
+      <canvas ref={canvasRef} className="absolute inset-0" />
+    </div>
   );
 }
 
@@ -484,7 +658,6 @@ function BookingForm({ onClose }) {
     return `${codeLine}%0A` + `Subtotal: £${money(pricing.subtotal)}%0A` + `Total: £${money(pricing.total)}`;
   };
 
-  // UPDATED: WhatsApp + background ToS receipt
   const handleSendWhatsApp = () => {
     if (missingFields) {
       alert("Please complete all fields before sending.");
@@ -612,7 +785,11 @@ function BookingForm({ onClose }) {
 
   return (
     <div className="p-6 space-y-4">
-      <button onClick={onClose} className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10" aria-label="Close booking">
+      <button
+        onClick={onClose}
+        className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10"
+        aria-label="Close booking"
+      >
         &times;
       </button>
 
@@ -620,13 +797,23 @@ function BookingForm({ onClose }) {
         Book a Bin Clean
       </h2>
 
-      <input type="text" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
+      <input
+        type="text"
+        placeholder="Your Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-4 py-2"
+      />
 
       {bins.map((bin, index) => {
         return (
           <div key={index} className="space-y-2 border-b border-gray-200 pb-4 mb-4">
             <div className="flex gap-4">
-              <select value={bin.type} onChange={(e) => handleBinChange(index, "type", e.target.value)} className="w-2/3 border border-gray-300 rounded-lg px-4 py-2">
+              <select
+                value={bin.type}
+                onChange={(e) => handleBinChange(index, "type", e.target.value)}
+                className="w-2/3 border border-gray-300 rounded-lg px-4 py-2"
+              >
                 <option value="">Select Bin</option>
                 <option value="Black Bin">Black</option>
                 <option value="Brown Bin">Brown</option>
@@ -634,10 +821,20 @@ function BookingForm({ onClose }) {
                 <option value="Blue Bin">Blue</option>
               </select>
 
-              <input type="number" min="1" value={bin.count} onChange={(e) => handleBinChange(index, "count", e.target.value)} className="w-1/3 border border-gray-300 rounded-lg px-4 py-2" />
+              <input
+                type="number"
+                min="1"
+                value={bin.count}
+                onChange={(e) => handleBinChange(index, "count", e.target.value)}
+                className="w-1/3 border border-gray-300 rounded-lg px-4 py-2"
+              />
             </div>
 
-            <select value={bin.planId} onChange={(e) => handleBinChange(index, "planId", e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2">
+            <select
+              value={bin.planId}
+              onChange={(e) => handleBinChange(index, "planId", e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2"
+            >
               {PLANS.map((p) => {
                 const { unitPrice, discounted } = computeDiscountedUnitPrice(p.price, p.id, discountCode);
                 const label = `${p.label} (£${money(unitPrice)})${discounted ? " ✓" : ""}`;
@@ -665,10 +862,20 @@ function BookingForm({ onClose }) {
 
       <div className="mt-2">
         <label className="block text-sm font-semibold text-gray-700 mb-1">Discount Code (optional)</label>
-        <input type="text" placeholder="Enter code" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
+        <input
+          type="text"
+          placeholder="Enter code"
+          value={discountCode}
+          onChange={(e) => setDiscountCode(e.target.value)}
+          className="w-full border border-gray-300 rounded-lg px-4 py-2"
+        />
 
-        {discountStatus.state === "valid" && <p className="text-sm mt-2 text-green-700 font-semibold">{discountStatus.message}</p>}
-        {discountStatus.state === "invalid" && <p className="text-sm mt-2 text-red-600 font-semibold">{discountStatus.message}</p>}
+        {discountStatus.state === "valid" && (
+          <p className="text-sm mt-2 text-green-700 font-semibold">{discountStatus.message}</p>
+        )}
+        {discountStatus.state === "invalid" && (
+          <p className="text-sm mt-2 text-red-600 font-semibold">{discountStatus.message}</p>
+        )}
       </div>
 
       <div className="mt-2 p-3 rounded-lg border border-gray-200 bg-gray-50">
@@ -715,8 +922,20 @@ function BookingForm({ onClose }) {
       />
       <p className="text-xs text-gray-500 -mt-2">Tip: pick from suggestions or just type your full address.</p>
 
-      <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
-      <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
+      <input
+        type="tel"
+        placeholder="Contact Number"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
+      />
+      <input
+        type="email"
+        placeholder="Email Address"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
+      />
 
       <div className="mt-4 p-3 rounded-lg border border-gray-300 bg-gray-50">
         <div className="flex items-center justify-between gap-3">
@@ -737,18 +956,35 @@ function BookingForm({ onClose }) {
           <span className="text-[10px] text-gray-500">v{TERMS_VERSION}</span>
         </div>
         <div className="mt-3 flex items-start gap-2">
-          <input id="agree" type="checkbox" className="mt-1" checked={agreeToTerms} disabled={!canToggleAgree} onChange={(e) => setAgreeToTerms(e.target.checked)} />
+          <input
+            id="agree"
+            type="checkbox"
+            className="mt-1"
+            checked={agreeToTerms}
+            disabled={!canToggleAgree}
+            onChange={(e) => setAgreeToTerms(e.target.checked)}
+          />
           <label htmlFor="agree" className="text-sm text-gray-800">
             I’ve read and agree to the Terms of Service.
-            {!canToggleAgree && <span className="block text-xs text-gray-500">(Open the Terms and scroll to the bottom to enable this.)</span>}
+            {!canToggleAgree && (
+              <span className="block text-xs text-gray-500">(Open the Terms and scroll to the bottom to enable this.)</span>
+            )}
           </label>
         </div>
       </div>
 
-      <button onClick={handleSendWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
+      <button
+        onClick={handleSendWhatsApp}
+        className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
+        disabled={!agreeToTerms}
+      >
         Send via WhatsApp
       </button>
-      <button onClick={handleSendEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
+      <button
+        onClick={handleSendEmail}
+        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
+        disabled={!agreeToTerms}
+      >
         Send via Email
       </button>
 
@@ -835,7 +1071,11 @@ function ContactForm({ onClose }) {
 
   return (
     <div className="p-6 space-y-4">
-      <button onClick={onClose} className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10" aria-label="Close contact">
+      <button
+        onClick={onClose}
+        className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10"
+        aria-label="Close contact"
+      >
         &times;
       </button>
 
@@ -843,7 +1083,12 @@ function ContactForm({ onClose }) {
         <h2 id="contact-title" className="text-2xl font-bold text-center">
           Contact Us
         </h2>
-        <button onClick={handleCallClick} className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none" aria-label="Call us" title="Call us">
+        <button
+          onClick={handleCallClick}
+          className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none"
+          aria-label="Call us"
+          title="Call us"
+        >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.684l1.1 3.3a1 1 0 01-.27 1.06l-1.6 1.6a16 16 0 007.18 7.18l1.6-1.6a1 1 0 011.06-.27l3.3 1.1a1 1 0 01.684.95V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
           </svg>
@@ -964,7 +1209,12 @@ function TheProcess() {
         <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
           <h3 className="text-xl font-bold">The Booking Process</h3>
           <ol className="mt-6 space-y-5">
-            {["Complete the quick booking form.", "We’ll reply with your price and the next clean date (right after your bin collection).", "Approve the quote to secure your spot in the schedule.", "You’ll receive an email to set up your payment method."].map((text, i) => (
+            {[
+              "Complete the quick booking form.",
+              "We’ll reply with your price and the next clean date (right after your bin collection).",
+              "Approve the quote to secure your spot in the schedule.",
+              "You’ll receive an email to set up your payment method.",
+            ].map((text, i) => (
               <li key={i} className="flex gap-4">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">
                   {i + 1}
@@ -977,7 +1227,13 @@ function TheProcess() {
         <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
           <h3 className="text-xl font-bold">The Cleaning Process</h3>
           <ol className="mt-6 space-y-5">
-            {["We remove any leftover waste the bin crew missed.", "Thorough wash and rinse — inside and out.", "We dry the interior to prevent residue.", "Sanitise and deodorise for a fresh finish.", "Your bin is returned clean and fresh to its usual spot."].map((text, i) => (
+            {[
+              "We remove any leftover waste the bin crew missed.",
+              "Thorough wash and rinse — inside and out.",
+              "We dry the interior to prevent residue.",
+              "Sanitise and deodorise for a fresh finish.",
+              "Your bin is returned clean and fresh to its usual spot.",
+            ].map((text, i) => (
               <li key={i} className="flex gap-4">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">
                   {i + 1}
@@ -1100,7 +1356,7 @@ export default function NiBinGuyLandingPage() {
   return (
     <div className="min-h-screen bg-black text-white font-sans relative">
       {/* Snow overlay */}
-      <SnowEffect enabled={snowEnabled} />
+      <SnowCanvas enabled={snowEnabled} />
 
       {/* Snow toggle button */}
       <button
