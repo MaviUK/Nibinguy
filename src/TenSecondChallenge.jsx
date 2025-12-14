@@ -308,7 +308,6 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
             </h2>
             <p className="text-xs md:text-sm opacity-80">
               Stop the timer on exactly <strong>10.00s</strong> to win a free bin clean.
-               </P>
           </div>
           <div className="text-xs opacity-80 text-right">
             One try per device · Europe/London
