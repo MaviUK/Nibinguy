@@ -8,6 +8,12 @@ import TenSecondChallenge from "./TenSecondChallenge.jsx";
  * - Google Places Autocomplete
  * - 10-Second Challenge modal
  * - WhatsApp bookings now send a ToS receipt via Netlify function
+ *
+ * UPDATED:
+ * - Discount code field
+ * - Discount validation (client-side)
+ * - Discounted prices shown in dropdown
+ * - Total + breakdown included in WhatsApp + Email payload/message
  */
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -76,6 +82,104 @@ function loadGooglePlaces(apiKey) {
     s.onerror = reject;
     document.head.appendChild(s);
   });
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Discount + Plans
+   ──────────────────────────────────────────────────────────────────────────── */
+
+// Your frequency dropdown options — now structured (id, label, price)
+const PLANS = [
+  { id: "domestic_4w", label: "4 Weekly", price: 5 },
+  { id: "domestic_oneoff", label: "One-off", price: 12.5 },
+
+  { id: "comm_lt360_4w", label: "Commercial <360L 4 Weekly", price: 5 },
+  { id: "comm_lt360_oneoff", label: "Commercial <360L One-Off", price: 12.5 },
+
+  { id: "comm_gt660_4w", label: "Commercial >660L 4 Weekly", price: 12.5 },
+  { id: "comm_gt660_oneoff", label: "Commercial >660L One-Off", price: 30 },
+];
+
+// Discount rules (edit these whenever you want)
+const DISCOUNT_CODES = {
+  // 10% off domestic regular + one-off
+  NIB10: {
+    type: "percent",
+    value: 10,
+    appliesTo: ["domestic_4w", "domestic_oneoff"],
+  },
+
+  // £2 off one-off domestic only
+  OFF2: {
+    type: "fixed",
+    value: 2,
+    appliesTo: ["domestic_oneoff"],
+  },
+
+  // Free domestic 4-weekly only (sets unit price to £0)
+  FREE4W: {
+    type: "free",
+    value: 0,
+    appliesTo: ["domestic_4w"],
+  },
+};
+
+function normalizeCode(code) {
+  return (code || "").trim().toUpperCase();
+}
+
+function money(n) {
+  // keep it simple and consistent for UI/messages
+  const x = Math.round((Number(n) || 0) * 100) / 100;
+  return x % 1 === 0 ? `${x.toFixed(0)}` : `${x.toFixed(2)}`;
+}
+
+function getPlanById(id) {
+  return PLANS.find((p) => p.id === id) || null;
+}
+
+function computeDiscountedUnitPrice(basePrice, planId, code) {
+  const c = normalizeCode(code);
+  if (!c) return { unitPrice: basePrice, discounted: false, reason: null };
+
+  const rule = DISCOUNT_CODES[c];
+  if (!rule) return { unitPrice: basePrice, discounted: false, reason: "Invalid code" };
+
+  if (!rule.appliesTo.includes(planId)) {
+    return { unitPrice: basePrice, discounted: false, reason: "Code not valid for this clean" };
+  }
+
+  if (rule.type === "percent") {
+    const unitPrice = Math.max(0, Math.round(basePrice * (1 - rule.value / 100) * 100) / 100);
+    return { unitPrice, discounted: true, reason: null };
+  }
+
+  if (rule.type === "fixed") {
+    const unitPrice = Math.max(0, Math.round((basePrice - rule.value) * 100) / 100);
+    return { unitPrice, discounted: true, reason: null };
+  }
+
+  if (rule.type === "free") {
+    return { unitPrice: 0, discounted: true, reason: null };
+  }
+
+  return { unitPrice: basePrice, discounted: false, reason: "Invalid code" };
+}
+
+function validateCodeAgainstSelection(bins, code) {
+  const c = normalizeCode(code);
+  if (!c) return { state: "empty", message: "" };
+
+  const rule = DISCOUNT_CODES[c];
+  if (!rule) return { state: "invalid", message: "That code isn’t valid." };
+
+  // valid overall if it applies to at least one selected plan
+  const appliesToAtLeastOne = bins.some((b) => !!b.planId && rule.appliesTo.includes(b.planId));
+  if (!appliesToAtLeastOne) {
+    return { state: "invalid", message: "That code doesn’t apply to your selected clean(s)." };
+  }
+
+  return { state: "valid", message: "Discount code applied ✅" };
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -172,7 +276,7 @@ function TermsModal({ open, onClose, onConfirm, version, title, body }) {
 /* ────────────────────────────────────────────────────────────────────────────
    Booking Form
    ──────────────────────────────────────────────────────────────────────────── */
-const DEFAULT_BIN = { type: "", count: 1, frequency: "4 Weekly (£5)" };
+const DEFAULT_BIN = { type: "", count: 1, planId: "domestic_4w" };
 
 function BookingForm({ onClose }) {
   const [bins, setBins] = useState([DEFAULT_BIN]);
@@ -182,6 +286,10 @@ function BookingForm({ onClose }) {
   const [phone, setPhone] = useState("");
   const [placeId, setPlaceId] = useState(null);
 
+  // Discount state
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountStatus, setDiscountStatus] = useState({ state: "empty", message: "" });
+
   const addressInputRef = useRef(null);
   const selectedPlaceRef = useRef(null);
 
@@ -190,7 +298,7 @@ function BookingForm({ onClose }) {
   const [termsViewed, setTermsViewed] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
-  const canToggleAgree = termsViewed; // final enable happens in modal after scroll
+  const canToggleAgree = termsViewed;
 
   // Attach Google Places autocomplete when modal opens
   useEffect(() => {
@@ -220,6 +328,11 @@ function BookingForm({ onClose }) {
     return () => cleanup();
   }, []);
 
+  // Re-validate discount whenever selection changes
+  useEffect(() => {
+    setDiscountStatus(validateCodeAgainstSelection(bins, discountCode));
+  }, [bins, discountCode]);
+
   const missingFields = useMemo(
     () => !name || !email || !address || !phone || bins.some((b) => !b.type),
     [name, email, address, phone, bins]
@@ -244,11 +357,69 @@ function BookingForm({ onClose }) {
     });
   };
 
-  const buildBinDetails = () =>
-    bins
+  // Pricing breakdown
+  const pricing = useMemo(() => {
+    const lines = bins
       .filter((b) => b.type)
-      .map((b) => `${b.count}x ${b.type.replace(" Bin", "")} (${b.frequency})`)
+      .map((b, idx) => {
+        const plan = getPlanById(b.planId);
+        const baseUnit = plan?.price ?? 0;
+        const planLabel = plan?.label ?? "Unknown";
+        const { unitPrice, discounted } = computeDiscountedUnitPrice(baseUnit, b.planId, discountCode);
+
+        const qty = Math.max(1, Number(b.count) || 1);
+        const lineTotal = Math.round(unitPrice * qty * 100) / 100;
+
+        return {
+          idx,
+          type: b.type,
+          count: qty,
+          planId: b.planId,
+          planLabel,
+          baseUnit,
+          unitPrice,
+          discounted,
+          lineTotal,
+        };
+      });
+
+    const subtotal = lines.reduce((acc, l) => acc + l.baseUnit * l.count, 0);
+    const total = lines.reduce((acc, l) => acc + l.lineTotal, 0);
+
+    return {
+      lines,
+      subtotal: Math.round(subtotal * 100) / 100,
+      total: Math.round(total * 100) / 100,
+    };
+  }, [bins, discountCode]);
+
+  const buildBinDetails = () => {
+    // WhatsApp line items (URL safe new lines)
+    return pricing.lines
+      .map((l) => {
+        const typeName = l.type.replace(" Bin", "");
+        const unitText = `£${money(l.unitPrice)}`;
+        const planText = `${l.planLabel} (${unitText})`;
+        return `${l.count}x ${typeName} — ${planText} = £${money(l.lineTotal)}`;
+      })
       .join("%0A");
+  };
+
+  const buildPricingSummary = () => {
+    const code = normalizeCode(discountCode);
+    const codeLine =
+      code && discountStatus.state === "valid"
+        ? `Discount Code: ${code} (applied)`
+        : code
+        ? `Discount Code: ${code} (not applied)`
+        : `Discount Code: None`;
+
+    return (
+      `${codeLine}%0A` +
+      `Subtotal: £${money(pricing.subtotal)}%0A` +
+      `Total: £${money(pricing.total)}`
+    );
+  };
 
   // UPDATED: WhatsApp + background ToS receipt
   const handleSendWhatsApp = () => {
@@ -260,8 +431,12 @@ function BookingForm({ onClose }) {
       alert("Please view and agree to the Terms of Service before booking.");
       return;
     }
+    // If they typed a code but it's invalid, block sending (you can relax this if you prefer)
+    if (normalizeCode(discountCode) && discountStatus.state !== "valid") {
+      alert("That discount code isn’t valid for your selected clean(s).");
+      return;
+    }
 
-    // background ToS receipt (admin+customer) via Netlify
     const payload = {
       source: "whatsapp",
       name,
@@ -269,6 +444,8 @@ function BookingForm({ onClose }) {
       phone,
       address,
       bins,
+      discountCode: normalizeCode(discountCode) || null,
+      pricing,
       termsAccepted: true,
       termsVersion: TERMS_VERSION,
       termsAcceptanceText: TOS_PREFIX,
@@ -289,10 +466,10 @@ function BookingForm({ onClose }) {
       }).catch(() => {});
     }
 
-    // open WhatsApp
     const message =
       `${encodeURIComponent(TOS_PREFIX)}%0A%0AHi my name is ${encodeURIComponent(name)}. I'd like to book a bin clean, please.` +
-      `%0A${buildBinDetails()}%0AAddress: ${encodeURIComponent(address)}%0AEmail: ${encodeURIComponent(email)}%0APhone: ${encodeURIComponent(phone)}`;
+      `%0A%0A${buildBinDetails()}%0A%0A${buildPricingSummary()}` +
+      `%0A%0AAddress: ${encodeURIComponent(address)}%0AEmail: ${encodeURIComponent(email)}%0APhone: ${encodeURIComponent(phone)}`;
 
     const url = `https://wa.me/${PHONE_E164}?text=${message}`;
     window.open(url, "_blank");
@@ -306,6 +483,10 @@ function BookingForm({ onClose }) {
     }
     if (!agreeToTerms) {
       alert("Please view and agree to the Terms of Service before booking.");
+      return;
+    }
+    if (normalizeCode(discountCode) && discountStatus.state !== "valid") {
+      alert("That discount code isn’t valid for your selected clean(s).");
       return;
     }
 
@@ -326,13 +507,15 @@ function BookingForm({ onClose }) {
           placeId,
           lat,
           lng,
+          discountCode: normalizeCode(discountCode) || null,
+          pricing,
           termsAccepted: true,
           termsVersion: TERMS_VERSION,
           termsAcceptanceText: TOS_PREFIX,
         }),
       });
+
       if (res.ok) {
-        // optionally also email a receipt to customer/admin from here:
         try {
           await fetch("/.netlify/functions/sendTosReceipt", {
             method: "POST",
@@ -344,6 +527,8 @@ function BookingForm({ onClose }) {
               phone,
               address,
               bins,
+              discountCode: normalizeCode(discountCode) || null,
+              pricing,
               termsAccepted: true,
               termsVersion: TERMS_VERSION,
               termsAcceptanceText: TOS_PREFIX,
@@ -351,7 +536,8 @@ function BookingForm({ onClose }) {
             }),
           });
         } catch {}
-        alert("Booking email sent successfully! (ToS acceptance included)");
+
+        alert("Booking email sent successfully! (Pricing + discount included)");
         onClose?.();
       } else {
         alert("Failed to send booking email.");
@@ -372,38 +558,120 @@ function BookingForm({ onClose }) {
         &times;
       </button>
 
-      <h2 id="booking-title" className="text-2xl font-bold text-center">Book a Bin Clean</h2>
+      <h2 id="booking-title" className="text-2xl font-bold text-center">
+        Book a Bin Clean
+      </h2>
 
-      <input type="text" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
+      <input
+        type="text"
+        placeholder="Your Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-4 py-2"
+      />
 
-      {bins.map((bin, index) => (
-        <div key={index} className="space-y-2 border-b border-gray-200 pb-4 mb-4">
-          <div className="flex gap-4">
-            <select value={bin.type} onChange={(e) => handleBinChange(index, "type", e.target.value)} className="w-2/3 border border-gray-300 rounded-lg px-4 py-2">
-              <option value="">Select Bin</option>
-              <option value="Black Bin">Black</option>
-              <option value="Brown Bin">Brown</option>
-              <option value="Green Bin">Green</option>
-              <option value="Blue Bin">Blue</option>
+      {bins.map((bin, index) => {
+        return (
+          <div key={index} className="space-y-2 border-b border-gray-200 pb-4 mb-4">
+            <div className="flex gap-4">
+              <select
+                value={bin.type}
+                onChange={(e) => handleBinChange(index, "type", e.target.value)}
+                className="w-2/3 border border-gray-300 rounded-lg px-4 py-2"
+              >
+                <option value="">Select Bin</option>
+                <option value="Black Bin">Black</option>
+                <option value="Brown Bin">Brown</option>
+                <option value="Green Bin">Green</option>
+                <option value="Blue Bin">Blue</option>
+              </select>
+
+              <input
+                type="number"
+                min="1"
+                value={bin.count}
+                onChange={(e) => handleBinChange(index, "count", e.target.value)}
+                className="w-1/3 border border-gray-300 rounded-lg px-4 py-2"
+              />
+            </div>
+
+            {/* Plan dropdown (discount-aware display) */}
+            <select
+              value={bin.planId}
+              onChange={(e) => handleBinChange(index, "planId", e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2"
+            >
+              {PLANS.map((p) => {
+                const { unitPrice, discounted } = computeDiscountedUnitPrice(p.price, p.id, discountCode);
+                const label = `${p.label} (£${money(unitPrice)})${discounted ? " ✓" : ""}`;
+                return (
+                  <option key={p.id} value={p.id}>
+                    {label}
+                  </option>
+                );
+              })}
             </select>
-            <input type="number" min="1" value={bin.count} onChange={(e) => handleBinChange(index, "count", e.target.value)} className="w-1/3 border border-gray-300 rounded-lg px-4 py-2" />
           </div>
-          <select value={bin.frequency} onChange={(e) => handleBinChange(index, "frequency", e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2">
-            <option value="4 Weekly (£5)">4 Weekly (£5)</option>
-            <option value="One-off (£12.50)">One-off (£12.50)</option>
-            <option value="Commercial <360L 4 Weekly (£5)">Commercial &lt;360L 4 Weekly (£5)</option>
-            <option value="Commercial <360L One-Off (£12.50)">Commercial &lt;360L One-Off (£12.50)</option>
-            <option value="Commercial >660L 4 Weekly (£12.50)">Commercial &gt;660L 4 Weekly (£12.50)</option>
-            <option value="Commercial >660L One-Off (£30)">Commercial &gt;660L One-Off (£30)</option>
-          </select>
-        </div>
-      ))}
+        );
+      })}
 
       <div className="flex items-center justify-between">
-        <button onClick={addBinRow} className="text-sm text-green-600 hover:text-green-800 font-semibold">+ Add Another Bin</button>
+        <button onClick={addBinRow} className="text-sm text-green-600 hover:text-green-800 font-semibold">
+          + Add Another Bin
+        </button>
         {bins.length > 1 && (
-          <button onClick={removeLastBin} className="text-sm text-red-600 hover:text-red-800 font-semibold">− Remove Last Bin</button>
+          <button onClick={removeLastBin} className="text-sm text-red-600 hover:text-red-800 font-semibold">
+            − Remove Last Bin
+          </button>
         )}
+      </div>
+
+      {/* Discount Code */}
+      <div className="mt-2">
+        <label className="block text-sm font-semibold text-gray-700 mb-1">Discount Code (optional)</label>
+        <input
+          type="text"
+          placeholder="Enter code"
+          value={discountCode}
+          onChange={(e) => setDiscountCode(e.target.value)}
+          className="w-full border border-gray-300 rounded-lg px-4 py-2"
+        />
+
+        {discountStatus.state === "valid" && (
+          <p className="text-sm mt-2 text-green-700 font-semibold">{discountStatus.message}</p>
+        )}
+        {discountStatus.state === "invalid" && (
+          <p className="text-sm mt-2 text-red-600 font-semibold">{discountStatus.message}</p>
+        )}
+      </div>
+
+      {/* Pricing summary */}
+      <div className="mt-2 p-3 rounded-lg border border-gray-200 bg-gray-50">
+        <div className="text-sm font-semibold text-gray-800">Pricing Summary</div>
+        <div className="mt-2 space-y-1 text-sm text-gray-700">
+          {pricing.lines.length ? (
+            pricing.lines.map((l) => (
+              <div key={l.idx} className="flex items-start justify-between gap-3">
+                <div className="pr-2">
+                  <div className="font-medium">
+                    {l.count}x {l.type.replace(" Bin", "")}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {l.planLabel} — £{money(l.unitPrice)} each{l.discounted ? " (discounted)" : ""}
+                  </div>
+                </div>
+                <div className="font-bold text-gray-900">£{money(l.lineTotal)}</div>
+              </div>
+            ))
+          ) : (
+            <div className="text-gray-500">Select a bin type to see pricing.</div>
+          )}
+
+          <div className="pt-2 mt-2 border-t border-gray-200 flex items-center justify-between">
+            <div className="font-semibold">Total</div>
+            <div className="font-extrabold">£{money(pricing.total)}</div>
+          </div>
+        </div>
       </div>
 
       <input
@@ -411,15 +679,31 @@ function BookingForm({ onClose }) {
         type="text"
         placeholder="Full Address"
         value={address}
-        onChange={(e) => { setAddress(e.target.value); setPlaceId(null); selectedPlaceRef.current = null; }}
+        onChange={(e) => {
+          setAddress(e.target.value);
+          setPlaceId(null);
+          selectedPlaceRef.current = null;
+        }}
         className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
         autoComplete="off"
         inputMode="text"
       />
       <p className="text-xs text-gray-500 -mt-2">Tip: pick from suggestions or just type your full address.</p>
 
-      <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
-      <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
+      <input
+        type="tel"
+        placeholder="Contact Number"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
+      />
+      <input
+        type="email"
+        placeholder="Email Address"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
+      />
 
       {/* Terms of Service gating */}
       <div className="mt-4 p-3 rounded-lg border border-gray-300 bg-gray-50">
@@ -428,7 +712,10 @@ function BookingForm({ onClose }) {
             You must view and agree to the{" "}
             <button
               type="button"
-              onClick={() => { setShowTerms(true); setTermsViewed(true); }}
+              onClick={() => {
+                setShowTerms(true);
+                setTermsViewed(true);
+              }}
               className="underline font-semibold"
             >
               Terms of Service
@@ -449,23 +736,36 @@ function BookingForm({ onClose }) {
           <label htmlFor="agree" className="text-sm text-gray-800">
             I’ve read and agree to the Terms of Service.
             {!canToggleAgree && (
-              <span className="block text-xs text-gray-500">(Open the Terms and scroll to the bottom to enable this.)</span>
+              <span className="block text-xs text-gray-500">
+                (Open the Terms and scroll to the bottom to enable this.)
+              </span>
             )}
           </label>
         </div>
       </div>
 
-      <button onClick={handleSendWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
+      <button
+        onClick={handleSendWhatsApp}
+        className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
+        disabled={!agreeToTerms}
+      >
         Send via WhatsApp
       </button>
-      <button onClick={handleSendEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
+      <button
+        onClick={handleSendEmail}
+        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
+        disabled={!agreeToTerms}
+      >
         Send via Email
       </button>
 
       <TermsModal
         open={showTerms}
         onClose={() => setShowTerms(false)}
-        onConfirm={() => { setAgreeToTerms(true); setShowTerms(false); }}
+        onConfirm={() => {
+          setAgreeToTerms(true);
+          setShowTerms(false);
+        }}
         version={TERMS_VERSION}
         title={TERMS_TITLE}
         body={TERMS_BODY}
@@ -507,7 +807,10 @@ function ContactForm({ onClose }) {
     const msg = `Hi, I'm ${encodeURIComponent(cName)}.%0APhone: ${encodeURIComponent(cPhone)}%0AEmail: ${encodeURIComponent(cEmail)}%0A%0AMessage:%0A${encodeURIComponent(cMessage)}`;
     window.open(`https://wa.me/${PHONE_E164}?text=${msg}`, "_blank");
     onClose?.();
-    setCName(""); setCEmail(""); setCPhone(""); setCMessage("");
+    setCName("");
+    setCEmail("");
+    setCPhone("");
+    setCMessage("");
   };
 
   const handleEmail = async () => {
@@ -524,7 +827,10 @@ function ContactForm({ onClose }) {
       if (res.ok) {
         alert("Your message has been sent!");
         onClose?.();
-        setCName(""); setCEmail(""); setCPhone(""); setCMessage("");
+        setCName("");
+        setCEmail("");
+        setCPhone("");
+        setCMessage("");
       } else {
         alert("Failed to send your message.");
       }
@@ -541,7 +847,9 @@ function ContactForm({ onClose }) {
       </button>
 
       <div className="flex items-center justify-center gap-3">
-        <h2 id="contact-title" className="text-2xl font-bold text-center">Contact Us</h2>
+        <h2 id="contact-title" className="text-2xl font-bold text-center">
+          Contact Us
+        </h2>
         <button onClick={handleCallClick} className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none" aria-label="Call us" title="Call us">
           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.684l1.1 3.3a1 1 0 01-.27 1.06l-1.6 1.6a16 16 0 007.18 7.18l1.6-1.6a1 1 0 011.06-.27l3.3 1.1a1 1 0 01.684.95V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
@@ -554,8 +862,12 @@ function ContactForm({ onClose }) {
       <input type="email" placeholder="Email Address" value={cEmail} onChange={(e) => setCEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
       <textarea placeholder="Your Message" value={cMessage} onChange={(e) => setCMessage(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 h-28 resize-y" />
 
-      <button onClick={handleWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full">Send via WhatsApp</button>
-      <button onClick={handleEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full">Send via Email</button>
+      <button onClick={handleWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full">
+        Send via WhatsApp
+      </button>
+      <button onClick={handleEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full">
+        Send via Email
+      </button>
       <p className="text-center text-sm text-gray-600 mt-2">Prefer to call? Tap the phone icon.</p>
     </div>
   );
@@ -608,10 +920,21 @@ function Hero({ onBook, onContact, onChallenge }) {
           Professional wheelie bin cleaning at your home, across <span className="text-green-400">County Down.</span> Sparkling clean &amp; fresh smelling bins without any drama.
         </p>
         <div className="mt-6 flex flex-col sm:flex-row gap-4">
-          <button onClick={onBook} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Book a Clean</button>
-          <button onClick={onContact} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Contact Us</button>
-          <button onClick={onChallenge} className="bg-[#9b111e] hover:bg-[#7f0e19] text-white font-bold py-3 px-6 rounded-xl shadow-lg transition focus:outline-none focus:ring-2 focus:ring-[#9b111e]/50 active:scale-[0.99]">Free Bin Clean</button>
-          <a href="#customer-portal" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center">Customer Portal</a>
+          <button onClick={onBook} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
+            Book a Clean
+          </button>
+          <button onClick={onContact} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
+            Contact Us
+          </button>
+          <button
+            onClick={onChallenge}
+            className="bg-[#9b111e] hover:bg-[#7f0e19] text-white font-bold py-3 px-6 rounded-xl shadow-lg transition focus:outline-none focus:ring-2 focus:ring-[#9b111e]/50 active:scale-[0.99]"
+          >
+            Free Bin Clean
+          </button>
+          <a href="#customer-portal" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center">
+            Customer Portal
+          </a>
         </div>
       </div>
     </section>
@@ -623,9 +946,18 @@ function WhatWeDo() {
     <section className="relative py-16 px-6 bg-[#18181b]">
       <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
       <div className="grid md:grid-cols-3 gap-6 text-center">
-        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg"><h3 className="text-xl font-bold mb-2">Domestic Bins</h3><p>We clean green, black, and blue bins right outside your home.</p></div>
-        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg"><h3 className="text-xl font-bold mb-2">Commercial Contracts</h3><p>Need regular bin cleaning? We handle your business waste too.</p></div>
-        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg"><h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3><p>We use biodegradable products and minimal water waste.</p></div>
+        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+          <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
+          <p>We clean green, black, and blue bins right outside your home.</p>
+        </div>
+        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+          <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
+          <p>Need regular bin cleaning? We handle your business waste too.</p>
+        </div>
+        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+          <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
+          <p>We use biodegradable products and minimal water waste.</p>
+        </div>
       </div>
     </section>
   );
@@ -641,7 +973,9 @@ function TheProcess() {
           <ol className="mt-6 space-y-5">
             {["Complete the quick booking form.", "We’ll reply with your price and the next clean date (right after your bin collection).", "Approve the quote to secure your spot in the schedule.", "You’ll receive an email to set up your payment method."].map((text, i) => (
               <li key={i} className="flex gap-4">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">{i + 1}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">
+                  {i + 1}
+                </span>
                 <p>{text}</p>
               </li>
             ))}
@@ -652,7 +986,9 @@ function TheProcess() {
           <ol className="mt-6 space-y-5">
             {["We remove any leftover waste the bin crew missed.", "Thorough wash and rinse — inside and out.", "We dry the interior to prevent residue.", "Sanitise and deodorise for a fresh finish.", "Your bin is returned clean and fresh to its usual spot."].map((text, i) => (
               <li key={i} className="flex gap-4">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">{i + 1}</span>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">
+                  {i + 1}
+                </span>
                 <p>{text}</p>
               </li>
             ))}
@@ -660,7 +996,9 @@ function TheProcess() {
         </div>
       </div>
       <div className="mt-12 text-center">
-        <a href="#book" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">Book a Clean</a>
+        <a href="#book" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
+          Book a Clean
+        </a>
       </div>
     </section>
   );
