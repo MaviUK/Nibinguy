@@ -29,7 +29,7 @@ Ni Bin Guy – Terms of Service (summary)
 • Put bins out / make accessible by 8 AM on the scheduled day.
   If not available and we weren't told before 8 AM that day, the clean is still charged.
 • Inside & outside cleaned (where safe) with pressurised water & detergent.
-  Some stains may take multiple visits / may not fully remove. Loosened waste may be bagged and left in your bin.
+  Some stains may take multiple visits / may not fully fully remove. Loosened waste may be bagged and left in your bin.
   Stay at least 5 m away during cleaning.
 • Payment due within 7 days. Accepted: Direct Debit, Bank Transfer, Card (no cash).
   Cancelling a Direct Debit doesn't cancel service — give 48 hours’ notice.
@@ -63,6 +63,86 @@ function tosHtmlBlock(version, timestampIso) {
   `;
 }
 
+const fmtGBP = (n) => {
+  const x = Math.round((Number(n) || 0) * 100) / 100;
+  return `£${x % 1 === 0 ? x.toFixed(0) : x.toFixed(2)}`;
+};
+
+// Builds pricing block from the client "pricing" object (sent by your React modal)
+function buildPricingBlocks(pricing, discountCode) {
+  const code = (discountCode || "").trim();
+  const hasPricing = pricing && Array.isArray(pricing.lines) && pricing.lines.length > 0;
+
+  // If the UI didn't send pricing yet, we still show something sensible
+  if (!hasPricing) {
+    const text =
+`Pricing:
+(No pricing breakdown provided)
+
+Discount Code: ${code || "None"}`;
+    const html = `
+      <h3 style="margin:16px 0 6px">Pricing</h3>
+      <p style="margin:0 0 8px;color:#6b7280">(No pricing breakdown provided)</p>
+      <p style="margin:0"><strong>Discount Code:</strong> ${escapeHtml(code || "None")}</p>
+    `;
+    return { text, html, applied: false };
+  }
+
+  const lines = pricing.lines;
+  const anyDiscounted = lines.some((l) => !!l.discounted);
+  const applied = !!code && anyDiscounted;
+
+  const textLines = lines.map((l) => {
+    const type = String(l.type || "").replace(" Bin", "");
+    const planLabel = l.planLabel || "";
+    const each = fmtGBP(l.unitPrice);
+    const total = fmtGBP(l.lineTotal);
+    const badge = l.discounted ? " (discounted)" : "";
+    return `${l.count}x ${type} — ${planLabel} @ ${each}${badge} = ${total}`;
+  });
+
+  const subtotal = fmtGBP(pricing.subtotal);
+  const total = fmtGBP(pricing.total);
+
+  const text =
+`Pricing:
+${textLines.join("\n")}
+
+Subtotal: ${subtotal}
+Total: ${total}
+
+Discount Code: ${code || "None"}${code ? (applied ? " (applied)" : " (not applied)") : ""}`;
+
+  const htmlLines = lines
+    .map((l) => {
+      const type = escapeHtml(String(l.type || "").replace(" Bin", ""));
+      const planLabel = escapeHtml(l.planLabel || "");
+      const each = escapeHtml(fmtGBP(l.unitPrice));
+      const totalLine = escapeHtml(fmtGBP(l.lineTotal));
+      const badge = l.discounted ? ` <span style="color:#059669;font-weight:700">(discounted)</span>` : "";
+      return `<div style="margin:0 0 6px">${escapeHtml(String(l.count || 1))}x <strong>${type}</strong> — ${planLabel} @ ${each}${badge} = <strong>${totalLine}</strong></div>`;
+    })
+    .join("");
+
+  const html = `
+    <h3 style="margin:16px 0 6px">Pricing</h3>
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px">
+      ${htmlLines}
+      <div style="margin-top:10px;border-top:1px solid #e5e7eb;padding-top:10px;display:flex;justify-content:space-between">
+        <div style="color:#374151">Subtotal</div>
+        <div style="font-weight:700">${escapeHtml(subtotal)}</div>
+      </div>
+      <div style="margin-top:6px;display:flex;justify-content:space-between">
+        <div style="color:#111827;font-weight:700">Total</div>
+        <div style="font-weight:800">${escapeHtml(total)}</div>
+      </div>
+    </div>
+    <p style="margin:10px 0 0"><strong>Discount Code:</strong> ${escapeHtml(code || "None")}${code ? (applied ? " <span style='color:#059669;font-weight:700'>(applied)</span>" : " <span style='color:#dc2626;font-weight:700'>(not applied)</span>") : ""}</p>
+  `;
+
+  return { text, html, applied };
+}
+
 // ---------- function ----------
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -82,6 +162,10 @@ exports.handler = async (event) => {
       lng = null,
       source = "website",
 
+      // NEW: discount + pricing (sent from UI)
+      discountCode = null,
+      pricing = null,
+
       // ToS fields coming from the UI
       termsAccepted = false,
       termsVersion = TERMS_VERSION_DEFAULT,
@@ -91,17 +175,31 @@ exports.handler = async (event) => {
 
     // Bins formatting
     const filteredBins = (Array.isArray(bins) ? bins : []).filter((b) => b && b.type);
-    const binsText = filteredBins
-      .map((b) => `${b.count || 1} x ${b.type} (${b.frequency || ""})`)
-      .join("\n") || "(none provided)";
-    const binsHtml = filteredBins
-      .map((b) => `${escapeHtml(b.count || 1)} x ${escapeHtml(b.type)} (${escapeHtml(b.frequency || "")})`)
-      .join("<br>") || "(none provided)";
+
+    // Support both old `frequency` and new `planId` (nice for backward compatibility)
+    const binsText =
+      filteredBins
+        .map((b) => {
+          const planOrFreq = b.planId ? `plan: ${b.planId}` : (b.frequency || "");
+          return `${b.count || 1} x ${b.type} (${planOrFreq})`;
+        })
+        .join("\n") || "(none provided)";
+
+    const binsHtml =
+      filteredBins
+        .map((b) => {
+          const planOrFreq = b.planId ? `plan: ${escapeHtml(b.planId)}` : escapeHtml(b.frequency || "");
+          return `${escapeHtml(b.count || 1)} x ${escapeHtml(b.type)} (${planOrFreq})`;
+        })
+        .join("<br>") || "(none provided)";
 
     // ToS text for plain text email
     const tosText = termsAccepted
       ? (termsAcceptanceText || `Customer accepted Ni Bin Guy Terms of Service (v${termsVersion}).`)
       : "Customer did NOT include a terms confirmation flag.";
+
+    // Pricing blocks
+    const pricingBlocks = buildPricingBlocks(pricing, discountCode);
 
     // ---------- ADMIN EMAIL ----------
     const subjectAdmin = `🗑️ New Bin Cleaning Booking (${source})`;
@@ -116,6 +214,8 @@ ${lat != null && lng != null ? `Geo: ${lat}, ${lng}\n` : ""}${placeId ? `Place I
 
 Bins:
 ${binsText}
+
+${pricingBlocks.text}
 
 — TERMS —
 Accepted: ${termsAccepted ? "yes" : "no"}
@@ -133,6 +233,8 @@ Acceptance line: ${termsAcceptanceText}
       ${lat != null && lng != null ? `<p><strong>Geo:</strong> ${escapeHtml(String(lat))}, ${escapeHtml(String(lng))}</p>` : ""}
       ${placeId ? `<p><strong>Place ID:</strong> ${escapeHtml(placeId)}</p>` : ""}
       <p><strong>Bins:</strong><br>${binsHtml}</p>
+
+      ${pricingBlocks.html}
 
       <hr style="margin:16px 0;border:none;border-top:1px solid #e5e7eb" />
       <div style="padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb">
@@ -156,10 +258,11 @@ Acceptance line: ${termsAcceptanceText}
     // ---------- CUSTOMER EMAIL (receipt + ToS) ----------
     if (email) {
       const subjectCustomer = `Your Ni Bin Guy booking & Terms confirmation (v${termsVersion})`;
+
       const textCustomer =
 `Thanks ${name},
 
-We've received your booking. Here is your booking summary and your Terms confirmation.
+We've received your booking. Here is your booking summary (including pricing) and your Terms confirmation.
 
 Name: ${name}
 Phone: ${phone}
@@ -167,6 +270,8 @@ Address: ${address}
 
 Bins:
 ${binsText}
+
+${pricingBlocks.text}
 
 Terms:
 Accepted: ${termsAccepted ? "yes" : "no"}
@@ -178,11 +283,16 @@ We’ll be in touch to confirm your schedule.`;
       const htmlCustomer = `
         <h2>Thanks, ${escapeHtml(name)} — your booking is in!</h2>
         <p>We’ve received your details and your Terms confirmation. We’ll be in touch to confirm your schedule.</p>
+
         <h3 style="margin:16px 0 6px">Booking summary</h3>
         <p><strong>Name:</strong> ${escapeHtml(name)}<br>
            <strong>Phone:</strong> ${escapeHtml(phone)}<br>
            <strong>Address:</strong> ${escapeHtml(address)}</p>
+
         <p><strong>Bins:</strong><br>${binsHtml}</p>
+
+        ${pricingBlocks.html}
+
         ${tosHtmlBlock(termsVersion, termsTimestamp)}
       `;
 
@@ -205,6 +315,8 @@ We’ll be in touch to confirm your schedule.`;
           channel: "email",
           name, email, phone, address, bins,
           placeId, lat, lng, source,
+          discountCode: discountCode || null,
+          pricing: pricing || null,
           termsAccepted, termsVersion, termsAcceptanceText,
           termsTimestamp,
           createdAt: new Date().toISOString(),
