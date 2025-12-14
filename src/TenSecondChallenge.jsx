@@ -309,10 +309,10 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
             <p className="text-xs md:text-sm opacity-80">
               Stop the timer on exactly <strong>10.00s</strong> to win a free bin
                Only Available to Areas Covered
-             Donaghadee, Newtownards, Comber, 
+             <P>Donaghadee, Newtownards, Comber, 
              Portaferry, Bangor, Millisle, 
              Ballywalter, Carrowdore, 
-             Greyabbery, Cloughey & Portavogie
+             Greyabbery, Cloughey & Portavogie</P>
               clean.
             </p>
           </div>
