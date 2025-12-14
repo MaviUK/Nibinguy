@@ -102,7 +102,7 @@ const PLANS = [
 
 // Discount rules (edit these whenever you want)
 const DISCOUNT_CODES = {
-  Fresh20: {
+  FRESH20: {
     type: "percent",
     value: 20,
     appliesTo: ["domestic_4w"],
