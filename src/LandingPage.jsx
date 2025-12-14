@@ -111,13 +111,11 @@ const DISCOUNT_CODES = {
   },
 };
 
-
 function normalizeCode(code) {
   return (code || "").trim().toUpperCase();
 }
 
 function money(n) {
-  // keep it simple and consistent for UI/messages
   const x = Math.round((Number(n) || 0) * 100) / 100;
   return x % 1 === 0 ? `${x.toFixed(0)}` : `${x.toFixed(2)}`;
 }
@@ -133,13 +131,13 @@ function computeDiscountedUnitPrice(basePrice, planId, code) {
   const rule = DISCOUNT_CODES[c];
   if (!rule) return { unitPrice: basePrice, discounted: false, reason: "Invalid code" };
 
-   const now = Date.now();
-if (rule.startsAt && now < Date.parse(rule.startsAt)) {
-  return { unitPrice: basePrice, discounted: false, reason: "Code not active yet" };
-}
-if (rule.expiresAt && now > Date.parse(rule.expiresAt)) {
-  return { unitPrice: basePrice, discounted: false, reason: "Code expired" };
-}
+  const now = Date.now();
+  if (rule.startsAt && now < Date.parse(rule.startsAt)) {
+    return { unitPrice: basePrice, discounted: false, reason: "Code not active yet" };
+  }
+  if (rule.expiresAt && now > Date.parse(rule.expiresAt)) {
+    return { unitPrice: basePrice, discounted: false, reason: "Code expired" };
+  }
 
   if (!rule.appliesTo.includes(planId)) {
     return { unitPrice: basePrice, discounted: false, reason: "Code not valid for this clean" };
@@ -169,21 +167,90 @@ function validateCodeAgainstSelection(bins, code) {
   const rule = DISCOUNT_CODES[c];
   if (!rule) return { state: "invalid", message: "That code isn’t valid." };
 
-   const now = Date.now();
-if (rule.startsAt && now < Date.parse(rule.startsAt)) {
-  return { state: "invalid", message: "That code isn’t active yet." };
-}
-if (rule.expiresAt && now > Date.parse(rule.expiresAt)) {
-  return { state: "invalid", message: "That code has expired." };
-}
+  const now = Date.now();
+  if (rule.startsAt && now < Date.parse(rule.startsAt)) {
+    return { state: "invalid", message: "That code isn’t active yet." };
+  }
+  if (rule.expiresAt && now > Date.parse(rule.expiresAt)) {
+    return { state: "invalid", message: "That code has expired." };
+  }
 
-  // valid overall if it applies to at least one selected plan
   const appliesToAtLeastOne = bins.some((b) => !!b.planId && rule.appliesTo.includes(b.planId));
   if (!appliesToAtLeastOne) {
     return { state: "invalid", message: "That code doesn’t apply to your selected clean(s)." };
   }
 
   return { state: "valid", message: "Discount code applied ✅" };
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Snow Effect + Toggle
+   ──────────────────────────────────────────────────────────────────────────── */
+
+const SNOW_STORAGE_KEY = "nbg_snow_enabled";
+
+function SnowEffect({ enabled = true }) {
+  if (!enabled) return null;
+
+  return (
+    <>
+      {/* Falling snow */}
+      <div className="pointer-events-none fixed inset-0 z-[5] overflow-hidden" aria-hidden="true">
+        <div className="nbg-snow" />
+      </div>
+
+      {/* “Landing / buildup” drift at the bottom */}
+      <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-[6]" aria-hidden="true">
+        <div className="nbg-snow-drift" />
+      </div>
+
+      <style>{`
+        .nbg-snow {
+          position: absolute;
+          inset: 0;
+          background-image:
+            radial-gradient(circle, rgba(255,255,255,0.95) 1px, transparent 1.6px),
+            radial-gradient(circle, rgba(255,255,255,0.75) 1px, transparent 1.8px),
+            radial-gradient(circle, rgba(255,255,255,0.55) 1px, transparent 2px);
+          background-size: 160px 160px, 220px 220px, 320px 320px;
+          background-position: 0 0, 60px 40px, 120px 140px;
+          animation: nbgSnowFall 14s linear infinite;
+          filter: drop-shadow(0 0 1px rgba(255,255,255,0.25));
+          opacity: 0.9;
+        }
+
+        @keyframes nbgSnowFall {
+          0%   { transform: translateY(-20%); }
+          100% { transform: translateY(20%); }
+        }
+
+        .nbg-snow-drift {
+          height: 120px;
+          width: 100%;
+          background:
+            radial-gradient(60px 18px at 8% 80%, rgba(255,255,255,0.95) 35%, transparent 70%),
+            radial-gradient(80px 22px at 22% 88%, rgba(255,255,255,0.95) 35%, transparent 70%),
+            radial-gradient(70px 20px at 40% 78%, rgba(255,255,255,0.95) 35%, transparent 70%),
+            radial-gradient(90px 26px at 58% 90%, rgba(255,255,255,0.95) 35%, transparent 70%),
+            radial-gradient(70px 20px at 76% 82%, rgba(255,255,255,0.95) 35%, transparent 70%),
+            radial-gradient(85px 24px at 92% 88%, rgba(255,255,255,0.95) 35%, transparent 70%),
+            linear-gradient(to top, rgba(255,255,255,0.92), rgba(255,255,255,0.0));
+          opacity: 0.22;
+          filter: blur(0.2px);
+          animation: nbgDriftWobble 6s ease-in-out infinite;
+        }
+
+        @keyframes nbgDriftWobble {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(2px); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .nbg-snow, .nbg-snow-drift { animation: none !important; }
+        }
+      `}</style>
+    </>
+  );
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -342,10 +409,7 @@ function BookingForm({ onClose }) {
     [name, email, address, phone, bins]
   );
 
-  const TOS_PREFIX = useMemo(
-    () => `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION})`,
-    []
-  );
+  const TOS_PREFIX = useMemo(() => `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION})`, []);
 
   const addBinRow = () => setBins((prev) => [...prev, { ...DEFAULT_BIN }]);
   const removeLastBin = () => setBins((prev) => (prev.length > 1 ? prev.slice(0, -1) : prev));
@@ -398,7 +462,6 @@ function BookingForm({ onClose }) {
   }, [bins, discountCode]);
 
   const buildBinDetails = () => {
-    // WhatsApp line items (URL safe new lines)
     return pricing.lines
       .map((l) => {
         const typeName = l.type.replace(" Bin", "");
@@ -418,11 +481,7 @@ function BookingForm({ onClose }) {
         ? `Discount Code: ${code} (not applied)`
         : `Discount Code: None`;
 
-    return (
-      `${codeLine}%0A` +
-      `Subtotal: £${money(pricing.subtotal)}%0A` +
-      `Total: £${money(pricing.total)}`
-    );
+    return `${codeLine}%0A` + `Subtotal: £${money(pricing.subtotal)}%0A` + `Total: £${money(pricing.total)}`;
   };
 
   // UPDATED: WhatsApp + background ToS receipt
@@ -435,7 +494,6 @@ function BookingForm({ onClose }) {
       alert("Please view and agree to the Terms of Service before booking.");
       return;
     }
-    // If they typed a code but it's invalid, block sending (you can relax this if you prefer)
     if (normalizeCode(discountCode) && discountStatus.state !== "valid") {
       alert("That discount code isn’t valid for your selected clean(s).");
       return;
@@ -554,11 +612,7 @@ function BookingForm({ onClose }) {
 
   return (
     <div className="p-6 space-y-4">
-      <button
-        onClick={onClose}
-        className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10"
-        aria-label="Close booking"
-      >
+      <button onClick={onClose} className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10" aria-label="Close booking">
         &times;
       </button>
 
@@ -566,23 +620,13 @@ function BookingForm({ onClose }) {
         Book a Bin Clean
       </h2>
 
-      <input
-        type="text"
-        placeholder="Your Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2"
-      />
+      <input type="text" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
 
       {bins.map((bin, index) => {
         return (
           <div key={index} className="space-y-2 border-b border-gray-200 pb-4 mb-4">
             <div className="flex gap-4">
-              <select
-                value={bin.type}
-                onChange={(e) => handleBinChange(index, "type", e.target.value)}
-                className="w-2/3 border border-gray-300 rounded-lg px-4 py-2"
-              >
+              <select value={bin.type} onChange={(e) => handleBinChange(index, "type", e.target.value)} className="w-2/3 border border-gray-300 rounded-lg px-4 py-2">
                 <option value="">Select Bin</option>
                 <option value="Black Bin">Black</option>
                 <option value="Brown Bin">Brown</option>
@@ -590,21 +634,10 @@ function BookingForm({ onClose }) {
                 <option value="Blue Bin">Blue</option>
               </select>
 
-              <input
-                type="number"
-                min="1"
-                value={bin.count}
-                onChange={(e) => handleBinChange(index, "count", e.target.value)}
-                className="w-1/3 border border-gray-300 rounded-lg px-4 py-2"
-              />
+              <input type="number" min="1" value={bin.count} onChange={(e) => handleBinChange(index, "count", e.target.value)} className="w-1/3 border border-gray-300 rounded-lg px-4 py-2" />
             </div>
 
-            {/* Plan dropdown (discount-aware display) */}
-            <select
-              value={bin.planId}
-              onChange={(e) => handleBinChange(index, "planId", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2"
-            >
+            <select value={bin.planId} onChange={(e) => handleBinChange(index, "planId", e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2">
               {PLANS.map((p) => {
                 const { unitPrice, discounted } = computeDiscountedUnitPrice(p.price, p.id, discountCode);
                 const label = `${p.label} (£${money(unitPrice)})${discounted ? " ✓" : ""}`;
@@ -630,26 +663,14 @@ function BookingForm({ onClose }) {
         )}
       </div>
 
-      {/* Discount Code */}
       <div className="mt-2">
         <label className="block text-sm font-semibold text-gray-700 mb-1">Discount Code (optional)</label>
-        <input
-          type="text"
-          placeholder="Enter code"
-          value={discountCode}
-          onChange={(e) => setDiscountCode(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2"
-        />
+        <input type="text" placeholder="Enter code" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
 
-        {discountStatus.state === "valid" && (
-          <p className="text-sm mt-2 text-green-700 font-semibold">{discountStatus.message}</p>
-        )}
-        {discountStatus.state === "invalid" && (
-          <p className="text-sm mt-2 text-red-600 font-semibold">{discountStatus.message}</p>
-        )}
+        {discountStatus.state === "valid" && <p className="text-sm mt-2 text-green-700 font-semibold">{discountStatus.message}</p>}
+        {discountStatus.state === "invalid" && <p className="text-sm mt-2 text-red-600 font-semibold">{discountStatus.message}</p>}
       </div>
 
-      {/* Pricing summary */}
       <div className="mt-2 p-3 rounded-lg border border-gray-200 bg-gray-50">
         <div className="text-sm font-semibold text-gray-800">Pricing Summary</div>
         <div className="mt-2 space-y-1 text-sm text-gray-700">
@@ -694,22 +715,9 @@ function BookingForm({ onClose }) {
       />
       <p className="text-xs text-gray-500 -mt-2">Tip: pick from suggestions or just type your full address.</p>
 
-      <input
-        type="tel"
-        placeholder="Contact Number"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
-      />
-      <input
-        type="email"
-        placeholder="Email Address"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
-      />
+      <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
+      <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
 
-      {/* Terms of Service gating */}
       <div className="mt-4 p-3 rounded-lg border border-gray-300 bg-gray-50">
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm text-gray-700">
@@ -729,37 +737,18 @@ function BookingForm({ onClose }) {
           <span className="text-[10px] text-gray-500">v{TERMS_VERSION}</span>
         </div>
         <div className="mt-3 flex items-start gap-2">
-          <input
-            id="agree"
-            type="checkbox"
-            className="mt-1"
-            checked={agreeToTerms}
-            disabled={!canToggleAgree}
-            onChange={(e) => setAgreeToTerms(e.target.checked)}
-          />
+          <input id="agree" type="checkbox" className="mt-1" checked={agreeToTerms} disabled={!canToggleAgree} onChange={(e) => setAgreeToTerms(e.target.checked)} />
           <label htmlFor="agree" className="text-sm text-gray-800">
             I’ve read and agree to the Terms of Service.
-            {!canToggleAgree && (
-              <span className="block text-xs text-gray-500">
-                (Open the Terms and scroll to the bottom to enable this.)
-              </span>
-            )}
+            {!canToggleAgree && <span className="block text-xs text-gray-500">(Open the Terms and scroll to the bottom to enable this.)</span>}
           </label>
         </div>
       </div>
 
-      <button
-        onClick={handleSendWhatsApp}
-        className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
-        disabled={!agreeToTerms}
-      >
+      <button onClick={handleSendWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
         Send via WhatsApp
       </button>
-      <button
-        onClick={handleSendEmail}
-        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
-        disabled={!agreeToTerms}
-      >
+      <button onClick={handleSendEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
         Send via Email
       </button>
 
@@ -1087,8 +1076,43 @@ export default function NiBinGuyLandingPage() {
   const [showContact, setShowContact] = useState(false);
   const [showChallenge, setShowChallenge] = useState(false);
 
+  // Snow toggle (persisted)
+  const [snowEnabled, setSnowEnabled] = useState(true);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SNOW_STORAGE_KEY);
+      if (saved === "0") setSnowEnabled(false);
+      if (saved === "1") setSnowEnabled(true);
+    } catch {}
+  }, []);
+
+  const toggleSnow = () => {
+    setSnowEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SNOW_STORAGE_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-black text-white font-sans">
+    <div className="min-h-screen bg-black text-white font-sans relative">
+      {/* Snow overlay */}
+      <SnowEffect enabled={snowEnabled} />
+
+      {/* Snow toggle button */}
+      <button
+        type="button"
+        onClick={toggleSnow}
+        className="fixed top-4 right-4 z-[30] px-4 py-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700/80 border border-white/10 shadow-lg text-sm font-semibold"
+        aria-pressed={snowEnabled}
+        title="Toggle snow"
+      >
+        {snowEnabled ? "❄️ Snow: On" : "❄️ Snow: Off"}
+      </button>
+
       <Hero onBook={() => setShowBooking(true)} onContact={() => setShowContact(true)} onChallenge={() => setShowChallenge(true)} />
 
       <Modal open={showBooking} onClose={() => setShowBooking(false)} maxWidth="max-w-md" labelledBy="booking-title">
