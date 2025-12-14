@@ -314,7 +314,10 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
           <div className="text-xs opacity-80 text-right">
             One try per device · Europe/London
              Only Available to Areas Covered
-             Donaghadee, Newtownards, Comber, Portaferry, Bangor, Millisle, Ballywalter, Carrowdore, Greyabbery, Cloughey & Portavogie
+             Donaghadee, Newtownards, Comber, 
+             Portaferry, Bangor, Millisle, 
+             Ballywalter, Carrowdore, 
+             Greyabbery, Cloughey & Portavogie
           </div>
         </div>
 
