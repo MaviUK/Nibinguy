@@ -1335,13 +1335,14 @@ export default function NiBinGuyLandingPage() {
   // Snow toggle (persisted)
   const [snowEnabled, setSnowEnabled] = useState(false);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(SNOW_STORAGE_KEY);
-      if (saved === "0") setSnowEnabled(false);
-      if (saved === "1") setSnowEnabled(true);
-    } catch {}
-  }, []);
+useEffect(() => {
+  try {
+    // Always force snow off (ignores saved setting)
+    localStorage.setItem(SNOW_STORAGE_KEY, "0");
+    setSnowEnabled(false);
+  } catch {}
+}, []);
+   
 
   const toggleSnow = () => {
     setSnowEnabled((prev) => {
