@@ -1333,7 +1333,7 @@ export default function NiBinGuyLandingPage() {
   const [showChallenge, setShowChallenge] = useState(false);
 
   // Snow toggle (persisted)
-  const [snowEnabled, setSnowEnabled] = useState(true);
+  const [snowEnabled, setSnowEnabled] = useState(false);
 
   useEffect(() => {
     try {
