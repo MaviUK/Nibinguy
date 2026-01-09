@@ -1359,16 +1359,6 @@ useEffect(() => {
       {/* Snow overlay */}
       <SnowCanvas enabled={snowEnabled} />
 
-      {/* Snow toggle button */}
-      <button
-        type="button"
-        onClick={toggleSnow}
-        className="fixed top-4 right-4 z-[30] px-4 py-2 rounded-xl bg-zinc-800/80 hover:bg-zinc-700/80 border border-white/10 shadow-lg text-sm font-semibold"
-        aria-pressed={snowEnabled}
-        title="Toggle snow"
-      >
-        {snowEnabled ? "❄️ Snow: On" : "❄️ Snow: Off"}
-      </button>
 
       <Hero onBook={() => setShowBooking(true)} onContact={() => setShowContact(true)} onChallenge={() => setShowChallenge(true)} />
 
