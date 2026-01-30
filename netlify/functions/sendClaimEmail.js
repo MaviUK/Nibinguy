@@ -69,7 +69,7 @@ exports.handler = async (event) => {
 
     const response = await resend.emails.send({
       from: "noreply@nibing.uy",
-      to: "aabincleaning@gmail.com",
+      to: "info@nibing.uy",
       subject: "New Standee Claim Submitted!",
       html: htmlContent,
     });
