@@ -8,7 +8,7 @@ exports.handler = async (event) => {
   try {
     const { data, error } = await resend.emails.send({
       from: 'claims@nibing.uy',
-      to: 'aabincleaning@gmail.com',
+      to: 'info@nibing.uy',
       subject: '🧽 New Bin Claim Submitted',
       html: `
         <h2>New Claim Received</h2>
