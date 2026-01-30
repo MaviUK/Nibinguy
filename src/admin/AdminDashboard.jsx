@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react"
 import { supabase } from "../lib/supabaseClient"
 import { useNavigate } from "react-router-dom"
 
-const allowedEmail = "thenibinguy@gmail.com"
+const allowedEmail = "info@nibing.uy"
 
 export default function AdminDashboard() {
   const [locations, setLocations] = useState([])
