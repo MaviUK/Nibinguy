@@ -18,7 +18,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ---------- config ----------
 const FROM_DEFAULT = process.env.RESEND_FROM || "Ni Bin Guy <noreply@nibing.uy>";
-const TO_ADMIN     = process.env.BOOKINGS_TO || "aabincleaning@gmail.com";
+const TO_ADMIN     = process.env.BOOKINGS_TO || "info@nibing.uy";
 const TERMS_VERSION_DEFAULT = "September 2025";
 
 // Shown in both emails. Replace with your full ToS text if you prefer.
