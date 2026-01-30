@@ -15,7 +15,7 @@ try {
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_DEFAULT = process.env.RESEND_FROM || "Ni Bin Guy <noreply@nibing.uy>";
-const TO_ADMIN     = process.env.BOOKINGS_TO || "aabincleaning@gmail.com";
+const TO_ADMIN     = process.env.BOOKINGS_TO || "info@nibing.uy";
 const TERMS_VERSION_DEFAULT = "September 2025";
 
 const escapeHtml = (s) => String(s ?? "")
