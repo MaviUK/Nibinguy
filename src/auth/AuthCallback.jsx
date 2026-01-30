@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 
-function parseHashParams(hash: string) {
+function parseHashParams(hash) {
   const h = hash.startsWith("#") ? hash.slice(1) : hash;
   const params = new URLSearchParams(h);
   return {
