@@ -1,6 +1,6 @@
 // netlify/functions/sendContactEmail.js
 // Requires: npm i resend
-// Set env vars in Netlify: RESEND_API_KEY, CONTACT_TO (e.g. aabincleaning@gmail.com), RESEND_FROM (verified sender)
+// Set env vars in Netlify: RESEND_API_KEY, CONTACT_TO (e.g. info@nibing.uy), RESEND_FROM (verified sender)
 
 import { Resend } from "resend";
 
@@ -44,7 +44,7 @@ export default async function handler(req, context) {
   }
 
   // Compose email
-  const to = process.env.CONTACT_TO || "aabincleaning@gmail.com";
+  const to = process.env.CONTACT_TO || "info@nibing.uy";
   const from =
     process.env.RESEND_FROM || "onboarding@resend.dev"; // must be verified in Resend
   const subject = `New Contact Message from ${name}`;
