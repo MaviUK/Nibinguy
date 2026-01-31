@@ -111,7 +111,7 @@ const DISCOUNT_CODES = {
     type: "percent",
     value: 20,
     appliesTo: ["domestic_4w"],
-    expiresAt: "2025-12-31T23:59:59Z", // expiry (UTC)
+    expiresAt: "2026-02-28T23:59:59Z", // expiry (UTC)
     // startsAt: "2025-12-01T00:00:00Z", // optional
   },
 };
