@@ -1392,7 +1392,6 @@ useEffect(() => {
   onClose={() => setShowChallenge(false)}
 />
 
-
 <WhatWeDo />
 <TheProcess />
 <BinsWeClean />
