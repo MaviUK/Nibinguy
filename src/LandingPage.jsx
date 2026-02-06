@@ -1372,6 +1372,26 @@ useEffect(() => {
 
       <ChallengeModal open={showChallenge} onClose={() => setShowChallenge(false)} />
 
+       <Hero
+  onBook={() => setShowBooking(true)}
+  onContact={() => setShowContact(true)}
+  onChallenge={() => setShowChallenge(true)}
+/>
+
+{/* ⭐ Google Reviews Carousel */}
+<section className="relative py-12 px-4 bg-black">
+  <div className="max-w-6xl mx-auto">
+    <h3 className="text-center text-green-400 text-2xl font-bold mb-6">
+      Rated 5★ by Local Customers
+    </h3>
+
+    <div className="bg-zinc-900/60 border border-white/10 rounded-2xl p-4 md:p-6 shadow-xl">
+      <div className="elfsight-app-YOUR_WIDGET_ID_HERE"></div>
+    </div>
+  </div>
+</section>
+
+
       <WhatWeDo />
       <TheProcess />
       <BinsWeClean />
