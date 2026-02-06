@@ -1393,8 +1393,6 @@ useEffect(() => {
 />
 
 
-</section>
-
 <WhatWeDo />
 <TheProcess />
 <BinsWeClean />
