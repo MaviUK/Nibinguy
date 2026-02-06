@@ -1151,6 +1151,25 @@ function Hero({ onBook, onContact, onChallenge }) {
       <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-b from-transparent via-[#121212] to-[#18181b] z-10 pointer-events-none" />
       <div className="relative z-20 flex flex-col items-center gap-4">
         <img src="logo.png" alt="Ni Bin Guy Logo" className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg" />
+
+ {/* Stats under logo */}
+        <div className="w-full max-w-4xl mt-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-5 shadow-lg">
+            <div className="text-xs tracking-widest text-white/60 uppercase">Total Bins Cleaned</div>
+            <div className="mt-2 text-3xl font-extrabold text-white">4,000+</div>
+          </div>
+
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-5 shadow-lg">
+            <div className="text-xs tracking-widest text-white/60 uppercase">Today’s Area</div>
+            <div className="mt-2 text-2xl font-extrabold text-white">Bangor</div>
+          </div>
+
+          <div className="rounded-2xl bg-white/5 border border-white/10 p-5 shadow-lg">
+            <div className="text-xs tracking-widest text-white/60 uppercase">Monthly Customers</div>
+            <div className="mt-2 text-3xl font-extrabold text-white">120+</div>
+          </div>
+        </div>
+         
         <h1 className="text-4xl md:text-6xl font-bold">
           Bin Cleaning, <span className="text-green-400">Done Right</span>
         </h1>
