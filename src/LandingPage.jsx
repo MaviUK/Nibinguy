@@ -68,6 +68,23 @@ const TERMS_BODY = `We keep our Terms of Service simple and transparent. By book
 • You consent to us storing your details and contacting you about your service.
 • Text reminders are a courtesy; you’re responsible for knowing your schedule.`;
 
+// ─────────────────────────────────────────────────────────────
+// Live Stats (4-week rota + day labels)
+// ─────────────────────────────────────────────────────────────
+
+const STATS_BASE = {
+  totalBinsCleaned: 4000,
+  monthlyCustomers: 120,
+};
+
+const FOUR_WEEK_PLAN = [
+  ...
+];
+
+const ANCHOR_MONDAY = new Date("2026-01-05T00:00:00");
+
+// rest of helpers + useLiveCounters()
+
 // Load Google Places once
 function loadGooglePlaces(apiKey) {
   return new Promise((resolve, reject) => {
