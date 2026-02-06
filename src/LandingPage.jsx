@@ -1360,22 +1360,36 @@ useEffect(() => {
       <SnowCanvas enabled={snowEnabled} />
 
 
-      <Hero onBook={() => setShowBooking(true)} onContact={() => setShowContact(true)} onChallenge={() => setShowChallenge(true)} />
-
-      <Modal open={showBooking} onClose={() => setShowBooking(false)} maxWidth="max-w-md" labelledBy="booking-title">
-        <BookingForm onClose={() => setShowBooking(false)} />
-      </Modal>
-
-      <Modal open={showContact} onClose={() => setShowContact(false)} maxWidth="max-w-md" labelledBy="contact-title">
-        <ContactForm onClose={() => setShowContact(false)} />
-      </Modal>
-
-      <ChallengeModal open={showChallenge} onClose={() => setShowChallenge(false)} />
-
-       <Hero
+    <Hero
   onBook={() => setShowBooking(true)}
   onContact={() => setShowContact(true)}
   onChallenge={() => setShowChallenge(true)}
+/>
+
+{/* Booking Modal */}
+<Modal
+  open={showBooking}
+  onClose={() => setShowBooking(false)}
+  maxWidth="max-w-md"
+  labelledBy="booking-title"
+>
+  <BookingForm onClose={() => setShowBooking(false)} />
+</Modal>
+
+{/* Contact Modal */}
+<Modal
+  open={showContact}
+  onClose={() => setShowContact(false)}
+  maxWidth="max-w-md"
+  labelledBy="contact-title"
+>
+  <ContactForm onClose={() => setShowContact(false)} />
+</Modal>
+
+{/* 10 Second Challenge Modal */}
+<ChallengeModal
+  open={showChallenge}
+  onClose={() => setShowChallenge(false)}
 />
 
 {/* ⭐ Google Reviews Carousel */}
@@ -1391,12 +1405,12 @@ useEffect(() => {
   </div>
 </section>
 
+<WhatWeDo />
+<TheProcess />
+<BinsWeClean />
+<WhyCleanYourBin />
+<WhyNiBinGuy />
 
-      <WhatWeDo />
-      <TheProcess />
-      <BinsWeClean />
-      <WhyCleanYourBin />
-      <WhyNiBinGuy />
     </div>
   );
 }
