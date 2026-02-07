@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 // ✅ Change these anytime
 export const STATS_BASE = {
-  totalBinsCleaned: 4000,  // your starting total bins cleaned
-  monthlyCustomers: 120,   // your starting total monthly customers
+  totalBinsCleaned: 27035,  // your starting total bins cleaned
+  monthlyCustomers: 1078,   // your starting total monthly customers
 };
 
 // ✅ Your real 4-week rota (Mon–Thu only)
