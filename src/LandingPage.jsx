@@ -1303,13 +1303,64 @@ function TheProcess() {
           </ol>
         </div>
       </div>
-       <div className="mt-6 flex flex-col sm:flex-row gap-4">
-          <button
-            onClick={onBook}
-            className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
-          >
-            Book a Clean
-          </button>
+      function TheProcess({ onBook }) {
+  return (
+    <section id="the-process" className="relative py-16 px-6 bg-[#18181b] text-white">
+      <h2 className="text-3xl font-bold text-green-400 mb-10 text-center">The Process</h2>
+
+      <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+        <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
+          <h3 className="text-xl font-bold">The Booking Process</h3>
+          <ol className="mt-6 space-y-5">
+            {[
+              "Complete the quick booking form.",
+              "We’ll reply with your price and the next clean date (right after your bin collection).",
+              "Approve the quote to secure your spot in the schedule.",
+              "You’ll receive an email to set up your payment method.",
+            ].map((text, i) => (
+              <li key={i} className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">
+                  {i + 1}
+                </span>
+                <p>{text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
+          <h3 className="text-xl font-bold">The Cleaning Process</h3>
+          <ol className="mt-6 space-y-5">
+            {[
+              "We remove any leftover waste the bin crew missed.",
+              "Thorough wash and rinse — inside and out.",
+              "We dry the interior to prevent residue.",
+              "Sanitise and deodorise for a fresh finish.",
+              "Your bin is returned clean and fresh to its usual spot.",
+            ].map((text, i) => (
+              <li key={i} className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">
+                  {i + 1}
+                </span>
+                <p>{text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+
+      <div className="mt-10 flex justify-center">
+        <button
+          onClick={onBook}
+          className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+        >
+          Book a Clean
+        </button>
+      </div>
+    </section>
+  );
+}
+
     </section>
   );
 }
