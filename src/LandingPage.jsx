@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLiveCounters } from "./data/statsPlan";
 import TenSecondChallenge from "./TenSecondChallenge.jsx";
+
 
 /**
  * Ni Bin Guy — Landing Page
@@ -68,17 +70,6 @@ const TERMS_BODY = `We keep our Terms of Service simple and transparent. By book
 • You consent to us storing your details and contacting you about your service.
 • Text reminders are a courtesy; you’re responsible for knowing your schedule.`;
 
-// ─────────────────────────────────────────────────────────────
-// Live Stats (4-week rota + day labels)
-// ─────────────────────────────────────────────────────────────
-
-const STATS_BASE = {
-  totalBinsCleaned: 4000,
-  monthlyCustomers: 120,
-};
-
-const FOUR_WEEK_PLAN = [
-  ...
 ];
 
 const ANCHOR_MONDAY = new Date("2026-01-05T00:00:00");
@@ -1162,6 +1153,7 @@ function ChallengeModal({ open, onClose }) {
    Page Sections
    ──────────────────────────────────────────────────────────────────────────── */
 function Hero({ onBook, onContact, onChallenge }) {
+  const { totalBinsCleaned, todaysArea, totalMonthlyCustomers } = useLiveCounters();
   return (
     <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-black">
       <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0" />
