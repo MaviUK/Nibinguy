@@ -128,9 +128,9 @@ export function useLiveCounters() {
 
   const progress = today.active ? getDayProgress(now) : 0;
 
-  return {
-    totalBinsCleaned: STATS_BASE.totalBinsCleaned + month.bins + Math.floor(today.bins * progress),
-    todaysArea: today.area,
-    totalMonthlyCustomers: STATS_BASE.monthlyCustomers + month.customers + Math.floor(today.customers * progress),
-  };
+ return {
+  totalBinsCleaned: STATS_BASE.totalBinsCleaned + month.bins + Math.floor(today.bins * progress),
+  todaysArea: today.area,
+  totalMonthlyCustomers: STATS_BASE.monthlyCustomers, // ✅ always 1078
+};
 }
