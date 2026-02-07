@@ -1160,17 +1160,23 @@ function Hero({ onBook, onContact, onChallenge }) {
         <div className="w-full max-w-4xl mt-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="rounded-2xl bg-white/5 border border-white/10 p-5 shadow-lg">
             <div className="text-xs tracking-widest text-white/60 uppercase">Total Bins Cleaned</div>
-            <div className="mt-2 text-3xl font-extrabold text-white">4,000+</div>
+           <div className="mt-2 text-3xl font-extrabold text-white">
+  {totalBinsCleaned.toLocaleString()}+
+</div>
           </div>
 
           <div className="rounded-2xl bg-white/5 border border-white/10 p-5 shadow-lg">
             <div className="text-xs tracking-widest text-white/60 uppercase">Today’s Area</div>
-            <div className="mt-2 text-2xl font-extrabold text-white">Bangor</div>
+            <div className="mt-2 text-2xl font-extrabold text-white">
+  {todaysArea}
+</div>
           </div>
 
           <div className="rounded-2xl bg-white/5 border border-white/10 p-5 shadow-lg">
             <div className="text-xs tracking-widest text-white/60 uppercase">Monthly Customers</div>
-            <div className="mt-2 text-3xl font-extrabold text-white">120+</div>
+            <div className="mt-2 text-3xl font-extrabold text-white">
+  {totalMonthlyCustomers.toLocaleString()}+
+</div>
           </div>
         </div>
          
