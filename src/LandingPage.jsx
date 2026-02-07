@@ -1163,30 +1163,31 @@ function Hero({ onBook, onContact, onChallenge }) {
         />
 
         {/* Stats under logo */}
-        <div className="w-full max-w-4xl mt-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-5 shadow-lg">
-            <div className="text-xs tracking-widest text-white/60 uppercase">
+        <div className="w-full max-w-4xl mt-2 grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-4">
+
+          <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:p-5 shadow-lg text-center">
+            <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">
               Total Bins Cleaned
             </div>
-            <div className="mt-2 text-3xl font-extrabold text-white">
+            <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">
               {totalBinsCleaned.toLocaleString()}+
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-5 shadow-lg">
-            <div className="text-xs tracking-widest text-white/60 uppercase">
+          <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:p-5 shadow-lg text-center">
+            <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">
               Today’s Area
             </div>
-            <div className="mt-2 text-2xl font-extrabold text-white">
+            <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">
               {todaysArea}
             </div>
           </div>
 
-          <div className="rounded-2xl bg-white/5 border border-white/10 p-5 shadow-lg">
-            <div className="text-xs tracking-widest text-white/60 uppercase">
+          <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:p-5 shadow-lg text-center">
+            <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">
               Monthly Customers
             </div>
-            <div className="mt-2 text-3xl font-extrabold text-white">
+           <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">
               {Number(totalMonthlyCustomers).toLocaleString()}
             </div>
           </div>
