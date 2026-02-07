@@ -1260,7 +1260,7 @@ function WhatWeDo() {
   );
 }
 
-function TheProcess() {
+function TheProcess({ onBook }) {
   return (
     <section id="the-process" className="relative py-16 px-6 bg-[#18181b] text-white">
       <h2 className="text-3xl font-bold text-green-400 mb-10 text-center">The Process</h2>
@@ -1457,7 +1457,7 @@ useEffect(() => {
 />
 
 <WhatWeDo />
-<TheProcess />
+<TheProcess onBook={() => setShowBooking(true)} />
 <BinsWeClean />
 <WhyCleanYourBin />
 <WhyNiBinGuy />
