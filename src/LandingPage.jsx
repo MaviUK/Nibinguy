@@ -1148,7 +1148,7 @@ function ChallengeModal({ open, onClose }) {
    Page Sections
    ──────────────────────────────────────────────────────────────────────────── */
 function Hero({ onBook, onContact, onChallenge }) {
-  const { totalBinsCleaned, todaysArea, totalMonthlyCustomers: STATS_BASE.monthlyCustomers;
+  const { totalBinsCleaned, todaysArea, totalMonthlyCustomers: STATS_BASE.monthlyCustomers,
   return (
     <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-black">
       <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0" />
