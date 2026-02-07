@@ -1303,11 +1303,13 @@ function TheProcess() {
           </ol>
         </div>
       </div>
-      <div className="mt-12 text-center">
-        <a href="#book" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
-          Book a Clean
-        </a>
-      </div>
+       <div className="mt-6 flex flex-col sm:flex-row gap-4">
+          <button
+            onClick={onBook}
+            className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+          >
+            Book a Clean
+          </button>
     </section>
   );
 }
