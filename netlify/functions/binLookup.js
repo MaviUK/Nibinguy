@@ -3,9 +3,8 @@
 function normalizeUkPostcode(raw) {
   const s = String(raw || "")
     .toUpperCase()
-    .replace(/[^A-Z0-9]/g, ""); // remove spaces/punctuation
+    .replace(/[^A-Z0-9]/g, "");
 
-  // UK postcodes always end with 3 chars (digit + 2 letters)
   if (s.length <= 3) return s;
   return s.slice(0, -3) + " " + s.slice(-3);
 }
@@ -18,6 +17,28 @@ function decodeHtml(str) {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .trim();
+}
+
+function looksLikeAddress(label, postcode) {
+  const l = (label || "").trim();
+  if (!l) return false;
+
+  // reject junk options like "1", "2"
+  if (/^\d+$/.test(l)) return false;
+
+  // must contain letters
+  if (!/[A-Z]/i.test(l)) return false;
+
+  // often has comma OR a house number
+  const hasComma = l.includes(",");
+  const hasHouseNo = /\b\d{1,4}\b/.test(l);
+
+  // if postcode is present, great (but don’t require it)
+  const pc = (postcode || "").toUpperCase().replace(/\s/g, "");
+  const lpc = l.toUpperCase().replace(/\s/g, "");
+  const hasPostcode = pc && lpc.includes(pc);
+
+  return hasComma || hasHouseNo || hasPostcode;
 }
 
 export default async function handler(req) {
@@ -34,7 +55,6 @@ export default async function handler(req) {
 
     const postcode = normalizeUkPostcode(postcodeRaw);
 
-    // This is the page you were on in your screenshot
     const councilUrl =
       "https://www.ardsandnorthdown.gov.uk/article/1141/Bins-and-recycling?postcode=" +
       encodeURIComponent(postcode);
@@ -55,54 +75,63 @@ export default async function handler(req) {
 
     const html = await res.text();
 
-    // 1) Try the “My address:” block first
-    let address = "";
-    const myAddr = html.match(/My address:\s*<\/strong>\s*([^<]+)/i);
-    if (myAddr?.[1]) address = decodeHtml(myAddr[1]);
+    // --- 1) Try “My address” (single address case) ---
+    const myAddr = html.match(/My address:\s*<\/strong>\s*([\s\S]*?)<\/p>/i);
+    if (myAddr?.[1]) {
+      const addr = decodeHtml(myAddr[1].replace(/<[^>]+>/g, " "));
+      if (looksLikeAddress(addr, postcode)) {
+        return new Response(
+          JSON.stringify({
+            postcode,
+            addresses: [{ uprn: postcode, label: addr }],
+            debug: { mode: "my_address", councilUrl },
+          }),
+          { headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
 
-    // 2) If there’s an address <select>, parse all options (multi-address postcodes)
-    // This regex looks for <option value="SOMETHING">LABEL</option>
+    // --- 2) Try to locate the address <select> block only ---
+    // This hunts for a select that includes the text "Select your address"
+    // and only parses option tags inside that select.
+    let selectBlock = "";
+    const selectMatch = html.match(
+      /<select[^>]*>[\s\S]*?Select your address[\s\S]*?<\/select>/i
+    );
+    if (selectMatch?.[0]) selectBlock = selectMatch[0];
+
+    // fallback: sometimes wording differs, so look for a select with "address" in id/name
+    if (!selectBlock) {
+      const alt = html.match(/<select[^>]*(id|name)="[^"]*address[^"]*"[\s\S]*?<\/select>/i);
+      if (alt?.[0]) selectBlock = alt[0];
+    }
+
     const options = [];
     const optionRe = /<option[^>]*value="([^"]+)"[^>]*>([\s\S]*?)<\/option>/gi;
+
+    const source = selectBlock || html; // if we can't find the block, fallback to html but filter hard
     let m;
-    while ((m = optionRe.exec(html))) {
+    while ((m = optionRe.exec(source))) {
       const value = decodeHtml(m[1]);
       const label = decodeHtml(m[2].replace(/<[^>]+>/g, " "));
-      // filter out placeholder options
-      if (!label || /select/i.test(label)) continue;
+      if (!looksLikeAddress(label, postcode)) continue;
       options.push({ uprn: value, label });
     }
 
-    // If we found options, return them
-    if (options.length) {
-      return new Response(
-        JSON.stringify({
-          postcode,
-          addresses: options,
-          debug: { mode: "options", councilUrl },
-        }),
-        { headers: { "Content-Type": "application/json" } }
-      );
-    }
+    // Deduplicate
+    const seen = new Set();
+    const clean = options.filter((a) => {
+      const key = (a.label || "").toUpperCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
-    // Otherwise return single address if found
-    if (address) {
-      return new Response(
-        JSON.stringify({
-          postcode,
-          addresses: [{ uprn: postcode, label: address }],
-          debug: { mode: "single", councilUrl },
-        }),
-        { headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    // Nothing found
     return new Response(
       JSON.stringify({
         postcode,
-        addresses: [],
-        debug: { mode: "none", councilUrl },
+        addresses: clean,
+        debug: { mode: selectBlock ? "select_block" : "fallback_filtered", councilUrl },
       }),
       { headers: { "Content-Type": "application/json" } }
     );
