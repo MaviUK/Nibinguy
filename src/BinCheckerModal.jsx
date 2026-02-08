@@ -11,18 +11,22 @@ export default function BinCheckerModal({ onClose }) {
   const [postcode, setPostcode] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [addresses, setAddresses] = useState([]); // array of strings
-  const [selectedAddress, setSelectedAddress] = useState("");
+  // NEW: addresses are objects: { uprn, addressText }
+  const [addresses, setAddresses] = useState([]);
+  const [selectedUprn, setSelectedUprn] = useState("");
+  const [selectedAddressText, setSelectedAddressText] = useState("");
 
-  const [schedule, setSchedule] = useState(null);
+  // NEW: council calendar html snippet
+  const [calendarHtml, setCalendarHtml] = useState("");
   const [error, setError] = useState("");
 
-  const canFetchSchedule = useMemo(() => !!selectedAddress, [selectedAddress]);
+  const canFetchSchedule = useMemo(() => !!selectedUprn, [selectedUprn]);
 
   async function findAddresses() {
     setError("");
-    setSchedule(null);
-    setSelectedAddress("");
+    setCalendarHtml("");
+    setSelectedUprn("");
+    setSelectedAddressText("");
     setAddresses([]);
 
     const pc = normalizePostcode(postcode);
@@ -34,8 +38,9 @@ export default function BinCheckerModal({ onClose }) {
     setLoading(true);
     try {
       const res = await fetch(
-        `/.netlify/functions/binLookup?postcode=${encodeURIComponent(pc)}`
+        `/.netlify/functions/binAddresses?postcode=${encodeURIComponent(pc)}`
       );
+
       const data = await res.json().catch(() => null);
 
       if (!res.ok || !data) {
@@ -43,27 +48,39 @@ export default function BinCheckerModal({ onClose }) {
         return;
       }
 
-      // Accept either:
-      // - data.addresses as array: ["...", "..."]
-      // - data.addresses as object: { "1": "...", "2": "..." }
-      // - data as object itself: { "1": "...", "2": "..." }
-      let list = [];
+      // Expected shape: { data: { addresses: [{ uprn, addressText }] } }
+      let list = data?.data?.addresses;
 
-      if (Array.isArray(data.addresses)) list = data.addresses;
-      else if (data.addresses && typeof data.addresses === "object")
+      // Fallbacks just in case:
+      if (!Array.isArray(list) && Array.isArray(data?.addresses)) list = data.addresses;
+      if (!Array.isArray(list) && data?.addresses && typeof data.addresses === "object")
         list = Object.values(data.addresses);
-      else if (data && typeof data === "object") list = Object.values(data);
 
-      list = (list || [])
-        .map((x) => String(x || "").trim())
+      // Normalize to [{ uprn, addressText }]
+      const normalized = (list || [])
+        .map((a) => {
+          if (!a) return null;
+
+          // If already object
+          if (typeof a === "object" && (a.uprn || a.addressText)) {
+            const uprn = String(a.uprn || "").trim();
+            const addressText = String(a.addressText || a.address || "").trim();
+            if (!uprn || !addressText) return null;
+            return { uprn, addressText };
+          }
+
+          // If string only (older format), can't fetch calendar without UPRN
+          // so we skip those
+          return null;
+        })
         .filter(Boolean);
 
-      if (!list.length) {
+      if (!normalized.length) {
         setError("No addresses found for that postcode.");
         return;
       }
 
-      setAddresses(list);
+      setAddresses(normalized);
     } catch (e) {
       setError("Lookup failed. Try again.");
     } finally {
@@ -73,20 +90,18 @@ export default function BinCheckerModal({ onClose }) {
 
   async function fetchSchedule() {
     setError("");
-    setSchedule(null);
+    setCalendarHtml("");
 
-    if (!selectedAddress) {
+    if (!selectedUprn) {
       setError("Pick your address first.");
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch(`/.netlify/functions/binSchedule`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: selectedAddress }),
-      });
+      const res = await fetch(
+        `/.netlify/functions/binCalendar?uprn=${encodeURIComponent(selectedUprn)}`
+      );
 
       const data = await res.json().catch(() => null);
 
@@ -95,7 +110,12 @@ export default function BinCheckerModal({ onClose }) {
         return;
       }
 
-      setSchedule(data);
+      if (!data.html) {
+        setError("No schedule returned. Try again.");
+        return;
+      }
+
+      setCalendarHtml(String(data.html));
     } catch (e) {
       setError("Couldn’t load schedule for that address.");
     } finally {
@@ -141,14 +161,22 @@ export default function BinCheckerModal({ onClose }) {
 
       {!!addresses.length && (
         <select
-          value={selectedAddress}
-          onChange={(e) => setSelectedAddress(e.target.value)}
+          value={selectedUprn}
+          onChange={(e) => {
+            const uprn = e.target.value;
+            setSelectedUprn(uprn);
+
+            const match = addresses.find((a) => a.uprn === uprn);
+            setSelectedAddressText(match?.addressText || "");
+            setCalendarHtml("");
+            setError("");
+          }}
           className="w-full border border-gray-300 rounded-lg px-4 py-2"
         >
           <option value="">Select your address...</option>
           {addresses.map((a) => (
-            <option key={a} value={a}>
-              {a}
+            <option key={a.uprn} value={a.uprn}>
+              {a.addressText}
             </option>
           ))}
         </select>
@@ -171,23 +199,17 @@ export default function BinCheckerModal({ onClose }) {
         </div>
       )}
 
-      {schedule && (
+      {calendarHtml && (
         <div className="border border-gray-200 bg-gray-50 rounded-lg p-4 space-y-2">
-          <div className="text-sm font-semibold text-gray-800">Next collections</div>
+          <div className="text-sm font-semibold text-gray-800">
+            Next collections {selectedAddressText ? `— ${selectedAddressText}` : ""}
+          </div>
 
-          {/* Render flexibly — depends on what your binSchedule returns */}
-          {Array.isArray(schedule.items) ? (
-            <div className="space-y-2">
-              {schedule.items.map((it, idx) => (
-                <div key={idx} className="flex items-center justify-between text-sm">
-                  <div className="font-medium">{it.bin}</div>
-                  <div className="text-gray-700">{it.date}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(schedule, null, 2)}</pre>
-          )}
+          {/* Council returns HTML. Render it directly. */}
+          <div
+            className="text-sm"
+            dangerouslySetInnerHTML={{ __html: calendarHtml }}
+          />
         </div>
       )}
 
