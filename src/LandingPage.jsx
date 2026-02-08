@@ -1234,7 +1234,7 @@ function Hero({ onBook, onContact, onChallenge }) {
 
 <button
   onClick={() => setShowBinChecker(true)}
-  className="w-full max-w-md rounded-2xl bg-green-500 text-black font-extrabold py-4 text-xl shadow-lg"
+className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
 >
   Bin Day Checker
 </button>
