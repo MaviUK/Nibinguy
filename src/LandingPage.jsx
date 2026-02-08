@@ -1147,7 +1147,7 @@ function ChallengeModal({ open, onClose }) {
 /* ────────────────────────────────────────────────────────────────────────────
    Page Sections
    ──────────────────────────────────────────────────────────────────────────── */
-function Hero({ onBook, onContact, onChallenge }) {
+function Hero({ onBook, onContact, onChallenge, onBinChecker }) {
   const { totalBinsCleaned, todaysArea, totalMonthlyCustomers } = useLiveCounters();
 
   return (
@@ -1232,9 +1232,9 @@ function Hero({ onBook, onContact, onChallenge }) {
             Customer Portal
           </a>
 
-<button
-  onClick={() => setShowBinChecker(true)}
-className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
+           <button
+  onClick={onBinChecker}
+  className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
 >
   Bin Day Checker
 </button>
@@ -1404,6 +1404,8 @@ export default function NiBinGuyLandingPage() {
   const [showBooking, setShowBooking] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showChallenge, setShowChallenge] = useState(false);
+  const [showBinChecker, setShowBinChecker] = useState(false);
+
 
   // Snow toggle (persisted)
   const [snowEnabled, setSnowEnabled] = useState(false);
@@ -1437,6 +1439,7 @@ useEffect(() => {
   onBook={() => setShowBooking(true)}
   onContact={() => setShowContact(true)}
   onChallenge={() => setShowChallenge(true)}
+  onBinChecker={() => setShowBinChecker(true)}
 />
 
 {/* Booking Modal */}
@@ -1458,6 +1461,16 @@ useEffect(() => {
 >
   <ContactForm onClose={() => setShowContact(false)} />
 </Modal>
+
+ <Modal
+  open={showBinChecker}
+  onClose={() => setShowBinChecker(false)}
+  maxWidth="max-w-md"
+  labelledBy="bin-checker-title"
+>
+  <BinCheckerModal onClose={() => setShowBinChecker(false)} />
+</Modal>
+      
 
 {/* 10 Second Challenge Modal */}
 <ChallengeModal
