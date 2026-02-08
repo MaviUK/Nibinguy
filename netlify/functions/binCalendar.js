@@ -1,5 +1,23 @@
 // netlify/functions/binCalendar.js
 
+function sanitizeCouncilHtml(html) {
+  let out = String(html || "");
+
+  // Remove scripts
+  out = out.replace(/<script[\s\S]*?<\/script>/gi, "");
+
+  // Remove CSS <style> blocks
+  out = out.replace(/<style[\s\S]*?<\/style>/gi, "");
+
+  // Remove external stylesheets
+  out = out.replace(/<link[^>]*rel=["']?stylesheet["']?[^>]*>/gi, "");
+
+  // (Optional) remove full document wrappers if they ever appear
+  out = out.replace(/<\/?(html|head|body)[^>]*>/gi, "");
+
+  return out.trim();
+}
+
 export default async function handler(req) {
   try {
     const url = new URL(req.url);
@@ -27,7 +45,7 @@ export default async function handler(req) {
       );
     }
 
-    // Upstream returns JSON (string), not raw HTML
+    // Upstream may return JSON text: {"calendarHTML":"..."}
     const text = await r.text();
 
     let calendarHTML = "";
@@ -35,9 +53,11 @@ export default async function handler(req) {
       const parsed = JSON.parse(text);
       calendarHTML = String(parsed?.calendarHTML || "");
     } catch {
-      // Fallback: if they ever return raw HTML directly
+      // Fallback: if upstream ever returns raw HTML
       calendarHTML = String(text || "");
     }
+
+    calendarHTML = sanitizeCouncilHtml(calendarHTML);
 
     if (!calendarHTML) {
       return new Response(JSON.stringify({ error: "No calendar HTML returned" }), {
@@ -46,7 +66,6 @@ export default async function handler(req) {
       });
     }
 
-    // Always return { html: "<div>...</div>" }
     return new Response(JSON.stringify({ html: calendarHTML }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
