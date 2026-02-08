@@ -1,3 +1,5 @@
+// netlify/functions/binCalendar.js
+
 export default async function handler(req) {
   try {
     const url = new URL(req.url);
@@ -25,9 +27,27 @@ export default async function handler(req) {
       );
     }
 
-    const html = await r.text();
+    // Upstream returns JSON (string), not raw HTML
+    const text = await r.text();
 
-    return new Response(JSON.stringify({ html }), {
+    let calendarHTML = "";
+    try {
+      const parsed = JSON.parse(text);
+      calendarHTML = String(parsed?.calendarHTML || "");
+    } catch {
+      // Fallback: if they ever return raw HTML directly
+      calendarHTML = String(text || "");
+    }
+
+    if (!calendarHTML) {
+      return new Response(JSON.stringify({ error: "No calendar HTML returned" }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Always return { html: "<div>...</div>" }
+    return new Response(JSON.stringify({ html: calendarHTML }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
