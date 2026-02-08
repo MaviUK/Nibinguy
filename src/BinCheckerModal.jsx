@@ -221,7 +221,7 @@ export default function BinCheckerModal({ onClose }) {
       )}
 
       <p className="text-[11px] text-gray-500 text-center pt-1">
-        If the checker can’t find your address, the council lookup may have changed — tell Andy and we’ll fix it.
+        If the checker can’t find your address, the council lookup may have changed — Contact us and we’ll fix it.
       </p>
     </div>
   );
