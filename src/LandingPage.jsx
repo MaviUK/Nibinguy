@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveCounters } from "./data/statsPlan";
 import TenSecondChallenge from "./TenSecondChallenge.jsx";
+import BinCheckerModal from "./BinCheckerModal.jsx";
 
 
 /**
