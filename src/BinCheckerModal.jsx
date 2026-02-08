@@ -91,7 +91,7 @@ export default function BinCheckerModal({ onClose }) {
     setLoadingSchedule(true);
     try {
       const res = await fetch(
-        `/.netlify/functions/binSchedule?uprn=${encodeURIComponent(selectedUprn)}`
+        `/.netlify/functions/binSchedule?postcode=${encodeURIComponent(postcode)}`
       );
       const data = await res.json().catch(() => ({}));
 
