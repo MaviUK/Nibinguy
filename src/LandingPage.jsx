@@ -1231,6 +1231,15 @@ function Hero({ onBook, onContact, onChallenge }) {
           >
             Customer Portal
           </a>
+
+<button
+  onClick={() => setShowBinChecker(true)}
+  className="w-full max-w-md rounded-2xl bg-green-500 text-black font-extrabold py-4 text-xl shadow-lg"
+>
+  Bin Day Checker
+</button>
+
+           
         </div>
       </div>
     </section>
