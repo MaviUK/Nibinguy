@@ -1200,7 +1200,7 @@ function Hero({ onBook, onContact, onChallenge, onBinChecker }) {
 
         <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
           Professional wheelie bin cleaning at your home from <span className="text-green-400 font-bold text-xl">£5</span>, across{" "}
-          <span className="text-green-400">County Down.</span> Sparkling clean &amp;
+          <span className="text-green-400">County Down</span>. Sparkling clean &amp;
           fresh smelling bins without any drama.
         </p>
 
