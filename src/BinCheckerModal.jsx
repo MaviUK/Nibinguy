@@ -110,7 +110,7 @@ export default function BinCheckerModal({ onClose }) {
         return;
       }
 
-      const html = data?.html || data?.calendarHTML;
+const html = data?.html || data?.calendarHTML;
 
 if (!html) {
   setError("No schedule returned. Try again.");
@@ -208,10 +208,10 @@ if (!html) {
           </div>
 
           {/* Council returns HTML. Render it directly. */}
-          <div
-            className="text-sm"
-            dangerouslySetInnerHTML={{ __html: calendarHtml }}
-          />
+         <div
+  className="text-sm"
+  dangerouslySetInnerHTML={{ __html: calendarHtml }}
+/>
         </div>
       )}
 
