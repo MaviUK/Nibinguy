@@ -131,12 +131,13 @@ export default function BinCheckerModal({ onClose }) {
   return (
     <div className="p-6 space-y-4 relative">
       <button
-        onClick={onClose}
-        className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10"
-        aria-label="Close bin checker"
-      >
-        &times;
-      </button>
+  onClick={onClose}
+  className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10"
+  aria-label="Close bin checker"
+>
+  &times;
+</button>
+
 
       <h2 id="bin-checker-title" className="text-2xl font-bold text-center">
         Bin Day Checker
