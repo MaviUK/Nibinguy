@@ -89,41 +89,44 @@ export default function BinCheckerModal({ onClose }) {
   }
 
   async function fetchSchedule() {
-    setError("");
-    setCalendarHtml("");
+  setError("");
+  setCalendarHtml("");
 
-    if (!selectedUprn) {
-      setError("Pick your address first.");
+  if (!selectedUprn) {
+    setError("Pick your address first.");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const res = await fetch(
+      `/.netlify/functions/binCalendar?uprn=${encodeURIComponent(selectedUprn)}`
+    );
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok || !data) {
+      setError("Couldn’t load schedule for that address.");
       return;
     }
 
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `/.netlify/functions/binCalendar?uprn=${encodeURIComponent(selectedUprn)}`
-      );
+    // 🔑 THIS IS THE IMPORTANT LINE
+    const html = data.html || data.calendarHTML;
 
-      const data = await res.json().catch(() => null);
+    if (!html) {
+      setError("No schedule returned.");
+      return;
+    }
 
-      if (!res.ok || !data) {
-        setError("Couldn’t load schedule for that address.");
-        return;
-      }
-
-const html = data?.html || data?.calendarHTML;
-
-if (!html) {
-  setError("No schedule returned. Try again.");
-  return;
+    // ✅ Store ONLY the HTML string
+    setCalendarHtml(html);
+  } catch (e) {
+    setError("Couldn’t load schedule for that address.");
+  } finally {
+    setLoading(false);
+  }
 }
 
-      setCalendarHtml(String(data.html));
-    } catch (e) {
-      setError("Couldn’t load schedule for that address.");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   return (
     <div className="p-6 space-y-4 relative">
