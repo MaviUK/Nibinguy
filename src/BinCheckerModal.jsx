@@ -110,10 +110,12 @@ export default function BinCheckerModal({ onClose }) {
         return;
       }
 
-      if (!data.html) {
-        setError("No schedule returned. Try again.");
-        return;
-      }
+      const html = data?.html || data?.calendarHTML;
+
+if (!html) {
+  setError("No schedule returned. Try again.");
+  return;
+}
 
       setCalendarHtml(String(data.html));
     } catch (e) {
