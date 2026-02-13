@@ -1151,6 +1151,41 @@ function ChallengeModal({ open, onClose }) {
 function Hero({ onBook, onContact, onChallenge, onBinChecker }) {
   const { totalBinsCleaned, todaysArea, totalMonthlyCustomers } = useLiveCounters();
 
+// Soft-live counter (display only)
+const [displayTotal, setDisplayTotal] = useState(() => Number(totalBinsCleaned) || 0);
+const sessionAddsRef = useRef(0);
+const lastAddRef = useRef(0);
+
+// When the real total changes (e.g. refresh/new data), reset display base + session add cap
+useEffect(() => {
+  const base = Number(totalBinsCleaned) || 0;
+  setDisplayTotal(base);
+  sessionAddsRef.current = 0;
+  lastAddRef.current = Date.now();
+}, [totalBinsCleaned]);
+
+useEffect(() => {
+  // Tune these:
+  const EVERY_MS = 45000;   // add 1 every 45s
+  const MAX_ADDS = 4;       // cap to 4 per session so it never drifts too far
+
+  const tick = () => {
+    if (document.hidden) return; // pause when tab not visible
+    if (sessionAddsRef.current >= MAX_ADDS) return;
+
+    const now = Date.now();
+    if (now - lastAddRef.current < EVERY_MS) return;
+
+    lastAddRef.current = now;
+    sessionAddsRef.current += 1;
+    setDisplayTotal((v) => v + 1);
+  };
+
+  const interval = setInterval(tick, 1000); // check once per second
+  return () => clearInterval(interval);
+}, []);
+
+
   return (
     <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-black">
       <div className="absolute top-[60%] left-1/2 transform -translate-x-1/2 w-[800px] h-[800px] bg-green-900 opacity-30 blur-3xl rounded-full z-0" />
