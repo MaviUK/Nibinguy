@@ -21,7 +21,6 @@ export const FOUR_WEEK_PLAN = [
     Tue: { area: "Bangor & Ards", bins: 95, customers: 61 },
     Wed: { area: "Comber & Ards", bins: 120, customers: 73 },
     Thu: { area: "Bangor & Ards", bins: 105, customers: 81 },
-    Fri: { area: "Bangor & Ardssss", bins: 105, customers: 81 },
   },
   // Week 3
   {
