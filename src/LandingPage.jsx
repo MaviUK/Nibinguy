@@ -1206,7 +1206,7 @@ useEffect(() => {
               Total Bins Cleaned
             </div>
             <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">
-              {totalBinsCleaned.toLocaleString()}+
+              {Number(displayTotal).toLocaleString()}
             </div>
           </div>
 
