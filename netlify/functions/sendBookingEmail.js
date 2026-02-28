@@ -18,7 +18,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ---------- config ----------
 const FROM_DEFAULT = process.env.RESEND_FROM || "Ni Bin Guy <noreply@nibing.uy>";
-const TO_ADMIN     = process.env.BOOKINGS_TO || "info@nibing.uy";
+const TO_ADMIN     = process.env.BOOKINGS_TO || "aabincleaning@gmail.com";
 const TERMS_VERSION_DEFAULT = "September 2025";
 
 // Shown in both emails. Replace with your full ToS text if you prefer.
@@ -29,7 +29,7 @@ Ni Bin Guy – Terms of Service (summary)
 • Put bins out / make accessible by 8 AM on the scheduled day.
   If not available and we weren't told before 8 AM that day, the clean is still charged.
 • Inside & outside cleaned (where safe) with pressurised water & detergent.
-  Some stains may take multiple visits / may not fully fully remove. Loosened waste may be bagged and left in your bin.
+  Some stains may take multiple visits / may not fully remove. Loosened waste may be bagged and left in your bin.
   Stay at least 5 m away during cleaning.
 • Payment due within 7 days. Accepted: Direct Debit, Bank Transfer, Card (no cash).
   Cancelling a Direct Debit doesn't cancel service — give 48 hours’ notice.
@@ -68,12 +68,11 @@ const fmtGBP = (n) => {
   return `£${x % 1 === 0 ? x.toFixed(0) : x.toFixed(2)}`;
 };
 
-// Builds pricing block from the client "pricing" object (sent by your React modal)
+// Builds pricing block from the client "pricing" object
 function buildPricingBlocks(pricing, discountCode) {
   const code = (discountCode || "").trim();
   const hasPricing = pricing && Array.isArray(pricing.lines) && pricing.lines.length > 0;
 
-  // If the UI didn't send pricing yet, we still show something sensible
   if (!hasPricing) {
     const text =
 `Pricing:
@@ -162,21 +161,17 @@ exports.handler = async (event) => {
       lng = null,
       source = "website",
 
-      // NEW: discount + pricing (sent from UI)
       discountCode = null,
       pricing = null,
 
-      // ToS fields coming from the UI
       termsAccepted = false,
       termsVersion = TERMS_VERSION_DEFAULT,
       termsAcceptanceText = `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION_DEFAULT}).`,
       termsTimestamp = new Date().toISOString(),
     } = payload;
 
-    // Bins formatting
     const filteredBins = (Array.isArray(bins) ? bins : []).filter((b) => b && b.type);
 
-    // Support both old `frequency` and new `planId` (nice for backward compatibility)
     const binsText =
       filteredBins
         .map((b) => {
@@ -193,12 +188,6 @@ exports.handler = async (event) => {
         })
         .join("<br>") || "(none provided)";
 
-    // ToS text for plain text email
-    const tosText = termsAccepted
-      ? (termsAcceptanceText || `Customer accepted Ni Bin Guy Terms of Service (v${termsVersion}).`)
-      : "Customer did NOT include a terms confirmation flag.";
-
-    // Pricing blocks
     const pricingBlocks = buildPricingBlocks(pricing, discountCode);
 
     // ---------- ADMIN EMAIL ----------
@@ -246,16 +235,21 @@ Acceptance line: ${termsAcceptanceText}
       <p style="color:#6b7280;font-size:12px;margin-top:12px">Source: ${escapeHtml(source)}</p>
     `;
 
-    await resend.emails.send({
+    const { error: adminError } = await resend.emails.send({
       from: FROM_DEFAULT,
       to: TO_ADMIN,
       subject: subjectAdmin,
       text: textAdmin,
       html: htmlAdmin,
-      reply_to: email || undefined,
+      replyTo: email || undefined, // ✅ correct Resend field
     });
 
-    // ---------- CUSTOMER EMAIL (receipt + ToS) ----------
+    if (adminError) {
+      console.error("Resend admin error:", adminError);
+      return { statusCode: 502, body: JSON.stringify({ error: "Failed to send admin email", details: adminError }) };
+    }
+
+    // ---------- CUSTOMER EMAIL ----------
     if (email) {
       const subjectCustomer = `Your Ni Bin Guy booking & Terms confirmation (v${termsVersion})`;
 
@@ -296,14 +290,19 @@ We’ll be in touch to confirm your schedule.`;
         ${tosHtmlBlock(termsVersion, termsTimestamp)}
       `;
 
-      await resend.emails.send({
+      const { error: custError } = await resend.emails.send({
         from: FROM_DEFAULT,
         to: email,
         subject: subjectCustomer,
         text: textCustomer,
         html: htmlCustomer,
-        reply_to: TO_ADMIN,
+        replyTo: TO_ADMIN, // ✅ correct Resend field
       });
+
+      if (custError) {
+        console.error("Resend customer error:", custError);
+        return { statusCode: 502, body: JSON.stringify({ error: "Failed to send customer email", details: custError }) };
+      }
     }
 
     // ---------- OPTIONAL AUDIT LOG (Blobs) ----------
