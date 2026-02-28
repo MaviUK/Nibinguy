@@ -134,8 +134,16 @@ export default async function handler(req) {
 
   // Basic validation
   if (!name.trim() || !email.trim() || !phone.trim() || !message.trim()) {
-    return jsonResponse({ error: "All fields are required." }, 400);
-  }
+  return jsonResponse({ error: "All fields are required." }, 400);
+}
+
+if (!/^[0-9]{11}$/.test(phone)) {
+  return jsonResponse({ error: "Phone number must be exactly 11 digits." }, 400);
+}
+
+if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  return jsonResponse({ error: "Invalid email address format." }, 400);
+}
 
   const subject = `New Contact Message from ${name.trim()}`;
 
