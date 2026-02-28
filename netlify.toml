@@ -19,12 +19,19 @@
         https://maps.googleapis.com
         https://maps.gstatic.com;
 
-      connect-src 'self' https:
+      connect-src 'self' https: wss:
         https://maps.googleapis.com
         https://maps.gstatic.com
-        https://sqgee.com;
+        https://sqgee.com
+        https://*.sqgee.com;
 
-      frame-src 'self' https:;
+      frame-src 'self' https:
+        https://sqgee.com
+        https://*.sqgee.com;
+
+      child-src 'self' https:
+        https://sqgee.com
+        https://*.sqgee.com;
     """
 
     X-Frame-Options = "DENY"
