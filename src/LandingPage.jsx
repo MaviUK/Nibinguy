@@ -1079,7 +1079,7 @@ function ContactForm({ onClose }) {
         setCPhone("");
         setCMessage("");
       } else {
-        alert("Failed to send your message.");
+        alert("There was a problem sending your request.  Please contact us at info@nibing.uy / 07555178484");
       }
     } catch (e) {
       console.error(e);
