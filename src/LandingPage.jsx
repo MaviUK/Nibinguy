@@ -3,7 +3,6 @@ import { useLiveCounters } from "./data/statsPlan";
 import TenSecondChallenge from "./TenSecondChallenge.jsx";
 import BinCheckerModal from "./BinCheckerModal.jsx";
 
-
 /**
  * Ni Bin Guy — Landing Page
  * - WhatsApp + Email booking
@@ -22,6 +21,10 @@ import BinCheckerModal from "./BinCheckerModal.jsx";
  * - Canvas snowfall (constant, natural)
  * - Snow accumulates at the bottom
  * - On/Off toggle + persisted in localStorage
+ *
+ * UPDATED (reCAPTCHA v3):
+ * - Dynamically inject reCAPTCHA v3 script on this page
+ * - Include recaptchaToken + action in booking email + contact email payloads
  */
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -71,7 +74,6 @@ const TERMS_BODY = `We keep our Terms of Service simple and transparent. By book
 • You consent to us storing your details and contacting you about your service.
 • Text reminders are a courtesy; you’re responsible for knowing your schedule.`;
 
-
 // Load Google Places once
 function loadGooglePlaces(apiKey) {
   return new Promise((resolve, reject) => {
@@ -90,6 +92,62 @@ function loadGooglePlaces(apiKey) {
     s.onload = () => resolve(window.google);
     s.onerror = reject;
     document.head.appendChild(s);
+  });
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   reCAPTCHA v3 (dynamic inject + token helper)
+   ──────────────────────────────────────────────────────────────────────────── */
+function loadRecaptchaV3(siteKey) {
+  return new Promise((resolve, reject) => {
+    if (!siteKey) return reject(new Error("Missing VITE_RECAPTCHA_SITE_KEY"));
+
+    // already available
+    if (window.grecaptcha?.execute) return resolve(window.grecaptcha);
+
+    // script already injected
+    const existing = document.getElementById("recaptcha-script");
+    if (existing) {
+      existing.addEventListener("load", () => resolve(window.grecaptcha));
+      existing.addEventListener("error", reject);
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.id = "recaptcha-script";
+    script.src = `https://www.google.com/recaptcha/api.js?render=${siteKey}`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve(window.grecaptcha);
+    script.onerror = reject;
+
+    document.head.appendChild(script);
+  });
+}
+
+async function getRecaptchaToken(action) {
+  const siteKey = import.meta.env?.VITE_RECAPTCHA_SITE_KEY;
+
+  try {
+    await loadRecaptchaV3(siteKey);
+  } catch (e) {
+    console.warn("reCAPTCHA failed to load:", e);
+    return null;
+  }
+
+  if (!window.grecaptcha?.execute) return null;
+
+  return new Promise((resolve) => {
+    // ready() is the safest way to ensure execute works
+    window.grecaptcha.ready(async () => {
+      try {
+        const token = await window.grecaptcha.execute(siteKey, { action });
+        resolve(token);
+      } catch (e) {
+        console.warn("reCAPTCHA execute failed:", e);
+        resolve(null);
+      }
+    });
   });
 }
 
@@ -225,7 +283,7 @@ function SnowCanvas({ enabled = true }) {
     let bank = [];
     let bankStep = 3;
     let maxBankRise = 150; // how high the buildup can get
-    let baseBank = 18;     // starting drift height
+    let baseBank = 18; // starting drift height
 
     // Wind
     let wind = 0;
@@ -292,7 +350,7 @@ function SnowCanvas({ enabled = true }) {
         bank[idx] = Math.min(cap, bank[idx] + v);
       };
 
-      addTo(i, amount * 0.60);
+      addTo(i, amount * 0.6);
       addTo(i - 1, amount * 0.26);
       addTo(i + 1, amount * 0.26);
       addTo(i - 2, amount * 0.12);
@@ -381,7 +439,7 @@ function SnowCanvas({ enabled = true }) {
 
         if (f.y + f.r >= floorY) {
           // Deposit: larger flakes add slightly more
-          const deposit = Math.min(1.55, 0.40 + f.r * 0.42);
+          const deposit = Math.min(1.55, 0.4 + f.r * 0.42);
           depositAt(f.x, deposit);
           flakes[i] = newFlake(false);
           continue;
@@ -582,10 +640,7 @@ function BookingForm({ onClose }) {
     setDiscountStatus(validateCodeAgainstSelection(bins, discountCode));
   }, [bins, discountCode]);
 
-  const missingFields = useMemo(
-    () => !name || !email || !address || !phone || bins.some((b) => !b.type),
-    [name, email, address, phone, bins]
-  );
+  const missingFields = useMemo(() => !name || !email || !address || !phone || bins.some((b) => !b.type), [name, email, address, phone, bins]);
 
   const TOS_PREFIX = useMemo(() => `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION})`, []);
 
@@ -653,11 +708,7 @@ function BookingForm({ onClose }) {
   const buildPricingSummary = () => {
     const code = normalizeCode(discountCode);
     const codeLine =
-      code && discountStatus.state === "valid"
-        ? `Discount Code: ${code} (applied)`
-        : code
-        ? `Discount Code: ${code} (not applied)`
-        : `Discount Code: None`;
+      code && discountStatus.state === "valid" ? `Discount Code: ${code} (applied)` : code ? `Discount Code: ${code} (not applied)` : `Discount Code: None`;
 
     return `${codeLine}%0A` + `Subtotal: £${money(pricing.subtotal)}%0A` + `Total: £${money(pricing.total)}`;
   };
@@ -729,6 +780,14 @@ function BookingForm({ onClose }) {
       return;
     }
 
+    // ✅ reCAPTCHA token (v3)
+    const recaptchaAction = "booking_submit";
+    const recaptchaToken = await getRecaptchaToken(recaptchaAction);
+    if (!recaptchaToken) {
+      alert("Anti-bot check not ready. Please try again in a moment.");
+      return;
+    }
+
     const loc = selectedPlaceRef.current?.geometry?.location;
     const lat = loc ? loc.lat() : null;
     const lng = loc ? loc.lng() : null;
@@ -751,6 +810,8 @@ function BookingForm({ onClose }) {
           termsAccepted: true,
           termsVersion: TERMS_VERSION,
           termsAcceptanceText: TOS_PREFIX,
+          recaptchaToken,
+          recaptchaAction,
         }),
       });
 
@@ -789,11 +850,7 @@ function BookingForm({ onClose }) {
 
   return (
     <div className="p-6 space-y-4">
-      <button
-        onClick={onClose}
-        className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10"
-        aria-label="Close booking"
-      >
+      <button onClick={onClose} className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10" aria-label="Close booking">
         &times;
       </button>
 
@@ -801,23 +858,13 @@ function BookingForm({ onClose }) {
         Book a Bin Clean
       </h2>
 
-      <input
-        type="text"
-        placeholder="Your Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2"
-      />
+      <input type="text" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
 
       {bins.map((bin, index) => {
         return (
           <div key={index} className="space-y-2 border-b border-gray-200 pb-4 mb-4">
             <div className="flex gap-4">
-              <select
-                value={bin.type}
-                onChange={(e) => handleBinChange(index, "type", e.target.value)}
-                className="w-2/3 border border-gray-300 rounded-lg px-4 py-2"
-              >
+              <select value={bin.type} onChange={(e) => handleBinChange(index, "type", e.target.value)} className="w-2/3 border border-gray-300 rounded-lg px-4 py-2">
                 <option value="">Select Bin</option>
                 <option value="Black Bin">Black</option>
                 <option value="Brown Bin">Brown</option>
@@ -825,20 +872,10 @@ function BookingForm({ onClose }) {
                 <option value="Blue Bin">Blue</option>
               </select>
 
-              <input
-                type="number"
-                min="1"
-                value={bin.count}
-                onChange={(e) => handleBinChange(index, "count", e.target.value)}
-                className="w-1/3 border border-gray-300 rounded-lg px-4 py-2"
-              />
+              <input type="number" min="1" value={bin.count} onChange={(e) => handleBinChange(index, "count", e.target.value)} className="w-1/3 border border-gray-300 rounded-lg px-4 py-2" />
             </div>
 
-            <select
-              value={bin.planId}
-              onChange={(e) => handleBinChange(index, "planId", e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2"
-            >
+            <select value={bin.planId} onChange={(e) => handleBinChange(index, "planId", e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2">
               {PLANS.map((p) => {
                 const { unitPrice, discounted } = computeDiscountedUnitPrice(p.price, p.id, discountCode);
                 const label = `${p.label} (£${money(unitPrice)})${discounted ? " ✓" : ""}`;
@@ -866,20 +903,10 @@ function BookingForm({ onClose }) {
 
       <div className="mt-2">
         <label className="block text-sm font-semibold text-gray-700 mb-1">Discount Code (optional)</label>
-        <input
-          type="text"
-          placeholder="Enter code"
-          value={discountCode}
-          onChange={(e) => setDiscountCode(e.target.value)}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2"
-        />
+        <input type="text" placeholder="Enter code" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
 
-        {discountStatus.state === "valid" && (
-          <p className="text-sm mt-2 text-green-700 font-semibold">{discountStatus.message}</p>
-        )}
-        {discountStatus.state === "invalid" && (
-          <p className="text-sm mt-2 text-red-600 font-semibold">{discountStatus.message}</p>
-        )}
+        {discountStatus.state === "valid" && <p className="text-sm mt-2 text-green-700 font-semibold">{discountStatus.message}</p>}
+        {discountStatus.state === "invalid" && <p className="text-sm mt-2 text-red-600 font-semibold">{discountStatus.message}</p>}
       </div>
 
       <div className="mt-2 p-3 rounded-lg border border-gray-200 bg-gray-50">
@@ -926,20 +953,8 @@ function BookingForm({ onClose }) {
       />
       <p className="text-xs text-gray-500 -mt-2">Tip: pick from suggestions or just type your full address.</p>
 
-      <input
-        type="tel"
-        placeholder="Contact Number"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
-      />
-      <input
-        type="email"
-        placeholder="Email Address"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2"
-      />
+      <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
+      <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
 
       <div className="mt-4 p-3 rounded-lg border border-gray-300 bg-gray-50">
         <div className="flex items-center justify-between gap-3">
@@ -960,35 +975,18 @@ function BookingForm({ onClose }) {
           <span className="text-[10px] text-gray-500">v{TERMS_VERSION}</span>
         </div>
         <div className="mt-3 flex items-start gap-2">
-          <input
-            id="agree"
-            type="checkbox"
-            className="mt-1"
-            checked={agreeToTerms}
-            disabled={!canToggleAgree}
-            onChange={(e) => setAgreeToTerms(e.target.checked)}
-          />
+          <input id="agree" type="checkbox" className="mt-1" checked={agreeToTerms} disabled={!canToggleAgree} onChange={(e) => setAgreeToTerms(e.target.checked)} />
           <label htmlFor="agree" className="text-sm text-gray-800">
             I’ve read and agree to the Terms of Service.
-            {!canToggleAgree && (
-              <span className="block text-xs text-gray-500">(Open the Terms and scroll to the bottom to enable this.)</span>
-            )}
+            {!canToggleAgree && <span className="block text-xs text-gray-500">(Open the Terms and scroll to the bottom to enable this.)</span>}
           </label>
         </div>
       </div>
 
-      <button
-        onClick={handleSendWhatsApp}
-        className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
-        disabled={!agreeToTerms}
-      >
+      <button onClick={handleSendWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
         Send via WhatsApp
       </button>
-      <button
-        onClick={handleSendEmail}
-        className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60"
-        disabled={!agreeToTerms}
-      >
+      <button onClick={handleSendEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>
         Send via Email
       </button>
 
@@ -1051,11 +1049,27 @@ function ContactForm({ onClose }) {
       alert("Please complete all fields before sending.");
       return;
     }
+
+    // ✅ reCAPTCHA token (v3)
+    const recaptchaAction = "contact_submit";
+    const recaptchaToken = await getRecaptchaToken(recaptchaAction);
+    if (!recaptchaToken) {
+      alert("Anti-bot check not ready. Please try again in a moment.");
+      return;
+    }
+
     try {
       const res = await fetch("/.netlify/functions/sendContactEmail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: cName, email: cEmail, phone: cPhone, message: cMessage }),
+        body: JSON.stringify({
+          name: cName,
+          email: cEmail,
+          phone: cPhone,
+          message: cMessage,
+          recaptchaToken,
+          recaptchaAction,
+        }),
       });
       if (res.ok) {
         alert("Your message has been sent!");
@@ -1075,11 +1089,7 @@ function ContactForm({ onClose }) {
 
   return (
     <div className="p-6 space-y-4">
-      <button
-        onClick={onClose}
-        className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10"
-        aria-label="Close contact"
-      >
+      <button onClick={onClose} className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10" aria-label="Close contact">
         &times;
       </button>
 
@@ -1087,14 +1097,13 @@ function ContactForm({ onClose }) {
         <h2 id="contact-title" className="text-2xl font-bold text-center">
           Contact Us
         </h2>
-        <button
-          onClick={handleCallClick}
-          className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none"
-          aria-label="Call us"
-          title="Call us"
-        >
+        <button onClick={handleCallClick} className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none" aria-label="Call us" title="Call us">
           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.684l1.1 3.3a1 1 0 01-.27 1.06l-1.6 1.6a16 16 0 007.18 7.18l1.6-1.6a1 1 0 011.06-.27l3.3 1.1a1 1 0 01.684.95V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3 5a2 2 0 012-2h2.28a1 1 0 01.95.684l1.1 3.3a1 1 0 01-.27 1.06l-1.6 1.6a16 16 0 007.18 7.18l1.6-1.6a1 1 0 011.06-.27l3.3 1.1a1 1 0 01.684.95V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+            />
           </svg>
         </button>
       </div>
@@ -1151,40 +1160,39 @@ function ChallengeModal({ open, onClose }) {
 function Hero({ onBook, onContact, onChallenge, onBinChecker }) {
   const { totalBinsCleaned, todaysArea, totalMonthlyCustomers } = useLiveCounters();
 
-// Soft-live counter (display only)
-const [displayTotal, setDisplayTotal] = useState(() => Number(totalBinsCleaned) || 0);
-const sessionAddsRef = useRef(0);
-const lastAddRef = useRef(0);
+  // Soft-live counter (display only)
+  const [displayTotal, setDisplayTotal] = useState(() => Number(totalBinsCleaned) || 0);
+  const sessionAddsRef = useRef(0);
+  const lastAddRef = useRef(0);
 
-// When the real total changes (e.g. refresh/new data), reset display base + session add cap
-useEffect(() => {
-  const base = Number(totalBinsCleaned) || 0;
-  setDisplayTotal(base);
-  sessionAddsRef.current = 0;
-  lastAddRef.current = Date.now();
-}, [totalBinsCleaned]);
+  // When the real total changes (e.g. refresh/new data), reset display base + session add cap
+  useEffect(() => {
+    const base = Number(totalBinsCleaned) || 0;
+    setDisplayTotal(base);
+    sessionAddsRef.current = 0;
+    lastAddRef.current = Date.now();
+  }, [totalBinsCleaned]);
 
-useEffect(() => {
-  // Tune these:
-  const EVERY_MS = 45000;   // add 1 every 45s
-  const MAX_ADDS = 4;       // cap to 4 per session so it never drifts too far
+  useEffect(() => {
+    // Tune these:
+    const EVERY_MS = 45000; // add 1 every 45s
+    const MAX_ADDS = 4; // cap to 4 per session so it never drifts too far
 
-  const tick = () => {
-    if (document.hidden) return; // pause when tab not visible
-    if (sessionAddsRef.current >= MAX_ADDS) return;
+    const tick = () => {
+      if (document.hidden) return; // pause when tab not visible
+      if (sessionAddsRef.current >= MAX_ADDS) return;
 
-    const now = Date.now();
-    if (now - lastAddRef.current < EVERY_MS) return;
+      const now = Date.now();
+      if (now - lastAddRef.current < EVERY_MS) return;
 
-    lastAddRef.current = now;
-    sessionAddsRef.current += 1;
-    setDisplayTotal((v) => v + 1);
-  };
+      lastAddRef.current = now;
+      sessionAddsRef.current += 1;
+      setDisplayTotal((v) => v + 1);
+    };
 
-  const interval = setInterval(tick, 1000); // check once per second
-  return () => clearInterval(interval);
-}, []);
-
+    const interval = setInterval(tick, 1000); // check once per second
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <section className="relative overflow-hidden flex flex-col items-center justify-center text-center pt-10 pb-20 px-4 bg-black">
@@ -1192,40 +1200,23 @@ useEffect(() => {
       <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-b from-transparent via-[#121212] to-[#18181b] z-10 pointer-events-none" />
 
       <div className="relative z-20 flex flex-col items-center gap-4">
-        <img
-          src="logo.png"
-          alt="Ni Bin Guy Logo"
-          className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg"
-        />
+        <img src="logo.png" alt="Ni Bin Guy Logo" className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg" />
 
         {/* Stats under logo */}
         <div className="w-full max-w-4xl mt-2 grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-4">
-
           <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:p-5 shadow-lg text-center">
-            <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">
-              Total Bins Cleaned
-            </div>
-            <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">
-              {Number(displayTotal).toLocaleString()}
-            </div>
+            <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">Total Bins Cleaned</div>
+            <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">{Number(displayTotal).toLocaleString()}</div>
           </div>
 
           <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:p-5 shadow-lg text-center">
-            <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">
-              Today’s Area
-            </div>
-            <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">
-              {todaysArea}
-            </div>
+            <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">Today’s Area</div>
+            <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">{todaysArea}</div>
           </div>
 
           <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:p-5 shadow-lg text-center">
-            <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">
-              Monthly Customers
-            </div>
-           <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">
-              {Number(totalMonthlyCustomers).toLocaleString()}
-            </div>
+            <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">Monthly Customers</div>
+            <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">{Number(totalMonthlyCustomers).toLocaleString()}</div>
           </div>
         </div>
 
@@ -1235,22 +1226,15 @@ useEffect(() => {
 
         <p className="text-lg md:text-xl max-w-xl mt-4 text-center">
           Professional wheelie bin cleaning at your home from <span className="text-green-400 font-bold text-xl">£5</span>, across{" "}
-          <span className="text-green-400">County Down</span>. Sparkling clean &amp;
-          fresh smelling bins without any drama.
+          <span className="text-green-400">County Down</span>. Sparkling clean &amp; fresh smelling bins without any drama.
         </p>
 
         <div className="mt-6 flex flex-col sm:flex-row gap-4">
-          <button
-            onClick={onBook}
-            className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
-          >
+          <button onClick={onBook} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
             Book a Clean
           </button>
 
-          <button
-            onClick={onContact}
-            className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
-          >
+          <button onClick={onContact} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
             Contact Us
           </button>
 
@@ -1261,27 +1245,18 @@ useEffect(() => {
             Free Bin Clean
           </button>
 
-          <a
-            href="#customer-portal"
-            className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center"
-          >
+          <a href="#customer-portal" className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition text-center">
             Customer Portal
           </a>
 
-           <button
-  onClick={onBinChecker}
-  className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
->
-  Bin Day Checker
-</button>
-
-           
+          <button onClick={onBinChecker} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
+            Bin Day Checker
+          </button>
         </div>
       </div>
     </section>
   );
 }
-
 
 function WhatWeDo() {
   return (
@@ -1313,51 +1288,35 @@ function TheProcess({ onBook }) {
         <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
           <h3 className="text-xl font-bold">The Booking Process</h3>
           <ol className="mt-6 space-y-5">
-            {[
-              "Complete the quick booking form.",
-              "We’ll reply with your price and the next clean date (right after your bin collection).",
-              "Approve the quote to secure your spot in the schedule.",
-              "You’ll receive an email to set up your payment method.",
-            ].map((text, i) => (
-              <li key={i} className="flex gap-4">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">
-                  {i + 1}
-                </span>
-                <p>{text}</p>
-              </li>
-            ))}
+            {["Complete the quick booking form.", "We’ll reply with your price and the next clean date (right after your bin collection).", "Approve the quote to secure your spot in the schedule.", "You’ll receive an email to set up your payment method."].map(
+              (text, i) => (
+                <li key={i} className="flex gap-4">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">{i + 1}</span>
+                  <p>{text}</p>
+                </li>
+              )
+            )}
           </ol>
         </div>
         <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
           <h3 className="text-xl font-bold">The Cleaning Process</h3>
           <ol className="mt-6 space-y-5">
-            {[
-              "We remove any leftover waste the bin crew missed.",
-              "Thorough wash and rinse — inside and out.",
-              "We dry the interior to prevent residue.",
-              "Sanitise and deodorise for a fresh finish.",
-              "Your bin is returned clean and fresh to its usual spot.",
-            ].map((text, i) => (
-              <li key={i} className="flex gap-4">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">
-                  {i + 1}
-                </span>
-                <p>{text}</p>
-              </li>
-            ))}
+            {["We remove any leftover waste the bin crew missed.", "Thorough wash and rinse — inside and out.", "We dry the interior to prevent residue.", "Sanitise and deodorise for a fresh finish.", "Your bin is returned clean and fresh to its usual spot."].map(
+              (text, i) => (
+                <li key={i} className="flex gap-4">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-green-400/50 bg-green-500/10 text-sm font-semibold text-green-300">{i + 1}</span>
+                  <p>{text}</p>
+                </li>
+              )
+            )}
           </ol>
         </div>
       </div>
-     <div className="mt-12 text-center">
-  <button
-    type="button"
-    onClick={onBook}
-    className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition"
-  >
-    Book a Clean
-  </button>
-</div>
-
+      <div className="mt-12 text-center">
+        <button type="button" onClick={onBook} className="bg-green-500 hover:bg-green-600 text-black font-bold py-3 px-6 rounded-xl shadow-lg transition">
+          Book a Clean
+        </button>
+      </div>
     </section>
   );
 }
@@ -1442,18 +1401,22 @@ export default function NiBinGuyLandingPage() {
   const [showChallenge, setShowChallenge] = useState(false);
   const [showBinChecker, setShowBinChecker] = useState(false);
 
-
   // Snow toggle (persisted)
   const [snowEnabled, setSnowEnabled] = useState(false);
 
-useEffect(() => {
-  try {
-    // Always force snow off (ignores saved setting)
-    localStorage.setItem(SNOW_STORAGE_KEY, "0");
-    setSnowEnabled(false);
-  } catch {}
-}, []);
-   
+  // ✅ Inject reCAPTCHA once for this page
+  useEffect(() => {
+    const siteKey = import.meta.env?.VITE_RECAPTCHA_SITE_KEY;
+    loadRecaptchaV3(siteKey).catch((e) => console.warn("reCAPTCHA failed to load:", e));
+  }, []);
+
+  useEffect(() => {
+    try {
+      // Always force snow off (ignores saved setting)
+      localStorage.setItem(SNOW_STORAGE_KEY, "0");
+      setSnowEnabled(false);
+    } catch {}
+  }, []);
 
   const toggleSnow = () => {
     setSnowEnabled((prev) => {
@@ -1470,56 +1433,30 @@ useEffect(() => {
       {/* Snow overlay */}
       <SnowCanvas enabled={snowEnabled} />
 
+      <Hero onBook={() => setShowBooking(true)} onContact={() => setShowContact(true)} onChallenge={() => setShowChallenge(true)} onBinChecker={() => setShowBinChecker(true)} />
 
-    <Hero
-  onBook={() => setShowBooking(true)}
-  onContact={() => setShowContact(true)}
-  onChallenge={() => setShowChallenge(true)}
-  onBinChecker={() => setShowBinChecker(true)}
-/>
+      {/* Booking Modal */}
+      <Modal open={showBooking} onClose={() => setShowBooking(false)} maxWidth="max-w-md" labelledBy="booking-title">
+        <BookingForm onClose={() => setShowBooking(false)} />
+      </Modal>
 
-{/* Booking Modal */}
-<Modal
-  open={showBooking}
-  onClose={() => setShowBooking(false)}
-  maxWidth="max-w-md"
-  labelledBy="booking-title"
->
-  <BookingForm onClose={() => setShowBooking(false)} />
-</Modal>
+      {/* Contact Modal */}
+      <Modal open={showContact} onClose={() => setShowContact(false)} maxWidth="max-w-md" labelledBy="contact-title">
+        <ContactForm onClose={() => setShowContact(false)} />
+      </Modal>
 
-{/* Contact Modal */}
-<Modal
-  open={showContact}
-  onClose={() => setShowContact(false)}
-  maxWidth="max-w-md"
-  labelledBy="contact-title"
->
-  <ContactForm onClose={() => setShowContact(false)} />
-</Modal>
+      <Modal open={showBinChecker} onClose={() => setShowBinChecker(false)} maxWidth="max-w-md" labelledBy="bin-checker-title">
+        <BinCheckerModal onClose={() => setShowBinChecker(false)} />
+      </Modal>
 
- <Modal
-  open={showBinChecker}
-  onClose={() => setShowBinChecker(false)}
-  maxWidth="max-w-md"
-  labelledBy="bin-checker-title"
->
-  <BinCheckerModal onClose={() => setShowBinChecker(false)} />
-</Modal>
-      
+      {/* 10 Second Challenge Modal */}
+      <ChallengeModal open={showChallenge} onClose={() => setShowChallenge(false)} />
 
-{/* 10 Second Challenge Modal */}
-<ChallengeModal
-  open={showChallenge}
-  onClose={() => setShowChallenge(false)}
-/>
-
-<WhatWeDo />
-<TheProcess onBook={() => setShowBooking(true)} />
-<BinsWeClean />
-<WhyCleanYourBin />
-<WhyNiBinGuy />
-
+      <WhatWeDo />
+      <TheProcess onBook={() => setShowBooking(true)} />
+      <BinsWeClean />
+      <WhyCleanYourBin />
+      <WhyNiBinGuy />
     </div>
   );
 }
