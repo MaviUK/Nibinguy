@@ -107,7 +107,6 @@ exports.handler = async (event) => {
       name="", email="", phone="", address="",
       bins=[], source="whatsapp",
 
-      // NEW: discount + pricing from UI
       discountCode = null,
       pricing = null,
 
@@ -117,10 +116,8 @@ exports.handler = async (event) => {
       termsTimestamp = new Date().toISOString(),
     } = JSON.parse(event.body || "{}");
 
-    const filteredBins = (Array.isArray(bins) ? bins : [])
-      .filter(b => b && b.type);
+    const filteredBins = (Array.isArray(bins) ? bins : []).filter(b => b && b.type);
 
-    // Support both old `frequency` and new `planId`
     const binsText = filteredBins
       .map(b => {
         const planOrFreq = b.planId ? `plan: ${b.planId}` : (b.frequency || "");
@@ -129,11 +126,10 @@ exports.handler = async (event) => {
       .join("\n") || "(none provided)";
 
     const binsHtml = escapeHtml(binsText).replace(/\n/g,"<br>");
-
     const pricingBlocks = buildPricingBlocks(pricing, discountCode);
 
     // ADMIN email
-    await resend.emails.send({
+    const { error: adminError } = await resend.emails.send({
       from: FROM_DEFAULT,
       to: TO_ADMIN,
       subject: `🗑️ New booking via WhatsApp (ToS receipt)`,
@@ -171,12 +167,18 @@ Source: ${source}`,
         <p><em>${escapeHtml(termsAcceptanceText)}</em></p>
         <p>Confirmed: ${escapeHtml(termsTimestamp)}</p>
         <p style="color:#6b7280">Source: ${escapeHtml(source)}</p>
-      `
+      `,
+      replyTo: email || undefined,
     });
 
-    // CUSTOMER email (if we have an email)
+    if (adminError) {
+      console.error("Resend admin error:", adminError);
+      return { statusCode: 502, body: JSON.stringify({ error: "Failed to send admin email", details: adminError }) };
+    }
+
+    // CUSTOMER email
     if (email) {
-      await resend.emails.send({
+      const { error: custError } = await resend.emails.send({
         from: FROM_DEFAULT,
         to: email,
         subject: `Your Ni Bin Guy booking, pricing & Terms confirmation (v${termsVersion})`,
@@ -199,3 +201,45 @@ Confirmed: ${termsTimestamp}
 
 We’ll be in touch to confirm your schedule.`,
         html: `
+          <h2>Thanks, ${escapeHtml(name)} — we’ve received your WhatsApp booking</h2>
+          <p><strong>Address:</strong> ${escapeHtml(address)}</p>
+          <p><strong>Bins:</strong><br>${binsHtml}</p>
+
+          ${pricingBlocks.html}
+
+          <h3>Terms confirmation</h3>
+          <p>Version: <strong>${escapeHtml(termsVersion)}</strong><br>
+             Confirmed: <strong>${escapeHtml(termsTimestamp)}</strong></p>
+          <p><em>${escapeHtml(termsAcceptanceText)}</em></p>
+        `,
+        replyTo: TO_ADMIN,
+      });
+
+      if (custError) {
+        console.error("Resend customer error:", custError);
+        return { statusCode: 502, body: JSON.stringify({ error: "Failed to send customer email", details: custError }) };
+      }
+    }
+
+    // Optional: log to Blobs
+    if (getStoreSafe) {
+      try {
+        const store = getStoreSafe("tos-confirmations");
+        const key = `${termsTimestamp}__${(email || phone || "unknown").replace(/[^a-z0-9@.+_-]/gi,"_")}.json`;
+        await store.setJSON(key, {
+          channel: "whatsapp",
+          name, email, phone, address, bins,
+          discountCode: discountCode || null,
+          pricing: pricing || null,
+          termsAccepted, termsVersion, termsAcceptanceText, termsTimestamp,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (e) { console.warn("Blobs log skipped:", e.message); }
+    }
+
+    return { statusCode: 200, body: JSON.stringify({ ok: true }) };
+  } catch (e) {
+    console.error("sendTosReceipt error:", e);
+    return { statusCode: 500, body: JSON.stringify({ error: "Failed" }) };
+  }
+};
