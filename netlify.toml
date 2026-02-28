@@ -1,9 +1,11 @@
 [[headers]]
   for = "/*"
   [headers.values]
-
-    # ✅ HSTS (forces HTTPS, includes subdomains)
     Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
     Content-Security-Policy = """
       default-src 'self';
@@ -42,17 +44,7 @@
         https://*.sqg.ee
         https://*.sqgee.com
         https://sqgee.com;
-
-      child-src 'self' https:
-        https://*.sqg.ee
-        https://*.sqgee.com
-        https://sqgee.com;
     """
-
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
 
 
 [build]
