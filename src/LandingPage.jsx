@@ -1014,6 +1014,19 @@ function ContactForm({ onClose }) {
   const [cPhone, setCPhone] = useState("");
   const [cMessage, setCMessage] = useState("");
 
+  const [errors, setErrors] = useState({ email: "", phone: "" });
+
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
+  const isValidPhone11 = (phone) => /^[0-9]{11}$/.test(String(phone).trim());
+
+  const resetForm = () => {
+    setCName("");
+    setCEmail("");
+    setCPhone("");
+    setCMessage("");
+    setErrors({ email: "", phone: "" });
+  };
+
   const handleCallClick = async () => {
     const isMobile = /Android|iPhone|iPad|iPod|Windows Phone|Mobi/i.test(navigator.userAgent);
     if (isMobile) {
@@ -1028,27 +1041,60 @@ function ContactForm({ onClose }) {
     }
   };
 
-  const missing = useMemo(() => !cName || !cEmail || !cPhone || !cMessage, [cName, cEmail, cPhone, cMessage]);
+  const missing = useMemo(() => !cName.trim() || !cEmail.trim() || !cPhone.trim() || !cMessage.trim(), [cName, cEmail, cPhone, cMessage]);
 
-  const handleWhatsApp = () => {
+  // Live validate as they type (optional but nice)
+  useEffect(() => {
+    setErrors((prev) => ({
+      ...prev,
+      email: cEmail && !isValidEmail(cEmail) ? "Please enter a valid email address." : "",
+    }));
+  }, [cEmail]);
+
+  useEffect(() => {
+    setErrors((prev) => ({
+      ...prev,
+      phone: cPhone && !isValidPhone11(cPhone) ? "Contact number must be exactly 11 digits." : "",
+    }));
+  }, [cPhone]);
+
+  const validateOrAlert = () => {
     if (missing) {
       alert("Please complete all fields before sending.");
-      return;
+      return false;
     }
-    const msg = `Hi, I'm ${encodeURIComponent(cName)}.%0APhone: ${encodeURIComponent(cPhone)}%0AEmail: ${encodeURIComponent(cEmail)}%0A%0AMessage:%0A${encodeURIComponent(cMessage)}`;
+
+    const nextErrors = {
+      email: isValidEmail(cEmail) ? "" : "Please enter a valid email address.",
+      phone: isValidPhone11(cPhone) ? "" : "Contact number must be exactly 11 digits (numbers only).",
+    };
+
+    setErrors(nextErrors);
+
+    if (nextErrors.email || nextErrors.phone) {
+      alert(nextErrors.phone || nextErrors.email);
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleWhatsApp = () => {
+    if (!validateOrAlert()) return;
+
+    const msg =
+      `Hi, I'm ${encodeURIComponent(cName)}.` +
+      `%0APhone: ${encodeURIComponent(cPhone)}` +
+      `%0AEmail: ${encodeURIComponent(cEmail)}` +
+      `%0A%0AMessage:%0A${encodeURIComponent(cMessage)}`;
+
     window.open(`https://wa.me/${PHONE_E164}?text=${msg}`, "_blank");
     onClose?.();
-    setCName("");
-    setCEmail("");
-    setCPhone("");
-    setCMessage("");
+    resetForm();
   };
 
   const handleEmail = async () => {
-    if (missing) {
-      alert("Please complete all fields before sending.");
-      return;
-    }
+    if (!validateOrAlert()) return;
 
     // ✅ reCAPTCHA token (v3)
     const recaptchaAction = "contact_submit";
@@ -1063,23 +1109,21 @@ function ContactForm({ onClose }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: cName,
-          email: cEmail,
-          phone: cPhone,
-          message: cMessage,
+          name: cName.trim(),
+          email: cEmail.trim(),
+          phone: cPhone.trim(),
+          message: cMessage.trim(),
           recaptchaToken,
           recaptchaAction,
         }),
       });
+
       if (res.ok) {
         alert("Your message has been sent!");
         onClose?.();
-        setCName("");
-        setCEmail("");
-        setCPhone("");
-        setCMessage("");
+        resetForm();
       } else {
-        alert("There was a problem sending your request.  Please contact us at info@nibing.uy / 07555178484");
+        alert("There was a problem sending your request. Please contact us at info@nibing.uy / 07555178484");
       }
     } catch (e) {
       console.error(e);
@@ -1089,7 +1133,11 @@ function ContactForm({ onClose }) {
 
   return (
     <div className="p-6 space-y-4">
-      <button onClick={onClose} className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10" aria-label="Close contact">
+      <button
+        onClick={onClose}
+        className="absolute top-3 right-4 text-gray-500 hover:text-red-500 text-2xl z-10"
+        aria-label="Close contact"
+      >
         &times;
       </button>
 
@@ -1097,7 +1145,12 @@ function ContactForm({ onClose }) {
         <h2 id="contact-title" className="text-2xl font-bold text-center">
           Contact Us
         </h2>
-        <button onClick={handleCallClick} className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none" aria-label="Call us" title="Call us">
+        <button
+          onClick={handleCallClick}
+          className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none"
+          aria-label="Call us"
+          title="Call us"
+        >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-green-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path
               strokeLinecap="round"
@@ -1108,17 +1161,58 @@ function ContactForm({ onClose }) {
         </button>
       </div>
 
-      <input type="text" placeholder="Your Name" value={cName} onChange={(e) => setCName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
-      <input type="tel" placeholder="Contact Number" value={cPhone} onChange={(e) => setCPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
-      <input type="email" placeholder="Email Address" value={cEmail} onChange={(e) => setCEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
-      <textarea placeholder="Your Message" value={cMessage} onChange={(e) => setCMessage(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 h-28 resize-y" />
+      <input
+        type="text"
+        placeholder="Your Name"
+        value={cName}
+        onChange={(e) => setCName(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-4 py-2"
+      />
+
+      <div className="space-y-1">
+        <input
+          type="tel"
+          placeholder="Contact Number (11 digits)"
+          value={cPhone}
+          maxLength={11}
+          inputMode="numeric"
+          pattern="[0-9]{11}"
+          onChange={(e) => {
+            // digits only, no spaces/symbols
+            const onlyDigits = e.target.value.replace(/\D/g, "").slice(0, 11);
+            setCPhone(onlyDigits);
+          }}
+          className={`w-full border rounded-lg px-4 py-2 ${errors.phone ? "border-red-500" : "border-gray-300"}`}
+        />
+        {errors.phone ? <p className="text-xs text-red-600">{errors.phone}</p> : null}
+      </div>
+
+      <div className="space-y-1">
+        <input
+          type="email"
+          placeholder="Email Address"
+          value={cEmail}
+          onChange={(e) => setCEmail(e.target.value)}
+          className={`w-full border rounded-lg px-4 py-2 ${errors.email ? "border-red-500" : "border-gray-300"}`}
+        />
+        {errors.email ? <p className="text-xs text-red-600">{errors.email}</p> : null}
+      </div>
+
+      <textarea
+        placeholder="Your Message"
+        value={cMessage}
+        onChange={(e) => setCMessage(e.target.value)}
+        className="w-full border border-gray-300 rounded-lg px-4 py-2 h-28 resize-y"
+      />
 
       <button onClick={handleWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full">
         Send via WhatsApp
       </button>
+
       <button onClick={handleEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full">
         Send via Email
       </button>
+
       <p className="text-center text-sm text-gray-600 mt-2">Prefer to call? Tap the phone icon.</p>
     </div>
   );
