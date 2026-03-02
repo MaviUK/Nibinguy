@@ -18,3 +18,32 @@
   margin: 0 auto;
   max-width: 800px;
 }
+
+/* ✅ Restore sane defaults + accessibility inside the portal */
+.squeegee-portal-wrapper,
+.squeegee-portal-wrapper * {
+  box-sizing: border-box;
+}
+
+/* Ensure form controls have visible boundaries */
+.squeegee-portal-wrapper input,
+.squeegee-portal-wrapper select,
+.squeegee-portal-wrapper textarea,
+.squeegee-portal-wrapper button {
+  border: 1px solid rgba(0,0,0,0.45); /* strong enough on white for 3:1 boundary */
+}
+
+/* Make focus clearly visible (keyboard accessibility + often fixes audits) */
+.squeegee-portal-wrapper a:focus-visible,
+.squeegee-portal-wrapper button:focus-visible,
+.squeegee-portal-wrapper input:focus-visible,
+.squeegee-portal-wrapper select:focus-visible,
+.squeegee-portal-wrapper textarea:focus-visible {
+  outline: 3px solid rgba(0,0,0,0.85);
+  outline-offset: 3px;
+}
+
+/* Optional: improve hover/active visibility for buttons */
+.squeegee-portal-wrapper button:hover {
+  filter: brightness(0.95);
+}
