@@ -1298,17 +1298,17 @@ function Hero({ onBook, onContact, onChallenge, onBinChecker }) {
 
         {/* Stats under logo */}
         <div className="w-full max-w-4xl mt-2 grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-4">
-          <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:p-5 shadow-lg text-center">
+          <div className="rounded-xl bg-white/5 border border-white/30 p-3 sm:p-5 shadow-lg text-center">
             <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">Total Bins Cleaned</div>
             <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">{Number(displayTotal).toLocaleString()}</div>
           </div>
 
-          <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:p-5 shadow-lg text-center">
+          <div className="rounded-xl bg-white/5 border border-white/30 p-3 sm:p-5 shadow-lg text-center">
             <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">Today’s Area</div>
             <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">{todaysArea}</div>
           </div>
 
-          <div className="rounded-xl bg-white/5 border border-white/10 p-3 sm:p-5 shadow-lg text-center">
+          <div className="rounded-xl bg-white/5 border border-white/30 p-3 sm:p-5 shadow-lg text-center">
             <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">Monthly Customers</div>
             <div className="mt-1 sm:mt-2 text-xl sm:text-3xl font-extrabold text-white">{Number(totalMonthlyCustomers).toLocaleString()}</div>
           </div>
@@ -1379,7 +1379,7 @@ function TheProcess({ onBook }) {
     <section id="the-process" className="relative py-16 px-6 bg-[#18181b] text-white">
       <h2 className="text-3xl font-bold text-green-400 mb-10 text-center">The Process</h2>
       <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-        <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
+        <div className="rounded-2xl bg-zinc-800/70 border border-white/30 p-6">
           <h3 className="text-xl font-bold">The Booking Process</h3>
           <ol className="mt-6 space-y-5">
             {["Complete the quick booking form.", "We’ll reply with your price and the next clean date (right after your bin collection).", "Approve the quote to secure your spot in the schedule.", "You’ll receive an email to set up your payment method."].map(
@@ -1392,7 +1392,7 @@ function TheProcess({ onBook }) {
             )}
           </ol>
         </div>
-        <div className="rounded-2xl bg-zinc-800/70 border border-white/10 p-6">
+        <div className="rounded-2xl bg-zinc-800/70 border border-white/30 p-6">
           <h3 className="text-xl font-bold">The Cleaning Process</h3>
           <ol className="mt-6 space-y-5">
             {["We remove any leftover waste the bin crew missed.", "Thorough wash and rinse — inside and out.", "We dry the interior to prevent residue.", "Sanitise and deodorise for a fresh finish.", "Your bin is returned clean and fresh to its usual spot."].map(
