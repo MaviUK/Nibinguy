@@ -6,8 +6,8 @@
 
 .squeegee-portal-wrapper {
   all: revert;
-font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-color: #111;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: #111;
   display: block;
   width: 100%;
   min-height: 700px;
@@ -32,22 +32,17 @@ color: #111;
 .squeegee-portal-wrapper select,
 .squeegee-portal-wrapper textarea,
 .squeegee-portal-wrapper button {
-  border: 1px solid rgba(0,0,0,0.45); /* strong enough on white for 3:1 boundary */
+  border: 1px solid rgba(0, 0, 0, 0.45);
 }
 
-/* Make focus clearly visible (keyboard accessibility + often fixes audits) */
+/* Make focus clearly visible inside the portal */
 .squeegee-portal-wrapper a:focus-visible,
 .squeegee-portal-wrapper button:focus-visible,
 .squeegee-portal-wrapper input:focus-visible,
 .squeegee-portal-wrapper select:focus-visible,
 .squeegee-portal-wrapper textarea:focus-visible {
-  outline: 3px solid rgba(0,0,0,0.85);
+  outline: 3px solid rgba(0, 0, 0, 0.85);
   outline-offset: 3px;
-}
-
-/* Optional: improve hover/active visibility for buttons */
-.squeegee-portal-wrapper {
-  all: revert;
 }
 
 /* Skip link accessibility */
@@ -64,11 +59,29 @@ color: #111;
   transition: top 0.2s;
 }
 
-.skip-link:focus {
+.skip-link:focus,
+.skip-link:focus-visible {
   top: 10px;
 }
 
-:focus-visible {
+/* Global accessible focus indicators */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   outline: 3px solid #22c55e;
   outline-offset: 2px;
+}
+
+/* Global visible boundaries for form controls */
+input,
+select,
+textarea {
+  border-color: #6b7280;
+}
+
+/* Give buttons a defined boundary */
+button {
+  border: 1px solid transparent;
 }
