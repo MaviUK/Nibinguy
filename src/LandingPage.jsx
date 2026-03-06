@@ -1357,15 +1357,15 @@ function WhatWeDo() {
     <section className="relative py-16 px-6 bg-[#18181b]">
       <h2 className="text-3xl font-bold text-green-400 mb-8 text-center">What We Do</h2>
       <div className="grid md:grid-cols-3 gap-6 text-center">
-        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+        <div className="bg-zinc-800/70 border border-white/30 p-6 rounded-2xl shadow-lg">
           <h3 className="text-xl font-bold mb-2">Domestic Bins</h3>
           <p>We clean green, black, and blue bins right outside your home.</p>
         </div>
-        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+        <div className="bg-zinc-800/70 border border-white/30 p-6 rounded-2xl shadow-lg">
           <h3 className="text-xl font-bold mb-2">Commercial Contracts</h3>
           <p>Need regular bin cleaning? We handle your business waste too.</p>
         </div>
-        <div className="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+        <div className="bg-zinc-800/70 border border-white/30 p-6 rounded-2xl shadow-lg">
           <h3 className="text-xl font-bold mb-2">Eco-Friendly Process</h3>
           <p>We use biodegradable products and minimal water waste.</p>
         </div>
