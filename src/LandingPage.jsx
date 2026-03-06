@@ -1522,8 +1522,8 @@ export default function NiBinGuyLandingPage() {
     });
   };
 
-  return (
-    <div className="min-h-screen bg-black text-white font-sans relative">
+ return (
+  <main id="main-content" tabIndex="-1" className="min-h-screen bg-black text-white font-sans relative">
       {/* Snow overlay */}
       <SnowCanvas enabled={snowEnabled} />
 
