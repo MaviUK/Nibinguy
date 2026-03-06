@@ -65,7 +65,7 @@ export default function AdminDashboard() {
             {matchedClaims.length > 0 ? (
               <div className="space-y-2">
                 {matchedClaims.map((claim, i) => (
-                  <div key={i} className="border border-gray-300 rounded p-3 bg-gray-50">
+                  <div key={i} className="border border-gray-500 rounded p-3 bg-gray-50">
                     <p><strong>Name:</strong> {claim.neighbourName}</p>
                     <p><strong>Email:</strong> {claim.email || "—"}</p>
                     <p><strong>Phone:</strong> {claim.phone || "—"}</p>
