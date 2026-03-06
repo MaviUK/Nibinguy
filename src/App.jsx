@@ -12,6 +12,10 @@ import AuthCallback from "./auth/AuthCallback"
 
 export default function App() {
 
+  <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+
   useEffect(() => {
     const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY
 
