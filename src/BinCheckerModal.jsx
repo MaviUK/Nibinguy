@@ -153,7 +153,7 @@ export default function BinCheckerModal({ onClose }) {
         placeholder="e.g. BT20 5NF"
         value={postcode}
         onChange={(e) => setPostcode(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2"
+        className="w-full border border-gray-500 rounded-lg px-4 py-2"
         autoComplete="postal-code"
       />
 
@@ -178,7 +178,7 @@ export default function BinCheckerModal({ onClose }) {
             setCalendarHtml("");
             setError("");
           }}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2"
+          className="w-full border border-gray-500 rounded-lg px-4 py-2"
         >
           <option value="">Select your address...</option>
           {addresses.map((a) => (
