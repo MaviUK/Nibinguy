@@ -392,7 +392,7 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
           <div className="bg-white text-black w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl">
             {winSubmitStatus === "success" ? (
               <div className="p-6">
-                <h3 className="text-xl font-bold">You&apos;re all set! 🎉</h3>
+                <h2 className="text-xl font-bold">You&apos;re all set! 🎉</h2>
                 <p className="text-sm text-neutral-700 mt-2">
                   Thanks, {form.name}. We’ve received your winner details and sent
                   a confirmation to <strong>{form.email}</strong>. We’ll be in
