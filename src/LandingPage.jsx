@@ -1294,7 +1294,7 @@ function Hero({ onBook, onContact, onChallenge, onBinChecker }) {
       <div className="absolute bottom-0 left-0 w-full h-40 bg-gradient-to-b from-transparent via-[#121212] to-[#18181b] z-10 pointer-events-none" />
 
       <div className="relative z-20 flex flex-col items-center gap-4">
-        <img src="logo.png" alt="Ni Bin Guy Logo" className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg" />
+        <img src="logo.png" alt="Ni Bin Guy wheelie bin cleaning service logo" className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg" />
 
         {/* Stats under logo */}
         <div className="w-full max-w-4xl mt-2 grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-4">
@@ -1417,12 +1417,12 @@ function TheProcess({ onBook }) {
 
 function BinsWeClean() {
   const items = [
-    { src: "/bins/120L.png", alt: "120L Bin", size: "120L", h: "h-32" },
-    { src: "/bins/240L.png", alt: "240L Bin", size: "240L", h: "h-36" },
-    { src: "/bins/360L.png", alt: "360L Bin", size: "360L", h: "h-40" },
-    { src: "/bins/660L.png", alt: "660L Bin", size: "660L", h: "h-44" },
-    { src: "/bins/1100L.png", alt: "1100L Bin", size: "1100L", h: "h-48" },
-  ];
+  { src: "/bins/120L.png", alt: "120 litre wheelie bin", size: "120L", h: "h-32" },
+  { src: "/bins/240L.png", alt: "240 litre wheelie bin", size: "240L", h: "h-36" },
+  { src: "/bins/360L.png", alt: "360 litre commercial bin", size: "360L", h: "h-40" },
+  { src: "/bins/660L.png", alt: "660 litre commercial waste bin", size: "660L", h: "h-44" },
+  { src: "/bins/1100L.png", alt: "1100 litre commercial waste container", size: "1100L", h: "h-48" },
+];
   return (
     <section className="relative py-16 px-6 bg-[#18181b] text-white text-center">
       <h2 className="text-3xl font-bold text-green-400 mb-12">The Bins We Clean</h2>
@@ -1452,7 +1452,7 @@ function WhyCleanYourBin() {
       <div className="grid md:grid-cols-2 gap-12 max-w-6xl mx-auto">
         {points.map((p) => (
           <div key={p.title} className="flex items-start gap-4">
-            <img src={p.icon} alt={`${p.title} icon`} className="w-12 h-12 mt-1" />
+            <img src={p.icon} alt={p.title} className="w-12 h-12 mt-1" />
             <div>
               <h3 className="text-xl font-semibold mb-1">{p.title}</h3>
               <p className="text-gray-300">{p.text}</p>
