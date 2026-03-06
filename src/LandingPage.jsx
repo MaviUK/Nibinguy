@@ -547,7 +547,7 @@ function TermsModal({ open, onClose, onConfirm, version, title, body }) {
           aria-labelledby="tos-title"
         >
           <div className="px-6 py-4 border-b flex items-center justify-between">
-            <h3 id="tos-title" className="text-lg font-bold">
+            <h2 id="tos-title" className="text-lg font-bold">
               {title} <span className="text-xs font-normal text-gray-500">(v{version})</span>
             </h3>
             <button onClick={onClose} className="text-2xl leading-none text-gray-500 hover:text-black" aria-label="Close Terms">
