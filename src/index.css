@@ -49,3 +49,21 @@ color: #111;
 .squeegee-portal-wrapper {
   all: revert;
 }
+
+/* Skip link accessibility */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 10px;
+  background: #000;
+  color: #fff;
+  padding: 10px 14px;
+  z-index: 1000;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: top 0.2s;
+}
+
+.skip-link:focus {
+  top: 10px;
+}
