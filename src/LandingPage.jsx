@@ -1147,7 +1147,7 @@ function ContactForm({ onClose }) {
         </h2>
         <button
           onClick={handleCallClick}
-          className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none"
+          className="ml-2 p-2 rounded-full bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-white"
           aria-label="Call us"
           title="Call us"
         >
