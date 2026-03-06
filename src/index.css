@@ -67,3 +67,8 @@ color: #111;
 .skip-link:focus {
   top: 10px;
 }
+
+:focus-visible {
+  outline: 3px solid #22c55e;
+  outline-offset: 2px;
+}
