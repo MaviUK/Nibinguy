@@ -1551,6 +1551,6 @@ export default function NiBinGuyLandingPage() {
       <BinsWeClean />
       <WhyCleanYourBin />
       <WhyNiBinGuy />
-    </div>
+    </main>
   );
 }
