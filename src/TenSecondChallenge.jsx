@@ -519,7 +519,7 @@ export default function TenSecondChallenge({ debug = false, autoWin = false }) {
 
       {/* Tailwind @apply helper */}
       <style>{`
-        .input { @apply w-full rounded-xl border border-neutral-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500; }
+        .input { @apply w-full rounded-xl border border-neutral-500 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500; }
       `}</style>
     </div>
   );
