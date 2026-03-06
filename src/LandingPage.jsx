@@ -858,13 +858,13 @@ function BookingForm({ onClose }) {
         Book a Bin Clean
       </h2>
 
-      <input type="text" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
+      <input type="text" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} className="w-full border border-gray-500 rounded-lg px-4 py-2" />
 
       {bins.map((bin, index) => {
         return (
           <div key={index} className="space-y-2 border-b border-gray-200 pb-4 mb-4">
             <div className="flex gap-4">
-              <select value={bin.type} onChange={(e) => handleBinChange(index, "type", e.target.value)} className="w-2/3 border border-gray-300 rounded-lg px-4 py-2">
+              <select value={bin.type} onChange={(e) => handleBinChange(index, "type", e.target.value)} className="w-2/3 border border-gray-500 rounded-lg px-4 py-2">
                 <option value="">Select Bin</option>
                 <option value="Black Bin">Black</option>
                 <option value="Brown Bin">Brown</option>
@@ -872,10 +872,10 @@ function BookingForm({ onClose }) {
                 <option value="Blue Bin">Blue</option>
               </select>
 
-              <input type="number" min="1" value={bin.count} onChange={(e) => handleBinChange(index, "count", e.target.value)} className="w-1/3 border border-gray-300 rounded-lg px-4 py-2" />
+              <input type="number" min="1" value={bin.count} onChange={(e) => handleBinChange(index, "count", e.target.value)} className="w-1/3 border border-gray-500 rounded-lg px-4 py-2" />
             </div>
 
-            <select value={bin.planId} onChange={(e) => handleBinChange(index, "planId", e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2">
+            <select value={bin.planId} onChange={(e) => handleBinChange(index, "planId", e.target.value)} className="w-full border border-gray-500 rounded-lg px-4 py-2">
               {PLANS.map((p) => {
                 const { unitPrice, discounted } = computeDiscountedUnitPrice(p.price, p.id, discountCode);
                 const label = `${p.label} (£${money(unitPrice)})${discounted ? " ✓" : ""}`;
@@ -903,7 +903,7 @@ function BookingForm({ onClose }) {
 
       <div className="mt-2">
         <label className="block text-sm font-semibold text-gray-700 mb-1">Discount Code (optional)</label>
-        <input type="text" placeholder="Enter code" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2" />
+        <input type="text" placeholder="Enter code" value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} className="w-full border border-gray-500 rounded-lg px-4 py-2" />
 
         {discountStatus.state === "valid" && <p className="text-sm mt-2 text-green-700 font-semibold">{discountStatus.message}</p>}
         {discountStatus.state === "invalid" && <p className="text-sm mt-2 text-red-600 font-semibold">{discountStatus.message}</p>}
@@ -947,16 +947,16 @@ function BookingForm({ onClose }) {
           setPlaceId(null);
           selectedPlaceRef.current = null;
         }}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-4"
+        className="w-full border border-gray-500 rounded-lg px-4 py-2 mt-4"
         autoComplete="off"
         inputMode="text"
       />
       <p className="text-xs text-gray-500 -mt-2">Tip: pick from suggestions or just type your full address.</p>
 
-      <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
-      <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-300 rounded-lg px-4 py-2 mt-2" />
+      <input type="tel" placeholder="Contact Number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full border border-gray-500 rounded-lg px-4 py-2 mt-2" />
+      <input type="email" placeholder="Email Address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full border border-gray-500 rounded-lg px-4 py-2 mt-2" />
 
-      <div className="mt-4 p-3 rounded-lg border border-gray-300 bg-gray-50">
+      <div className="mt-4 p-3 rounded-lg border border-gray-500 bg-gray-50">
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm text-gray-700">
             You must view and agree to the{" "}
@@ -1166,7 +1166,7 @@ function ContactForm({ onClose }) {
         placeholder="Your Name"
         value={cName}
         onChange={(e) => setCName(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2"
+        className="w-full border border-gray-500 rounded-lg px-4 py-2"
       />
 
       <div className="space-y-1">
@@ -1182,7 +1182,7 @@ function ContactForm({ onClose }) {
             const onlyDigits = e.target.value.replace(/\D/g, "").slice(0, 11);
             setCPhone(onlyDigits);
           }}
-          className={`w-full border rounded-lg px-4 py-2 ${errors.phone ? "border-red-500" : "border-gray-300"}`}
+          className={`w-full border rounded-lg px-4 py-2 ${errors.phone ? "border-red-500" : "border-gray-500"}`}
         />
         {errors.phone ? <p className="text-xs text-red-600">{errors.phone}</p> : null}
       </div>
@@ -1193,7 +1193,7 @@ function ContactForm({ onClose }) {
           placeholder="Email Address"
           value={cEmail}
           onChange={(e) => setCEmail(e.target.value)}
-          className={`w-full border rounded-lg px-4 py-2 ${errors.email ? "border-red-500" : "border-gray-300"}`}
+          className={`w-full border rounded-lg px-4 py-2 ${errors.email ? "border-red-500" : "border-gray-500"}`}
         />
         {errors.email ? <p className="text-xs text-red-600">{errors.email}</p> : null}
       </div>
@@ -1202,7 +1202,7 @@ function ContactForm({ onClose }) {
         placeholder="Your Message"
         value={cMessage}
         onChange={(e) => setCMessage(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2 h-28 resize-y"
+        className="w-full border border-gray-500 rounded-lg px-4 py-2 h-28 resize-y"
       />
 
       <button onClick={handleWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full">
