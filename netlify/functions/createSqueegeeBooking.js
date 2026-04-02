@@ -1,24 +1,23 @@
 exports.handler = async (event) => {
+  if (event.httpMethod !== "POST") {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: "Method not allowed" }),
+    };
+  }
+
   try {
-    if (event.httpMethod !== "POST") {
-      return {
-        statusCode: 405,
-        body: JSON.stringify({ error: "Method not allowed" }),
-      };
-    }
+    const payload = JSON.parse(event.body || "{}");
 
     const {
-      name,
-      email,
-      phone,
-      address,
-      bins,
-      binSize,
-      frequency,
-      cleanType,
-      notes,
-      recaptchaToken,
-    } = JSON.parse(event.body || "{}");
+      name = "",
+      email = "",
+      phone = "",
+      address = "",
+      bins = [],
+      notes = "",
+      recaptchaToken = "",
+    } = payload;
 
     if (!name || !email || !phone || !address || !recaptchaToken) {
       return {
@@ -27,35 +26,37 @@ exports.handler = async (event) => {
       };
     }
 
+    const safeBins = Array.isArray(bins) ? bins : [];
+
+    const getAnswer = (typeLabel) => {
+      const found = safeBins.find((b) => (b?.type || "").toLowerCase().includes(typeLabel));
+      return found || null;
+    };
+
+    const firstBin = safeBins[0] || {};
+
     const questionAnswers = [
       {
-        questionId: "question.bin-count",
+        questionId: "question.bin-count-choice",
         question: "How many bins do you have?",
-        answer: bins || "",
+        answer: String(
+          safeBins.reduce((sum, b) => sum + (Number(b?.count || 1)), 0) || 1
+        ),
       },
       {
-        questionId: "question.bin-size",
+        questionId: "question.bin-size-choice",
         question: "What size are your bins?",
-        answer: binSize || "",
+        answer: firstBin.size || "Domestic 120L",
       },
       {
-        questionId: "question.clean-frequency",
-        question: "How often would you like to have your bins cleaned?",
-        answer: frequency || "",
+        questionId: "question.bin-frequency-choice",
+        question: "How often would you like to have your bins cleaned? ",
+        answer: firstBin.frequency || firstBin.planLabel || "After Every Bin Lorry Visit",
       },
       {
-        questionId: "question.clean-type",
-        question: "What kind of clean would you like to book?",
-        answer: cleanType || "",
-      },
-    ];
-
-    const selectedServices = [
-      {
-        children: [],
-        description: "",
-        id: "service.bin-cleaning",
-        name: "Bin/Garbage Can Cleaning",
+        questionId: "question.bin-clean-type-choice",
+        question: "What kind of clean would you like to book? ",
+        answer: firstBin.cleanType || "Maintenance Clean",
       },
     ];
 
@@ -64,18 +65,23 @@ exports.handler = async (event) => {
       name,
       email,
       phone,
-      location: {
-        formattedAddress: address,
-      },
+      location: {},
       additionalInfo: notes || "",
       errors: [],
       locale: "en-US",
       questionAnswers,
       recaptcha: recaptchaToken,
-      selectedServices,
+      selectedServices: [
+        {
+          children: [],
+          description: "",
+          id: "service.bin-cleaning",
+          name: "Bin/Garbage Can Cleaning",
+        },
+      ],
     };
 
-    const squegeeRes = await fetch("https://squeeg.ee/api/quote-request", {
+    const res = await fetch("https://squeeg.ee/api/quote-request", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -83,14 +89,15 @@ exports.handler = async (event) => {
       body: JSON.stringify(squegeePayload),
     });
 
-    const squegeeData = await squegeeRes.json();
+    const data = await res.json();
 
-    if (!squegeeRes.ok || !squegeeData.success) {
+    if (!res.ok || !data?.success) {
+      console.error("Squeegee error:", data);
       return {
-        statusCode: 500,
+        statusCode: 502,
         body: JSON.stringify({
-          error: "Squeegee booking failed",
-          details: squegeeData,
+          error: "Failed to create Squeegee booking",
+          details: data,
         }),
       };
     }
@@ -99,14 +106,18 @@ exports.handler = async (event) => {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        squegee: squegeeData,
+        customerId: data.customerId,
+        quoteId: data.quote?._id || null,
+        squegee: data,
       }),
     };
   } catch (error) {
+    console.error("createSqueegeeBooking failed:", error);
     return {
       statusCode: 500,
       body: JSON.stringify({
-        error: error.message || "Unknown error",
+        error: "Squeegee booking failed",
+        details: error.message,
       }),
     };
   }
