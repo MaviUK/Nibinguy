@@ -780,6 +780,7 @@ function BookingForm({ onClose }) {
       return;
     }
 
+    // ✅ reCAPTCHA token (v3)
     const recaptchaAction = "booking_submit";
     const recaptchaToken = await getRecaptchaToken(recaptchaAction);
     if (!recaptchaToken) {
@@ -790,72 +791,60 @@ function BookingForm({ onClose }) {
     const loc = selectedPlaceRef.current?.geometry?.location;
     const lat = loc ? loc.lat() : null;
     const lng = loc ? loc.lng() : null;
-    const termsTimestamp = new Date().toISOString();
-
-    const bookingPayload = {
-      name,
-      email,
-      phone,
-      address,
-      bins,
-      placeId,
-      lat,
-      lng,
-      notes: "",
-      discountCode: normalizeCode(discountCode) || null,
-      pricing,
-      termsAccepted: true,
-      termsVersion: TERMS_VERSION,
-      termsAcceptanceText: TOS_PREFIX,
-      termsTimestamp,
-      recaptchaToken,
-      recaptchaAction,
-    };
 
     try {
-      const squegeeRes = await fetch("/.netlify/functions/createSqueegeeBooking", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bookingPayload),
-      });
-
-      const squegeeData = await squegeeRes.json().catch(() => ({}));
-
-      if (!squegeeRes.ok || !squegeeData.success) {
-        console.error("Squeegee booking failed:", squegeeData);
-        alert(
-          squegeeData?.details?.error ||
-          squegeeData?.error ||
-          squegeeData?.raw ||
-          "Booking could not be added to Squeegee."
-        );
-        return;
-      }
-
-      const emailRes = await fetch("/.netlify/functions/sendBookingEmail", {
+      const res = await fetch("/.netlify/functions/sendBookingEmail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...bookingPayload,
-          source: "email",
-          customerId: squegeeData.customerId || null,
-          quoteId: squegeeData.quoteId || null,
+          name,
+          email,
+          phone,
+          address,
+          bins,
+          placeId,
+          lat,
+          lng,
+          discountCode: normalizeCode(discountCode) || null,
+          pricing,
+          termsAccepted: true,
+          termsVersion: TERMS_VERSION,
+          termsAcceptanceText: TOS_PREFIX,
+          recaptchaToken,
+          recaptchaAction,
         }),
       });
 
-      const emailData = await emailRes.json().catch(() => ({}));
+      if (res.ok) {
+        try {
+          await fetch("/.netlify/functions/sendTosReceipt", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              source: "email",
+              name,
+              email,
+              phone,
+              address,
+              bins,
+              discountCode: normalizeCode(discountCode) || null,
+              pricing,
+              termsAccepted: true,
+              termsVersion: TERMS_VERSION,
+              termsAcceptanceText: TOS_PREFIX,
+              termsTimestamp: new Date().toISOString(),
+            }),
+          });
+        } catch {}
 
-      if (!emailRes.ok || !emailData.success) {
-        console.error("Booking email failed:", emailData);
-        alert("Booking was added to Squeegee, but the email failed to send.");
-        return;
+        alert("Booking email sent successfully! (Pricing + discount included)");
+        onClose?.();
+      } else {
+        alert("Failed to send booking email.");
       }
-
-      alert("Booking sent successfully!");
-      onClose?.();
     } catch (err) {
       console.error(err);
-      alert("Error sending booking.");
+      alert("Error sending booking email.");
     }
   };
 
