@@ -1,118 +1,105 @@
+// netlify/functions/createSqueegeeBooking.js
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: "Method not allowed" }),
-    };
+    return { statusCode: 405, body: "Method Not Allowed" };
   }
 
   try {
-    const payload = JSON.parse(event.body || "{}");
+    const data = JSON.parse(event.body);
 
     const {
-      name = "",
-      email = "",
-      phone = "",
-      address = "",
-      bins = [],
-      notes = "",
-      recaptchaToken = "",
-    } = payload;
-
-    if (!name || !email || !phone || !address || !recaptchaToken) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Missing required fields" }),
-      };
-    }
-
-    const safeBins = Array.isArray(bins) ? bins : [];
-    const firstBin = safeBins[0] || {};
-
-    const totalBins = safeBins.reduce((sum, b) => sum + (Number(b?.count || 1)), 0) || 1;
-
-    const questionAnswers = [
-      {
-        questionId: "question.bin-count-choice",
-        question: "How many bins do you have?",
-        answer: String(totalBins),
-      },
-      {
-        questionId: "question.bin-size-choice",
-        question: "What size are your bins?",
-        answer: firstBin.size || "Domestic 120L",
-      },
-      {
-        questionId: "question.bin-frequency-choice",
-        question: "How often would you like to have your bins cleaned? ",
-        answer: firstBin.frequency || firstBin.planId || "After Every Bin Lorry Visit",
-      },
-      {
-        questionId: "question.bin-clean-type-choice",
-        question: "What kind of clean would you like to book? ",
-        answer: firstBin.cleanType || "Maintenance Clean",
-      },
-    ];
-
-    const squegeePayload = {
-      clientId: "nibinguy",
       name,
       email,
       phone,
-      location: {},
-      additionalInfo: notes || "",
-      errors: [],
-      locale: "en-US",
-      questionAnswers,
-      recaptcha: recaptchaToken,
-      selectedServices: [
-        {
-          children: [],
-          description: "",
-          id: "service.bin-cleaning",
-          name: "Bin/Garbage Can Cleaning",
-        },
-      ],
-    };
+      address,
+      bins = [],
+    } = data;
 
-    const res = await fetch("https://squeeg.ee/api/quote-request", {
+    // 🔹 Build description from bins
+    const description = bins
+      .map((b) => {
+        const plan = b.planId || "";
+        return `${b.count || 1} x ${b.type} (${plan})`;
+      })
+      .join("\n");
+
+    // 🔹 STEP 1: Create customer
+    const customerRes = await fetch("https://api.squeegeeapp.com/v1/customers", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.SQUEEGEE_API_KEY}`,
       },
-      body: JSON.stringify(squegeePayload),
+      body: JSON.stringify({
+        name,
+        email,
+        phone,
+        address: {
+          line1: address,
+        },
+      }),
     });
 
-    const data = await res.json();
+    const customerData = await customerRes.json();
 
-    if (!res.ok || !data?.success) {
-      console.error("Squeegee error:", data);
+    if (!customerData?.data?._id) {
       return {
-        statusCode: 502,
-        body: JSON.stringify({
-          error: "Failed to create Squeegee booking",
-          details: data,
-        }),
+        statusCode: 500,
+        body: JSON.stringify({ error: "Failed to create customer", customerData }),
       };
     }
 
+    const customerId = customerData.data._id;
+
+    // 🔹 STEP 2: Create quote (job)
+    const quoteRes = await fetch("https://api.squeegeeapp.com/v1/quotes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.SQUEEGEE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        customerId,
+        name,
+        items: [
+          {
+            title: "Bin Cleaning",
+            description,
+            quantity: 1,
+            unitPrice: 0,
+            type: "job",
+          },
+        ],
+      }),
+    });
+
+    const quoteData = await quoteRes.json();
+
+    if (!quoteData?.data?._id) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Failed to create quote", quoteData }),
+      };
+    }
+
+    const quoteId = quoteData.data._id;
+
+    // ✅ Return both IDs to frontend
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        customerId: data.customerId,
-        quoteId: data.quote?._id || null,
-        squegee: data,
+        customerId,
+        quoteId,
       }),
     };
-  } catch (error) {
-    console.error("createSqueegeeBooking failed:", error);
+
+  } catch (err) {
+    console.error("Squeegee error:", err);
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: "Squeegee booking failed",
-        details: error.message,
-      }),
+      body: JSON.stringify({ error: "Squeegee booking failed" }),
     };
   }
 };
