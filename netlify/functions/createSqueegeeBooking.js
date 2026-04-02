@@ -125,6 +125,7 @@ exports.handler = async (event) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-client-id": "nibinguy",
       },
       body: JSON.stringify(squegeePayload),
     });
@@ -139,11 +140,18 @@ exports.handler = async (event) => {
     }
 
     if (!res.ok || !data?.success) {
-      console.error("Squeegee error:", data);
+      console.error("Squeegee error FULL:", {
+        status: res.status,
+        raw: rawText,
+        parsed: data,
+      });
+
       return {
         statusCode: 502,
         body: JSON.stringify({
-          error: "Failed to create Squeegee booking",
+          error: "Squeegee failed",
+          status: res.status,
+          raw: rawText,
           details: data,
         }),
       };

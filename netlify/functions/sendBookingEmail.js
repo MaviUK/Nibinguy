@@ -7,7 +7,7 @@ try {
   const { getStore } = require("@netlify/blobs");
   getStoreSafe = function (name) {
     const siteID = process.env.NETLIFY_SITE_ID || process.env.BLOBS_SITE_ID;
-    const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.BLOBS_TOKEN;
+    const token  = process.env.NETLIFY_BLOBS_TOKEN || process.env.BLOBS_TOKEN;
     return (siteID && token) ? getStore({ name, siteID, token }) : getStore({ name });
   };
 } catch (_) {
@@ -18,7 +18,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ---------- config ----------
 const FROM_DEFAULT = process.env.RESEND_FROM || "Ni Bin Guy <noreply@nibing.uy>";
-const TO_ADMIN = process.env.BOOKINGS_TO || "info@nibing.uy";
+const TO_ADMIN     = process.env.BOOKINGS_TO || "info@nibing.uy";
 const TERMS_VERSION_DEFAULT = "September 2025";
 
 // Shown in both emails. Replace with your full ToS text if you prefer.
@@ -151,7 +151,7 @@ exports.handler = async (event) => {
   try {
     const payload = JSON.parse(event.body || "{}");
 
-    // reCAPTCHA is now verified upstream before this function is called.
+    // reCAPTCHA is verified upstream before this function is called.
     // Keep action for logging only.
     const recaptchaAction = payload.recaptchaAction || "booking_submit";
     const recaptcha = { ok: true, data: null };
@@ -208,7 +208,7 @@ Name: ${name}
 Email: ${email}
 Phone: ${phone}
 Address: ${address}
-${lat != null && lng != null ? `Geo: ${lat}, ${lng}\n` : ""}${placeId ? `Place ID: ${placeId}\n` : ""}${customerId ? `Squeegee Customer ID: ${customerId}\n` : ""}${quoteId ? `Squeegee Quote ID: ${quoteId}\n` : ""}
+${lat != null && lng != null ? `Geo: ${lat}, ${lng}\n` : ""}${placeId ? `Place ID: ${placeId}\n` : ""}
 
 Bins:
 ${binsText}
@@ -252,7 +252,7 @@ Acceptance line: ${termsAcceptanceText}
       subject: subjectAdmin,
       text: textAdmin,
       html: htmlAdmin,
-      replyTo: email || undefined,
+      replyTo: email || undefined, // ✅ correct Resend field
     });
 
     if (adminError) {
@@ -307,7 +307,7 @@ We’ll be in touch to confirm your schedule.`;
         subject: subjectCustomer,
         text: textCustomer,
         html: htmlCustomer,
-        replyTo: TO_ADMIN,
+        replyTo: TO_ADMIN, // ✅ correct Resend field
       });
 
       if (custError) {
@@ -323,22 +323,11 @@ We’ll be in touch to confirm your schedule.`;
         const key = `${new Date().toISOString()}__${(email || phone || "unknown").replace(/[^a-z0-9@.+_-]/gi, "_")}.json`;
         await store.setJSON(key, {
           channel: "email",
-          name,
-          email,
-          phone,
-          address,
-          bins,
-          placeId,
-          lat,
-          lng,
-          source,
-          customerId,
-          quoteId,
+          name, email, phone, address, bins,
+          placeId, lat, lng, source,
           discountCode: discountCode || null,
           pricing: pricing || null,
-          termsAccepted,
-          termsVersion,
-          termsAcceptanceText,
+          termsAccepted, termsVersion, termsAcceptanceText,
           termsTimestamp,
           recaptcha: {
             action: recaptchaAction,

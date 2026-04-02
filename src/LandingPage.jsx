@@ -25,10 +25,6 @@ import BinCheckerModal from "./BinCheckerModal.jsx";
  * UPDATED (reCAPTCHA v3):
  * - Dynamically inject reCAPTCHA v3 script on this page
  * - Include recaptchaToken + action in booking email + contact email payloads
- *
- * UPDATED (Squeegee):
- * - Email bookings now create the booking in Squeegee first
- * - Only after Squeegee succeeds do we send the admin/customer email
  */
 
 /* ────────────────────────────────────────────────────────────────────────────
@@ -106,8 +102,10 @@ function loadRecaptchaV3(siteKey) {
   return new Promise((resolve, reject) => {
     if (!siteKey) return reject(new Error("Missing VITE_RECAPTCHA_SITE_KEY"));
 
+    // already available
     if (window.grecaptcha?.execute) return resolve(window.grecaptcha);
 
+    // script already injected
     const existing = document.getElementById("recaptcha-script");
     if (existing) {
       existing.addEventListener("load", () => resolve(window.grecaptcha));
@@ -140,6 +138,7 @@ async function getRecaptchaToken(action) {
   if (!window.grecaptcha?.execute) return null;
 
   return new Promise((resolve) => {
+    // ready() is the safest way to ensure execute works
     window.grecaptcha.ready(async () => {
       try {
         const token = await window.grecaptcha.execute(siteKey, { action });
@@ -156,6 +155,7 @@ async function getRecaptchaToken(action) {
    Discount + Plans
    ──────────────────────────────────────────────────────────────────────────── */
 
+// Your frequency dropdown options — now structured (id, label, price)
 const PLANS = [
   { id: "domestic_4w", label: "4 Weekly", price: 5 },
   { id: "domestic_oneoff", label: "One-off", price: 12.5 },
@@ -167,12 +167,14 @@ const PLANS = [
   { id: "comm_gt660_oneoff", label: "Commercial >660L One-Off", price: 30 },
 ];
 
+// Discount rules (edit these whenever you want)
 const DISCOUNT_CODES = {
   FRESH20: {
     type: "percent",
     value: 20,
     appliesTo: ["domestic_4w"],
-    expiresAt: "2026-02-28T23:59:59Z",
+    expiresAt: "2026-02-28T23:59:59Z", // expiry (UTC)
+    // startsAt: "2025-12-01T00:00:00Z", // optional
   },
 };
 
@@ -261,6 +263,7 @@ function SnowCanvas({ enabled = true }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Respect reduced motion
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     if (reduceMotion) return;
 
@@ -271,12 +274,18 @@ function SnowCanvas({ enabled = true }) {
 
     let W = 0;
     let H = 0;
+
+    // Flakes
     let flakes = [];
     let targetFlakeCount = 0;
+
+    // Bank (accumulation)
     let bank = [];
     let bankStep = 3;
-    let maxBankRise = 150;
-    let baseBank = 18;
+    let maxBankRise = 150; // how high the buildup can get
+    let baseBank = 18; // starting drift height
+
+    // Wind
     let wind = 0;
     let windTarget = 0;
 
@@ -303,7 +312,7 @@ function SnowCanvas({ enabled = true }) {
     }
 
     function newFlake(spawnAnywhere = false) {
-      const r = Math.pow(Math.random(), 2) * 2.4 + 0.55;
+      const r = Math.pow(Math.random(), 2) * 2.4 + 0.55; // 0.55..~3
       const vy = 26 + r * 42 + rand(0, 28);
       return {
         x: rand(0, W),
@@ -359,6 +368,7 @@ function SnowCanvas({ enabled = true }) {
     function drawBank() {
       ctx.save();
 
+      // Powdery fill
       ctx.fillStyle = "rgba(255,255,255,0.82)";
       ctx.shadowColor = "rgba(255,255,255,0.28)";
       ctx.shadowBlur = 14;
@@ -374,6 +384,7 @@ function SnowCanvas({ enabled = true }) {
       ctx.closePath();
       ctx.fill();
 
+      // Soft top edge highlight
       ctx.shadowBlur = 0;
       ctx.strokeStyle = "rgba(255,255,255,0.28)";
       ctx.lineWidth = 1;
@@ -398,13 +409,16 @@ function SnowCanvas({ enabled = true }) {
 
       ctx.clearRect(0, 0, W, H);
 
+      // Wind slowly meanders
       windTarget += rand(-0.14, 0.14);
       windTarget = Math.max(-22, Math.min(22, windTarget));
       wind += (windTarget - wind) * 0.012;
 
+      // Keep density stable
       if (flakes.length < targetFlakeCount) flakes.push(newFlake(false));
       if (flakes.length > targetFlakeCount) flakes.pop();
 
+      // Draw flakes (behind accumulation)
       for (let i = 0; i < flakes.length; i++) {
         const f = flakes[i];
 
@@ -415,25 +429,30 @@ function SnowCanvas({ enabled = true }) {
         f.x += (vx + wob) * dt;
         f.y += f.vy * dt;
 
+        // Wrap x
         if (f.x < -30) f.x = W + 30;
         if (f.x > W + 30) f.x = -30;
 
+        // Collision with snow bank
         const bankH = bankHeightAt(f.x);
         const floorY = H - bankH;
 
         if (f.y + f.r >= floorY) {
+          // Deposit: larger flakes add slightly more
           const deposit = Math.min(1.55, 0.4 + f.r * 0.42);
           depositAt(f.x, deposit);
           flakes[i] = newFlake(false);
           continue;
         }
 
+        // Flake draw
         ctx.beginPath();
         ctx.fillStyle = `rgba(255,255,255,${f.alpha})`;
         ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
         ctx.fill();
       }
 
+      // Smooth & draw bank so it looks like “landing”
       smoothBank();
       drawBank();
 
@@ -574,18 +593,21 @@ function BookingForm({ onClose }) {
   const [phone, setPhone] = useState("");
   const [placeId, setPlaceId] = useState(null);
 
+  // Discount state
   const [discountCode, setDiscountCode] = useState("");
   const [discountStatus, setDiscountStatus] = useState({ state: "empty", message: "" });
 
   const addressInputRef = useRef(null);
   const selectedPlaceRef = useRef(null);
 
+  // Terms gating state
   const [showTerms, setShowTerms] = useState(false);
   const [termsViewed, setTermsViewed] = useState(false);
   const [agreeToTerms, setAgreeToTerms] = useState(false);
 
   const canToggleAgree = termsViewed;
 
+  // Attach Google Places autocomplete when modal opens
   useEffect(() => {
     const key = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY;
     if (!key || !addressInputRef.current) return;
@@ -613,6 +635,7 @@ function BookingForm({ onClose }) {
     return () => cleanup();
   }, []);
 
+  // Re-validate discount whenever selection changes
   useEffect(() => {
     setDiscountStatus(validateCodeAgainstSelection(bins, discountCode));
   }, [bins, discountCode]);
@@ -635,6 +658,7 @@ function BookingForm({ onClose }) {
     });
   };
 
+  // Pricing breakdown
   const pricing = useMemo(() => {
     const lines = bins
       .filter((b) => b.type)
@@ -795,17 +819,18 @@ function BookingForm({ onClose }) {
         body: JSON.stringify(bookingPayload),
       });
 
-      const squegeeData = await squegeeRes.json();
+      const squegeeData = await squegeeRes.json().catch(() => ({}));
 
       if (!squegeeRes.ok || !squegeeData.success) {
-  console.error("Squeegee booking failed:", squegeeData);
-  alert(
-    squegeeData?.details?.error ||
-    squegeeData?.error ||
-    "Booking could not be added to Squeegee."
-  );
-  return;
-}
+        console.error("Squeegee booking failed:", squegeeData);
+        alert(
+          squegeeData?.details?.error ||
+          squegeeData?.error ||
+          squegeeData?.raw ||
+          "Booking could not be added to Squeegee."
+        );
+        return;
+      }
 
       const emailRes = await fetch("/.netlify/functions/sendBookingEmail", {
         method: "POST",
@@ -832,6 +857,7 @@ function BookingForm({ onClose }) {
       console.error(err);
       alert("Error sending booking.");
     }
+  };
   };
 
   return (
@@ -1029,6 +1055,7 @@ function ContactForm({ onClose }) {
 
   const missing = useMemo(() => !cName.trim() || !cEmail.trim() || !cPhone.trim() || !cMessage.trim(), [cName, cEmail, cPhone, cMessage]);
 
+  // Live validate as they type (optional but nice)
   useEffect(() => {
     setErrors((prev) => ({
       ...prev,
@@ -1081,6 +1108,7 @@ function ContactForm({ onClose }) {
   const handleEmail = async () => {
     if (!validateOrAlert()) return;
 
+    // ✅ reCAPTCHA token (v3)
     const recaptchaAction = "contact_submit";
     const recaptchaToken = await getRecaptchaToken(recaptchaAction);
     if (!recaptchaToken) {
@@ -1162,6 +1190,7 @@ function ContactForm({ onClose }) {
           inputMode="numeric"
           pattern="[0-9]{11}"
           onChange={(e) => {
+            // digits only, no spaces/symbols
             const onlyDigits = e.target.value.replace(/\D/g, "").slice(0, 11);
             setCPhone(onlyDigits);
           }}
@@ -1237,10 +1266,12 @@ function ChallengeModal({ open, onClose }) {
 function Hero({ onBook, onContact, onChallenge, onBinChecker }) {
   const { totalBinsCleaned, todaysArea, totalMonthlyCustomers } = useLiveCounters();
 
+  // Soft-live counter (display only)
   const [displayTotal, setDisplayTotal] = useState(() => Number(totalBinsCleaned) || 0);
   const sessionAddsRef = useRef(0);
   const lastAddRef = useRef(0);
 
+  // When the real total changes (e.g. refresh/new data), reset display base + session add cap
   useEffect(() => {
     const base = Number(totalBinsCleaned) || 0;
     setDisplayTotal(base);
@@ -1249,11 +1280,12 @@ function Hero({ onBook, onContact, onChallenge, onBinChecker }) {
   }, [totalBinsCleaned]);
 
   useEffect(() => {
-    const EVERY_MS = 45000;
-    const MAX_ADDS = 4;
+    // Tune these:
+    const EVERY_MS = 45000; // add 1 every 45s
+    const MAX_ADDS = 4; // cap to 4 per session so it never drifts too far
 
     const tick = () => {
-      if (document.hidden) return;
+      if (document.hidden) return; // pause when tab not visible
       if (sessionAddsRef.current >= MAX_ADDS) return;
 
       const now = Date.now();
@@ -1264,7 +1296,7 @@ function Hero({ onBook, onContact, onChallenge, onBinChecker }) {
       setDisplayTotal((v) => v + 1);
     };
 
-    const interval = setInterval(tick, 1000);
+    const interval = setInterval(tick, 1000); // check once per second
     return () => clearInterval(interval);
   }, []);
 
@@ -1276,6 +1308,7 @@ function Hero({ onBook, onContact, onChallenge, onBinChecker }) {
       <div className="relative z-20 flex flex-col items-center gap-4">
         <img src="logo.png" alt="Ni Bin Guy wheelie bin cleaning service logo" className="w-64 h-64 md:w-80 md:h-80 rounded-xl shadow-lg" />
 
+        {/* Stats under logo */}
         <div className="w-full max-w-4xl mt-2 grid grid-cols-3 gap-2 sm:grid-cols-3 sm:gap-4">
           <div className="rounded-xl bg-white/5 border border-white/30 p-3 sm:p-5 shadow-lg text-center">
             <div className="text-[10px] sm:text-xs tracking-widest text-white/60 uppercase">Total Bins Cleaned</div>
@@ -1396,12 +1429,12 @@ function TheProcess({ onBook }) {
 
 function BinsWeClean() {
   const items = [
-    { src: "/bins/120L.png", alt: "120 litre wheelie bin", size: "120L", h: "h-32" },
-    { src: "/bins/240L.png", alt: "240 litre wheelie bin", size: "240L", h: "h-36" },
-    { src: "/bins/360L.png", alt: "360 litre commercial bin", size: "360L", h: "h-40" },
-    { src: "/bins/660L.png", alt: "660 litre commercial waste bin", size: "660L", h: "h-44" },
-    { src: "/bins/1100L.png", alt: "1100 litre commercial waste container", size: "1100L", h: "h-48" },
-  ];
+  { src: "/bins/120L.png", alt: "120 litre wheelie bin", size: "120L", h: "h-32" },
+  { src: "/bins/240L.png", alt: "240 litre wheelie bin", size: "240L", h: "h-36" },
+  { src: "/bins/360L.png", alt: "360 litre commercial bin", size: "360L", h: "h-40" },
+  { src: "/bins/660L.png", alt: "660 litre commercial waste bin", size: "660L", h: "h-44" },
+  { src: "/bins/1100L.png", alt: "1100 litre commercial waste container", size: "1100L", h: "h-48" },
+];
   return (
     <section className="relative py-16 px-6 bg-[#18181b] text-white text-center">
       <h2 className="text-3xl font-bold text-green-400 mb-12">The Bins We Clean</h2>
@@ -1474,8 +1507,10 @@ export default function NiBinGuyLandingPage() {
   const [showChallenge, setShowChallenge] = useState(false);
   const [showBinChecker, setShowBinChecker] = useState(false);
 
+  // Snow toggle (persisted)
   const [snowEnabled, setSnowEnabled] = useState(false);
 
+  // ✅ Inject reCAPTCHA once for this page
   useEffect(() => {
     const siteKey = import.meta.env?.VITE_RECAPTCHA_SITE_KEY;
     loadRecaptchaV3(siteKey).catch((e) => console.warn("reCAPTCHA failed to load:", e));
@@ -1483,6 +1518,7 @@ export default function NiBinGuyLandingPage() {
 
   useEffect(() => {
     try {
+      // Always force snow off (ignores saved setting)
       localStorage.setItem(SNOW_STORAGE_KEY, "0");
       setSnowEnabled(false);
     } catch {}
@@ -1498,16 +1534,19 @@ export default function NiBinGuyLandingPage() {
     });
   };
 
-  return (
-    <main id="main-content" tabIndex="-1" className="min-h-screen bg-black text-white font-sans relative">
+ return (
+  <main id="main-content" tabIndex="-1" className="min-h-screen bg-black text-white font-sans relative">
+      {/* Snow overlay */}
       <SnowCanvas enabled={snowEnabled} />
 
       <Hero onBook={() => setShowBooking(true)} onContact={() => setShowContact(true)} onChallenge={() => setShowChallenge(true)} onBinChecker={() => setShowBinChecker(true)} />
 
+      {/* Booking Modal */}
       <Modal open={showBooking} onClose={() => setShowBooking(false)} maxWidth="max-w-md" labelledBy="booking-title">
         <BookingForm onClose={() => setShowBooking(false)} />
       </Modal>
 
+      {/* Contact Modal */}
       <Modal open={showContact} onClose={() => setShowContact(false)} maxWidth="max-w-md" labelledBy="contact-title">
         <ContactForm onClose={() => setShowContact(false)} />
       </Modal>
@@ -1516,6 +1555,7 @@ export default function NiBinGuyLandingPage() {
         <BinCheckerModal onClose={() => setShowBinChecker(false)} />
       </Modal>
 
+      {/* 10 Second Challenge Modal */}
       <ChallengeModal open={showChallenge} onClose={() => setShowChallenge(false)} />
 
       <WhatWeDo />
