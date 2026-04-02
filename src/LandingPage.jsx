@@ -798,10 +798,14 @@ function BookingForm({ onClose }) {
       const squegeeData = await squegeeRes.json();
 
       if (!squegeeRes.ok || !squegeeData.success) {
-        console.error("Squeegee booking failed:", squegeeData);
-        alert("Booking could not be added to Squeegee. Please try again.");
-        return;
-      }
+  console.error("Squeegee booking failed:", squegeeData);
+  alert(
+    squegeeData?.details?.error ||
+    squegeeData?.error ||
+    "Booking could not be added to Squeegee."
+  );
+  return;
+}
 
       const emailRes = await fetch("/.netlify/functions/sendBookingEmail", {
         method: "POST",
