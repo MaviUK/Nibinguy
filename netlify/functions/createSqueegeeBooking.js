@@ -27,21 +27,15 @@ exports.handler = async (event) => {
     }
 
     const safeBins = Array.isArray(bins) ? bins : [];
-
-    const getAnswer = (typeLabel) => {
-      const found = safeBins.find((b) => (b?.type || "").toLowerCase().includes(typeLabel));
-      return found || null;
-    };
-
     const firstBin = safeBins[0] || {};
+
+    const totalBins = safeBins.reduce((sum, b) => sum + (Number(b?.count || 1)), 0) || 1;
 
     const questionAnswers = [
       {
         questionId: "question.bin-count-choice",
         question: "How many bins do you have?",
-        answer: String(
-          safeBins.reduce((sum, b) => sum + (Number(b?.count || 1)), 0) || 1
-        ),
+        answer: String(totalBins),
       },
       {
         questionId: "question.bin-size-choice",
@@ -51,7 +45,7 @@ exports.handler = async (event) => {
       {
         questionId: "question.bin-frequency-choice",
         question: "How often would you like to have your bins cleaned? ",
-        answer: firstBin.frequency || firstBin.planLabel || "After Every Bin Lorry Visit",
+        answer: firstBin.frequency || firstBin.planId || "After Every Bin Lorry Visit",
       },
       {
         questionId: "question.bin-clean-type-choice",
