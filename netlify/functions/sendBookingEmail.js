@@ -7,7 +7,7 @@ try {
   const { getStore } = require("@netlify/blobs");
   getStoreSafe = function (name) {
     const siteID = process.env.NETLIFY_SITE_ID || process.env.BLOBS_SITE_ID;
-    const token  = process.env.NETLIFY_BLOBS_TOKEN || process.env.BLOBS_TOKEN;
+    const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.BLOBS_TOKEN;
     return (siteID && token) ? getStore({ name, siteID, token }) : getStore({ name });
   };
 } catch (_) {
@@ -18,12 +18,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ---------- config ----------
 const FROM_DEFAULT = process.env.RESEND_FROM || "Ni Bin Guy <noreply@nibing.uy>";
-const TO_ADMIN     = process.env.BOOKINGS_TO || "info@nibing.uy";
+const TO_ADMIN = process.env.BOOKINGS_TO || "info@nibing.uy";
 const TERMS_VERSION_DEFAULT = "September 2025";
-
-// reCAPTCHA config (v3)
-const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY || "";
-const RECAPTCHA_MIN_SCORE = Number(process.env.RECAPTCHA_MIN_SCORE || "0.5"); // 0.5 is a sensible default
 
 // Shown in both emails. Replace with your full ToS text if you prefer.
 const TERMS_BODY = `
@@ -146,37 +142,6 @@ Discount Code: ${code || "None"}${code ? (applied ? " (applied)" : " (not applie
   return { text, html, applied };
 }
 
-// --- reCAPTCHA verify (v3) ---
-async function verifyRecaptcha({ token, expectedAction }) {
-  if (!RECAPTCHA_SECRET) {
-    // If you prefer “fail open” during setup, change this to return ok:true
-    return { ok: false, reason: "missing_secret" };
-  }
-  if (!token) return { ok: false, reason: "missing_token" };
-
-  const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ secret: RECAPTCHA_SECRET, response: token }),
-  });
-
-  const data = await res.json();
-
-  if (!data?.success) return { ok: false, reason: "not_success", data };
-
-  // Action check (recommended for v3)
-  if (expectedAction && data.action && data.action !== expectedAction) {
-    return { ok: false, reason: "action_mismatch", data };
-  }
-
-  // Score check (v3)
-  if (typeof data.score === "number" && data.score < RECAPTCHA_MIN_SCORE) {
-    return { ok: false, reason: "low_score", data };
-  }
-
-  return { ok: true, data };
-}
-
 // ---------- function ----------
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
@@ -186,19 +151,10 @@ exports.handler = async (event) => {
   try {
     const payload = JSON.parse(event.body || "{}");
 
-    // ✅ reCAPTCHA guard (must be before sending email)
-    const recaptchaToken = payload.recaptchaToken || null;
+    // reCAPTCHA is now verified upstream before this function is called.
+    // Keep action for logging only.
     const recaptchaAction = payload.recaptchaAction || "booking_submit";
-
-    const recaptcha = await verifyRecaptcha({ token: recaptchaToken, expectedAction: recaptchaAction });
-    if (!recaptcha.ok) {
-      // Keep response generic so bots don’t learn
-      console.warn("reCAPTCHA blocked booking:", recaptcha.reason, recaptcha.data || "");
-      return {
-        statusCode: 403,
-        body: JSON.stringify({ error: "Anti-bot check failed" }),
-      };
-    }
+    const recaptcha = { ok: true, data: null };
 
     const {
       name = "",
@@ -213,6 +169,9 @@ exports.handler = async (event) => {
 
       discountCode = null,
       pricing = null,
+
+      customerId = null,
+      quoteId = null,
 
       termsAccepted = false,
       termsVersion = TERMS_VERSION_DEFAULT,
@@ -249,7 +208,7 @@ Name: ${name}
 Email: ${email}
 Phone: ${phone}
 Address: ${address}
-${lat != null && lng != null ? `Geo: ${lat}, ${lng}\n` : ""}${placeId ? `Place ID: ${placeId}\n` : ""}
+${lat != null && lng != null ? `Geo: ${lat}, ${lng}\n` : ""}${placeId ? `Place ID: ${placeId}\n` : ""}${customerId ? `Squeegee Customer ID: ${customerId}\n` : ""}${quoteId ? `Squeegee Quote ID: ${quoteId}\n` : ""}
 
 Bins:
 ${binsText}
@@ -271,6 +230,8 @@ Acceptance line: ${termsAcceptanceText}
       <p><strong>Email:</strong> ${escapeHtml(email)}</p>
       ${lat != null && lng != null ? `<p><strong>Geo:</strong> ${escapeHtml(String(lat))}, ${escapeHtml(String(lng))}</p>` : ""}
       ${placeId ? `<p><strong>Place ID:</strong> ${escapeHtml(placeId)}</p>` : ""}
+      ${customerId ? `<p><strong>Squeegee Customer ID:</strong> ${escapeHtml(customerId)}</p>` : ""}
+      ${quoteId ? `<p><strong>Squeegee Quote ID:</strong> ${escapeHtml(quoteId)}</p>` : ""}
       <p><strong>Bins:</strong><br>${binsHtml}</p>
 
       ${pricingBlocks.html}
@@ -291,7 +252,7 @@ Acceptance line: ${termsAcceptanceText}
       subject: subjectAdmin,
       text: textAdmin,
       html: htmlAdmin,
-      replyTo: email || undefined, // ✅ correct Resend field
+      replyTo: email || undefined,
     });
 
     if (adminError) {
@@ -346,7 +307,7 @@ We’ll be in touch to confirm your schedule.`;
         subject: subjectCustomer,
         text: textCustomer,
         html: htmlCustomer,
-        replyTo: TO_ADMIN, // ✅ correct Resend field
+        replyTo: TO_ADMIN,
       });
 
       if (custError) {
@@ -362,11 +323,22 @@ We’ll be in touch to confirm your schedule.`;
         const key = `${new Date().toISOString()}__${(email || phone || "unknown").replace(/[^a-z0-9@.+_-]/gi, "_")}.json`;
         await store.setJSON(key, {
           channel: "email",
-          name, email, phone, address, bins,
-          placeId, lat, lng, source,
+          name,
+          email,
+          phone,
+          address,
+          bins,
+          placeId,
+          lat,
+          lng,
+          source,
+          customerId,
+          quoteId,
           discountCode: discountCode || null,
           pricing: pricing || null,
-          termsAccepted, termsVersion, termsAcceptanceText,
+          termsAccepted,
+          termsVersion,
+          termsAcceptanceText,
           termsTimestamp,
           recaptcha: {
             action: recaptchaAction,
