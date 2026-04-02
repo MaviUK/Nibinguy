@@ -816,27 +816,6 @@ function BookingForm({ onClose }) {
       });
 
       if (res.ok) {
-        try {
-          await fetch("/.netlify/functions/sendTosReceipt", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              source: "email",
-              name,
-              email,
-              phone,
-              address,
-              bins,
-              discountCode: normalizeCode(discountCode) || null,
-              pricing,
-              termsAccepted: true,
-              termsVersion: TERMS_VERSION,
-              termsAcceptanceText: TOS_PREFIX,
-              termsTimestamp: new Date().toISOString(),
-            }),
-          });
-        } catch {}
-
         alert("Booking email sent successfully! (Pricing + discount included)");
         onClose?.();
       } else {
