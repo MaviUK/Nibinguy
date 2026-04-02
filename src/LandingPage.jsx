@@ -858,7 +858,6 @@ function BookingForm({ onClose }) {
       alert("Error sending booking.");
     }
   };
-  };
 
   return (
     <div className="p-6 space-y-4">
