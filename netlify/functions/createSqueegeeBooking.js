@@ -1,105 +1,171 @@
 // netlify/functions/createSqueegeeBooking.js
 
+function getPlanAnswer(planId = "") {
+  switch (planId) {
+    case "domestic_4w":
+      return "After Every Bin Lorry Visit";
+    case "domestic_oneoff":
+      return "One Off Clean";
+    case "comm_lt360_4w":
+      return "After Every Bin Lorry Visit";
+    case "comm_lt360_oneoff":
+      return "One Off Clean";
+    case "comm_gt660_4w":
+      return "After Every Bin Lorry Visit";
+    case "comm_gt660_oneoff":
+      return "One Off Clean";
+    default:
+      return "After Every Bin Lorry Visit";
+  }
+}
+
+function getBinSizeAnswer(planId = "") {
+  if (planId.includes("gt660")) return "Commercial 660L+";
+  if (planId.includes("lt360")) return "Commercial <360L";
+  return "Domestic 120L";
+}
+
+function getCleanTypeAnswer(planId = "") {
+  if (planId.includes("oneoff")) return "One Off Clean";
+  return "Maintenance Clean";
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: "Method Not Allowed" };
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: "Method not allowed" }),
+    };
   }
 
   try {
-    const data = JSON.parse(event.body);
+    const payload = JSON.parse(event.body || "{}");
 
     const {
+      name = "",
+      email = "",
+      phone = "",
+      address = "",
+      bins = [],
+      notes = "",
+      recaptchaToken = "",
+    } = payload;
+
+    if (!name || !email || !phone || !address || !recaptchaToken) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Missing required fields" }),
+      };
+    }
+
+    const safeBins = Array.isArray(bins) ? bins.filter(Boolean) : [];
+    const firstBin = safeBins[0] || {};
+
+    const totalBins =
+      safeBins.reduce((sum, b) => sum + (Number(b?.count || 1)), 0) || 1;
+
+    const combinedNotes = [
+      notes || "",
+      address ? `Address: ${address}` : "",
+      safeBins.length
+        ? "Bins:\n" +
+          safeBins
+            .map((b) => `${b.count || 1} x ${b.type || "Bin"} (${b.planId || "unknown"})`)
+            .join("\n")
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const questionAnswers = [
+      {
+        questionId: "question.window-count-choice",
+        question: "How many bins do you have?",
+        answer: String(totalBins),
+      },
+      {
+        questionId: "question.bin-size-choice",
+        question: "What size are your bins?",
+        answer: getBinSizeAnswer(firstBin.planId || ""),
+      },
+      {
+        questionId: "question.bin-frequency-choice",
+        question: "How often would you like to have your bins cleaned? ",
+        answer: getPlanAnswer(firstBin.planId || ""),
+      },
+      {
+        questionId: "question.bin-clean-type-choice",
+        question: "What kind of clean would you like to book? ",
+        answer: getCleanTypeAnswer(firstBin.planId || ""),
+      },
+    ];
+
+    const squegeePayload = {
       name,
       email,
       phone,
-      address,
-      bins = [],
-    } = data;
-
-    // 🔹 Build description from bins
-    const description = bins
-      .map((b) => {
-        const plan = b.planId || "";
-        return `${b.count || 1} x ${b.type} (${plan})`;
-      })
-      .join("\n");
-
-    // 🔹 STEP 1: Create customer
-    const customerRes = await fetch("https://api.squeegeeapp.com/v1/customers", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.SQUEEGEE_API_KEY}`,
-      },
-      body: JSON.stringify({
-        name,
-        email,
-        phone,
-        address: {
-          line1: address,
+      location: {},
+      additionalInfo: combinedNotes,
+      clientId: "nibinguy",
+      errors: [],
+      locale: "en-US",
+      questionAnswers,
+      recaptcha: recaptchaToken,
+      selectedServices: [
+        {
+          children: [],
+          description: "",
+          id: "service.bin-cleaning",
+          name: "Bin/Garbage Can Cleaning",
         },
-      }),
-    });
+      ],
+    };
 
-    const customerData = await customerRes.json();
-
-    if (!customerData?.data?._id) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Failed to create customer", customerData }),
-      };
-    }
-
-    const customerId = customerData.data._id;
-
-    // 🔹 STEP 2: Create quote (job)
-    const quoteRes = await fetch("https://api.squeegeeapp.com/v1/quotes", {
+    const res = await fetch("https://squeeg.ee/api/quote-request", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.SQUEEGEE_API_KEY}`,
       },
-      body: JSON.stringify({
-        customerId,
-        name,
-        items: [
-          {
-            title: "Bin Cleaning",
-            description,
-            quantity: 1,
-            unitPrice: 0,
-            type: "job",
-          },
-        ],
-      }),
+      body: JSON.stringify(squegeePayload),
     });
 
-    const quoteData = await quoteRes.json();
+    const rawText = await res.text();
+    let data = null;
 
-    if (!quoteData?.data?._id) {
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = { raw: rawText };
+    }
+
+    if (!res.ok || !data?.success) {
+      console.error("Squeegee error:", data);
       return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Failed to create quote", quoteData }),
+        statusCode: 502,
+        body: JSON.stringify({
+          error: "Failed to create Squeegee booking",
+          details: data,
+        }),
       };
     }
 
-    const quoteId = quoteData.data._id;
-
-    // ✅ Return both IDs to frontend
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        customerId,
-        quoteId,
+        customerId: data.customerId || null,
+        quoteId: data.quote?._id || null,
+        squegee: data,
       }),
     };
-
-  } catch (err) {
-    console.error("Squeegee error:", err);
+  } catch (error) {
+    console.error("createSqueegeeBooking failed:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Squeegee booking failed" }),
+      body: JSON.stringify({
+        error: "Squeegee booking failed",
+        details: error.message,
+      }),
     };
   }
 };
