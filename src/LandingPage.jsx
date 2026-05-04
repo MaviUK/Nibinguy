@@ -792,8 +792,38 @@ function BookingForm({ onClose }) {
     const lat = loc ? loc.lat() : null;
     const lng = loc ? loc.lng() : null;
 
-    try {
-  // 1) Save booking to Supabase queue for Squeegee bot
+   try {
+  // 1) Send your original booking email first
+  const res = await fetch("/.netlify/functions/sendBookingEmail", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      email,
+      phone,
+      address,
+      bins,
+      placeId,
+      lat,
+      lng,
+      discountCode: normalizeCode(discountCode) || null,
+      pricing,
+      termsAccepted: true,
+      termsVersion: TERMS_VERSION,
+      termsAcceptanceText: TOS_PREFIX,
+      recaptchaToken,
+      recaptchaAction,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error("Email failed:", errorText);
+    alert("Failed to send booking email: " + errorText);
+    return;
+  }
+
+  // 2) Save booking to Supabase queue for Squeegee bot
   const bookingRes = await fetch("/.netlify/functions/createBooking", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -817,31 +847,18 @@ function BookingForm({ onClose }) {
   });
 
   if (!bookingRes.ok) {
-    alert("Booking could not be saved. Please try again.");
+    const errorText = await bookingRes.text();
+    console.error("Booking save failed:", errorText);
+    alert("Email sent, but booking was not saved for Squeegee: " + errorText);
     return;
   }
 
-  // 2) Still send your normal email notification
-  const emailRes = await fetch("/.netlify/functions/sendBookingEmail", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name,
-      email,
-      phone,
-      address,
-      bins,
-      placeId,
-      lat,
-      lng,
-      discountCode: normalizeCode(discountCode) || null,
-      pricing,
-      termsAccepted: true,
-      termsVersion: TERMS_VERSION,
-      termsAcceptanceText: TOS_PREFIX,
-      recaptchaToken,
-      recaptchaAction,
-    }),
+  alert("Booking received! We’ll prepare your quote.");
+  onClose?.();
+} catch (err) {
+  console.error(err);
+  alert("Error sending booking.");
+}
   });
 
   if (emailRes.ok) {
