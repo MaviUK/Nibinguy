@@ -859,19 +859,6 @@ function BookingForm({ onClose }) {
   console.error(err);
   alert("Error sending booking.");
 }
-  });
-
-  if (emailRes.ok) {
-    alert("Booking received! We’ll prepare your quote.");
-    onClose?.();
-  } else {
-    alert("Booking saved, but email notification failed.");
-    onClose?.();
-  }
-} catch (err) {
-  console.error(err);
-  alert("Error sending booking.");
-}
   };
 
   return (
