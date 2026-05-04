@@ -793,38 +793,68 @@ function BookingForm({ onClose }) {
     const lng = loc ? loc.lng() : null;
 
     try {
-      const res = await fetch("/.netlify/functions/sendBookingEmail", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          email,
-          phone,
-          address,
-          bins,
-          placeId,
-          lat,
-          lng,
-          discountCode: normalizeCode(discountCode) || null,
-          pricing,
-          termsAccepted: true,
-          termsVersion: TERMS_VERSION,
-          termsAcceptanceText: TOS_PREFIX,
-          recaptchaToken,
-          recaptchaAction,
-        }),
-      });
+  // 1) Save booking to Supabase queue for Squeegee bot
+  const bookingRes = await fetch("/.netlify/functions/createBooking", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      email,
+      phone,
+      address,
+      bins,
+      placeId,
+      lat,
+      lng,
+      discountCode: normalizeCode(discountCode) || null,
+      pricing,
+      termsAccepted: true,
+      termsVersion: TERMS_VERSION,
+      termsAcceptanceText: TOS_PREFIX,
+      status: "new",
+      source: "website_booking_form",
+    }),
+  });
 
-      if (res.ok) {
-        alert("Booking email sent successfully! (Pricing + discount included)");
-        onClose?.();
-      } else {
-        alert("Failed to send booking email.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Error sending booking email.");
-    }
+  if (!bookingRes.ok) {
+    alert("Booking could not be saved. Please try again.");
+    return;
+  }
+
+  // 2) Still send your normal email notification
+  const emailRes = await fetch("/.netlify/functions/sendBookingEmail", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name,
+      email,
+      phone,
+      address,
+      bins,
+      placeId,
+      lat,
+      lng,
+      discountCode: normalizeCode(discountCode) || null,
+      pricing,
+      termsAccepted: true,
+      termsVersion: TERMS_VERSION,
+      termsAcceptanceText: TOS_PREFIX,
+      recaptchaToken,
+      recaptchaAction,
+    }),
+  });
+
+  if (emailRes.ok) {
+    alert("Booking received! We’ll prepare your quote.");
+    onClose?.();
+  } else {
+    alert("Booking saved, but email notification failed.");
+    onClose?.();
+  }
+} catch (err) {
+  console.error(err);
+  alert("Error sending booking.");
+}
   };
 
   return (
