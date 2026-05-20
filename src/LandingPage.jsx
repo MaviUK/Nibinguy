@@ -823,8 +823,8 @@ function BookingForm({ onClose }) {
     return;
   }
 
-  // Booking database save removed by request.
-  // The form now only sends the booking email and does not add a booking row to Supabase/Squeegee.
+  // Booking database/Squeegee save removed by request.
+  // The form now only sends the booking email.
 
   alert("Booking received! We’ll prepare your quote.");
   onClose?.();
