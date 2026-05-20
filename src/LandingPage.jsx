@@ -823,35 +823,8 @@ function BookingForm({ onClose }) {
     return;
   }
 
-  // 2) Save booking to Supabase queue for Squeegee bot
-  const bookingRes = await fetch("/.netlify/functions/createBooking", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name,
-      email,
-      phone,
-      address,
-      bins,
-      placeId,
-      lat,
-      lng,
-      discountCode: normalizeCode(discountCode) || null,
-      pricing,
-      termsAccepted: true,
-      termsVersion: TERMS_VERSION,
-      termsAcceptanceText: TOS_PREFIX,
-      status: "new",
-      source: "website_booking_form",
-    }),
-  });
-
-  if (!bookingRes.ok) {
-    const errorText = await bookingRes.text();
-    console.error("Booking save failed:", errorText);
-    alert("Email sent, but booking was not saved for Squeegee: " + errorText);
-    return;
-  }
+  // Booking database save removed by request.
+  // The form now only sends the booking email and does not add a booking row to Supabase/Squeegee.
 
   alert("Booking received! We’ll prepare your quote.");
   onClose?.();
