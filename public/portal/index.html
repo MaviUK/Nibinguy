@@ -14,17 +14,26 @@
       color: #fff;
     }
 
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
     body {
       margin: 0;
-      min-height: 100vh;
+      min-height: 100%;
       background: #000;
       color: #fff;
     }
 
+    body {
+      overflow-x: hidden;
+    }
+
     main {
-      min-height: 100vh;
-      padding: 40px 16px;
-      box-sizing: border-box;
+      min-height: 100svh;
+      width: 100%;
+      padding: 16px;
     }
 
     .wrap {
@@ -34,52 +43,85 @@
       text-align: center;
     }
 
-    a {
+    .back-link {
+      display: inline-block;
+      margin-bottom: 16px;
       color: #4ade80;
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 4px;
     }
 
     h1 {
-      margin: 24px 0 12px;
+      margin: 0 0 10px;
       color: #4ade80;
-      font-size: clamp(2rem, 5vw, 3rem);
+      font-size: clamp(1.75rem, 7vw, 3rem);
       line-height: 1.1;
     }
 
     p {
       max-width: 680px;
-      margin: 0 auto 28px;
+      margin: 0 auto 18px;
       color: #d4d4d8;
-      line-height: 1.6;
+      line-height: 1.5;
     }
 
-    .portal-card {
+    .portal-shell {
       width: 100%;
-      max-width: 800px;
-      min-height: 700px;
+      max-width: 900px;
+      min-height: 760px;
       margin: 0 auto;
-      display: block;
-      background: #18181b;
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 1rem;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
       overflow: visible;
-      padding: 20px;
-      box-sizing: border-box;
+    }
+
+    .portal-shell [data-sqc="layout"] {
+      width: 100%;
+      min-height: 760px;
+    }
+
+    @media (max-width: 640px) {
+      main {
+        padding: 10px 0 24px;
+      }
+
+      .back-link,
+      h1,
+      p {
+        display: none;
+      }
+
+      .wrap {
+        max-width: none;
+      }
+
+      .portal-shell {
+        width: 100vw;
+        max-width: none;
+        min-height: calc(100svh - 20px);
+        margin: 0;
+        padding: 0;
+      }
+
+      .portal-shell [data-sqc="layout"] {
+        width: 100%;
+        min-height: calc(100svh - 20px);
+      }
     }
   </style>
 </head>
 <body>
   <main id="main-content" tabindex="-1">
     <div class="wrap">
-      <a href="/">Back to homepage</a>
+      <a class="back-link" href="/">Back to homepage</a>
       <h1>Customer Portal</h1>
       <p>Manage your Ni Bin Guy account, payments and service details in the secure customer portal.</p>
-      <div
-        class="portal-card"
-        data-sqc="layout"
-        data-sqa="25a031e7-75af-4a0e-9f3a-d308fd9b2e3a"
-        data-sqe="https://sqgee.com"
-      ></div>
+      <div class="portal-shell">
+        <div
+          data-sqc="layout"
+          data-sqa="25a031e7-75af-4a0e-9f3a-d308fd9b2e3a"
+          data-sqe="https://sqgee.com"
+        ></div>
+      </div>
     </div>
   </main>
 </body>
