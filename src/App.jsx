@@ -11,11 +11,6 @@ import AdminDashboard from "./admin/AdminDashboard"
 import AuthCallback from "./auth/AuthCallback"
 
 export default function App() {
-
-  <a href="#main-content" className="skip-link">
-        Skip to main content
-      </a>
-
   useEffect(() => {
     const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY
 
@@ -43,16 +38,21 @@ export default function App() {
   }, [])
 
   return (
-    <Routes>
-      <Route path="/" element={<NiBinGuyLandingPage />} />
-      <Route path="/standee/:slug" element={<StandeePreClaim />} />
-      <Route path="/standee/:slug/claim" element={<StandeeClaim />} />
-      <Route path="/standee/:slug/spotted" element={<StandeeSpottedClaim />} />
-      <Route path="/standee/latest" element={<LatestStandeeRedirect />} />
-      <Route path="/standee/:slug/spotted/closed" element={<StandeeSpottedClosed />} />
-      <Route path="/admin/login" element={<AdminLogin />} />
-      <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
-    </Routes>
+    <>
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+      <Routes>
+        <Route path="/" element={<NiBinGuyLandingPage />} />
+        <Route path="/standee/:slug" element={<StandeePreClaim />} />
+        <Route path="/standee/:slug/claim" element={<StandeeClaim />} />
+        <Route path="/standee/:slug/spotted" element={<StandeeSpottedClaim />} />
+        <Route path="/standee/latest" element={<LatestStandeeRedirect />} />
+        <Route path="/standee/:slug/spotted/closed" element={<StandeeSpottedClosed />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+      </Routes>
+    </>
   )
 }
