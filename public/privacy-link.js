@@ -28,6 +28,9 @@
 
     var panel = document.createElement("div");
     panel.style.cssText = "width:min(920px,96vw);max-height:90dvh;background:#fff;color:#111;border-radius:18px;overflow:hidden;box-shadow:0 20px 70px rgba(0,0,0,.45);display:flex;flex-direction:column;";
+    panel.addEventListener("click", function (event) {
+      event.stopPropagation();
+    });
 
     var header = document.createElement("div");
     header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #e5e7eb;background:#f9fafb;";
@@ -49,9 +52,7 @@
     panel.appendChild(frame);
     overlay.appendChild(panel);
 
-    overlay.addEventListener("click", function (event) {
-      if (event.target === overlay) closePrivacyOverlay();
-    });
+    overlay.addEventListener("click", closePrivacyOverlay);
 
     document.body.appendChild(overlay);
   }
@@ -77,16 +78,18 @@
         .replace(/\n/g, "<br>")
         .replace("Privacy Policy", linkMarkup);
 
+      var trigger = node.querySelector("[data-open-privacy-policy]");
+      if (trigger) {
+        trigger.addEventListener("click", function (event) {
+          event.preventDefault();
+          event.stopPropagation();
+          openPrivacyOverlay();
+        });
+      }
+
       node.dataset.privacyPolicyLinked = "true";
     });
   }
-
-  document.addEventListener("click", function (event) {
-    var trigger = event.target.closest("[data-open-privacy-policy]");
-    if (!trigger) return;
-    event.preventDefault();
-    openPrivacyOverlay();
-  });
 
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") closePrivacyOverlay();
