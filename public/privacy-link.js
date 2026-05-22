@@ -98,6 +98,8 @@
     loadPolicyInto(content);
   }
 
+  window.NBGOpenPrivacyPolicy = openPrivacyOverlay;
+
   function addPrivacyLinkToTerms() {
     var nodes = document.querySelectorAll("div.whitespace-pre-line");
 
@@ -143,6 +145,14 @@
   }
 
   document.addEventListener("click", function (event) {
+    var trigger = event.target.closest("[data-open-privacy-policy]");
+    if (trigger) {
+      event.preventDefault();
+      event.stopPropagation();
+      openPrivacyOverlay();
+      return;
+    }
+
     var link = event.target.closest("a[href]");
     if (!link) return;
     if (link.dataset.allowPolicyNavigation === "true") return;
