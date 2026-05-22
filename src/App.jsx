@@ -1,5 +1,5 @@
 import React, { useEffect } from "react"
-import { Routes, Route } from "react-router-dom"
+import { Routes, Route, useNavigate } from "react-router-dom"
 import NiBinGuyLandingPage from "./LandingPage"
 import StandeeClaim from "./standee/StandeeClaim"
 import StandeeSpottedClaim from "./standee/StandeeSpottedClaim"
@@ -9,8 +9,11 @@ import StandeeSpottedClosed from "./standee/StandeeSpottedClosed"
 import AdminLogin from "./admin/AdminLogin"
 import AdminDashboard from "./admin/AdminDashboard"
 import AuthCallback from "./auth/AuthCallback"
+import CustomerPortal from "./pages/CustomerPortal"
 
 export default function App() {
+  const navigate = useNavigate()
+
   useEffect(() => {
     const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY
 
@@ -37,6 +40,19 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    const handlePortalAnchorClick = (event) => {
+      const link = event.target.closest?.('a[href="#customer-portal"]')
+      if (!link) return
+
+      event.preventDefault()
+      navigate("/portal")
+    }
+
+    document.addEventListener("click", handlePortalAnchorClick)
+    return () => document.removeEventListener("click", handlePortalAnchorClick)
+  }, [navigate])
+
   return (
     <>
       <a href="#main-content" className="skip-link">
@@ -44,6 +60,7 @@ export default function App() {
       </a>
       <Routes>
         <Route path="/" element={<NiBinGuyLandingPage />} />
+        <Route path="/portal" element={<CustomerPortal />} />
         <Route path="/standee/:slug" element={<StandeePreClaim />} />
         <Route path="/standee/:slug/claim" element={<StandeeClaim />} />
         <Route path="/standee/:slug/spotted" element={<StandeeSpottedClaim />} />
