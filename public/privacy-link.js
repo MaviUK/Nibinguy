@@ -16,6 +16,49 @@
     if (overlay) overlay.remove();
   }
 
+  function stylePolicyContent(container) {
+    container.querySelectorAll("h1").forEach(function (el) {
+      el.style.cssText = "margin:0 0 8px;color:#16a34a;font-size:clamp(28px,5vw,44px);line-height:1.1;font-weight:900;";
+    });
+    container.querySelectorAll("h2").forEach(function (el) {
+      el.style.cssText = "margin:28px 0 10px;color:#111;font-size:20px;line-height:1.2;font-weight:900;";
+    });
+    container.querySelectorAll("p").forEach(function (el) {
+      el.style.cssText = "margin:0 0 14px;color:#222;line-height:1.65;";
+    });
+    container.querySelectorAll("ul").forEach(function (el) {
+      el.style.cssText = "margin:0 0 16px;padding-left:22px;color:#222;line-height:1.65;";
+    });
+    container.querySelectorAll("a").forEach(function (el) {
+      el.style.cssText = "color:#16a34a;text-decoration:underline;font-weight:700;";
+    });
+    container.querySelectorAll(".updated").forEach(function (el) {
+      el.style.cssText = "margin-top:0;margin-bottom:22px;color:#555;";
+    });
+    container.querySelectorAll(".contact-box").forEach(function (el) {
+      el.style.cssText = "margin-top:28px;padding:18px;border-radius:16px;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.25);";
+    });
+  }
+
+  function loadPolicyInto(content) {
+    content.innerHTML = '<p style="margin:0;color:#444;">Loading Privacy Policy...</p>';
+
+    fetch(privacyHref, { cache: "no-store" })
+      .then(function (response) {
+        if (!response.ok) throw new Error("Privacy Policy request failed");
+        return response.text();
+      })
+      .then(function (html) {
+        var parsed = new DOMParser().parseFromString(html, "text/html");
+        var article = parsed.querySelector("article.card") || parsed.querySelector("article") || parsed.body;
+        content.innerHTML = article ? article.innerHTML : html;
+        stylePolicyContent(content);
+      })
+      .catch(function () {
+        content.innerHTML = '<p style="margin:0 0 12px;color:#222;line-height:1.6;">Sorry, the Privacy Policy could not load inside this popup.</p><p style="margin:0;color:#222;line-height:1.6;">Please use the Privacy Policy link in the footer, or open <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer" style="color:#16a34a;text-decoration:underline;font-weight:700;">the Privacy Policy here</a>.</p>';
+      });
+  }
+
   function openPrivacyOverlay() {
     closePrivacyOverlay();
 
@@ -33,7 +76,7 @@
     });
 
     var header = document.createElement("div");
-    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #e5e7eb;background:#f9fafb;";
+    header.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #e5e7eb;background:#f9fafb;flex-shrink:0;";
     header.innerHTML = '<strong id="nbg-privacy-policy-title" style="font-size:18px;">Privacy Policy</strong>';
 
     var closeButton = document.createElement("button");
@@ -43,18 +86,16 @@
     closeButton.addEventListener("click", closePrivacyOverlay);
     header.appendChild(closeButton);
 
-    var frame = document.createElement("iframe");
-    frame.src = privacyHref;
-    frame.title = "Ni Bin Guy Privacy Policy";
-    frame.style.cssText = "width:100%;height:72dvh;border:0;background:#050505;";
+    var content = document.createElement("div");
+    content.style.cssText = "padding:22px;overflow:auto;max-height:calc(90dvh - 70px);background:#fff;color:#111;";
 
     panel.appendChild(header);
-    panel.appendChild(frame);
+    panel.appendChild(content);
     overlay.appendChild(panel);
-
     overlay.addEventListener("click", closePrivacyOverlay);
-
     document.body.appendChild(overlay);
+
+    loadPolicyInto(content);
   }
 
   function addPrivacyLinkToTerms() {
