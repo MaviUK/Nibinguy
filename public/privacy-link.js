@@ -55,7 +55,7 @@
         stylePolicyContent(content);
       })
       .catch(function () {
-        content.innerHTML = '<p style="margin:0 0 12px;color:#222;line-height:1.6;">Sorry, the Privacy Policy could not load inside this popup.</p><p style="margin:0;color:#222;line-height:1.6;">Please use the Privacy Policy link in the footer, or open <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer" style="color:#16a34a;text-decoration:underline;font-weight:700;">the Privacy Policy here</a>.</p>';
+        content.innerHTML = '<p style="margin:0 0 12px;color:#222;line-height:1.6;">Sorry, the Privacy Policy could not load inside this popup.</p><p style="margin:0;color:#222;line-height:1.6;">Please open <a href="/privacy-policy.html" target="_blank" rel="noopener noreferrer" data-allow-policy-navigation="true" style="color:#16a34a;text-decoration:underline;font-weight:700;">the Privacy Policy here</a>.</p>';
       });
   }
 
@@ -131,6 +131,27 @@
       node.dataset.privacyPolicyLinked = "true";
     });
   }
+
+  function isPrivacyPolicyHref(href) {
+    if (!href) return false;
+    try {
+      var url = new URL(href, window.location.origin);
+      return url.pathname === privacyHref;
+    } catch (e) {
+      return href === privacyHref;
+    }
+  }
+
+  document.addEventListener("click", function (event) {
+    var link = event.target.closest("a[href]");
+    if (!link) return;
+    if (link.dataset.allowPolicyNavigation === "true") return;
+    if (!isPrivacyPolicyHref(link.getAttribute("href"))) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    openPrivacyOverlay();
+  }, true);
 
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") closePrivacyOverlay();
