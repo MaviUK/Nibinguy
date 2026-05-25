@@ -12,6 +12,7 @@ function niBinGuyPriceOverrides() {
 
       const updatedCode = code
         .replace(/({ id: "domestic_oneoff", label: "One-off", price: )12\.5( })/, '$115$2')
+        .replace(/({ id: "comm_lt360_oneoff", label: "Commercial <360L One-Off", price: )12\.5( })/, '$115$2')
         .replace(/({ id: "comm_gt660_oneoff", label: "Commercial >660L One-Off", price: )30( })/, '$135$2')
 
       return updatedCode === code ? null : { code: updatedCode, map: null }
