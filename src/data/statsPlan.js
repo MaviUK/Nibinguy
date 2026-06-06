@@ -84,25 +84,22 @@ function getDayProgress(now) {
   return clamp((now - start) / (end - start), 0, 1);
 }
 
-function startOfMonth(d) {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
+function startOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
 }
 
-function computeMonthTotals(now) {
+function computeCompletedRouteTotals(now) {
   let bins = 0;
   let customers = 0;
-  const cursor = startOfMonth(now);
+  const cursor = startOfDay(ANCHOR_MONDAY);
+  const today = startOfDay(now);
 
-  while (cursor < now) {
-    const isSameDay =
-      cursor.getFullYear() === now.getFullYear() &&
-      cursor.getMonth() === now.getMonth() &&
-      cursor.getDate() === now.getDate();
-
+  while (cursor < today) {
     const plan = getPlanForDate(cursor);
 
-    // Count completed route days (Mon–Thu), but not today
-    if (!isSameDay && plan.active && ["Mon", "Tue", "Wed", "Thu"].includes(plan.dayKey)) {
+    // Count every completed route day since the rota anchor.
+    // This keeps the headline counter cumulative instead of resetting each month.
+    if (plan.active && ["Mon", "Tue", "Wed", "Thu"].includes(plan.dayKey)) {
       bins += plan.bins;
       customers += plan.customers;
     }
@@ -124,13 +121,13 @@ export function useLiveCounters() {
 
   const now = useMemo(() => new Date(), [tick]);
   const today = useMemo(() => getPlanForDate(now), [now]);
-  const month = useMemo(() => computeMonthTotals(now), [now]);
+  const completedRoutes = useMemo(() => computeCompletedRouteTotals(now), [now]);
 
   const progress = today.active ? getDayProgress(now) : 0;
 
- return {
-  totalBinsCleaned: STATS_BASE.totalBinsCleaned + month.bins + Math.floor(today.bins * progress),
-  todaysArea: today.area,
-  totalMonthlyCustomers: STATS_BASE.monthlyCustomers, // ✅ always 1078
-};
+  return {
+    totalBinsCleaned: STATS_BASE.totalBinsCleaned + completedRoutes.bins + Math.floor(today.bins * progress),
+    todaysArea: today.area,
+    totalMonthlyCustomers: STATS_BASE.monthlyCustomers, // ✅ always 1078
+  };
 }
