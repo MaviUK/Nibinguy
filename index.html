@@ -81,6 +81,66 @@
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
   <script src="/privacy-link.js?v=20260522-2" defer></script>
+  <script>
+    (function () {
+      const logos = ["/logo.png", "/logo2.png", "/logo3.png", "/logo4.png", "/logo5.png"];
+      const storageKey = "nbg_last_logo_index";
+
+      function pickLogo() {
+        let lastIndex = -1;
+
+        try {
+          lastIndex = Number(window.localStorage.getItem(storageKey));
+        } catch (error) {
+          lastIndex = -1;
+        }
+
+        const availableIndexes = logos
+          .map((_, index) => index)
+          .filter((index) => index !== lastIndex);
+
+        const nextIndex = availableIndexes[Math.floor(Math.random() * availableIndexes.length)] ?? 0;
+
+        try {
+          window.localStorage.setItem(storageKey, String(nextIndex));
+        } catch (error) {
+          // Ignore private browsing/storage errors.
+        }
+
+        return logos[nextIndex];
+      }
+
+      const selectedLogo = pickLogo();
+
+      function applySelectedLogo() {
+        const logoImages = document.querySelectorAll('img[alt*="Ni Bin Guy"], img[src$="logo.png"]');
+
+        logoImages.forEach((img) => {
+          const currentSrc = img.getAttribute("src") || "";
+          const looksLikeLogo = currentSrc.includes("logo.png") || /logo[2-5]\.png$/i.test(currentSrc) || img.alt.includes("Ni Bin Guy");
+
+          if (!looksLikeLogo || img.dataset.randomLogoApplied === "true") return;
+
+          img.dataset.randomLogoApplied = "true";
+          img.onerror = function () {
+            if (!img.src.endsWith("/logo.png")) img.src = "/logo.png";
+          };
+          img.src = selectedLogo;
+        });
+      }
+
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", applySelectedLogo);
+      } else {
+        applySelectedLogo();
+      }
+
+      new MutationObserver(applySelectedLogo).observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+      });
+    })();
+  </script>
 
  <!-- Static Squeegee Portal -->
 <section id="customer-portal" style="padding: 40px; background: black; text-align: center; color: white;">
@@ -108,7 +168,7 @@
     "
   ></div>
 </section>
-  
+   
   <!-- Footer -->
   <footer style="background: black; color: #a1a1aa; text-align: center; padding: 24px 16px;">
     <p style="margin: 0; font-size: 0.9rem;">© 2025 Ni Bin Guy. All rights reserved.</p>
