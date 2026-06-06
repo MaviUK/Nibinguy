@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 // ✅ Change these anytime
 export const STATS_BASE = {
-  totalBinsCleaned: 27886,  // your starting total bins cleaned
+  totalBinsCleaned: 27886,  // total before the last 4 months were added
   monthlyCustomers: 1078,   // your starting total monthly customers
 };
 
@@ -40,6 +40,10 @@ export const FOUR_WEEK_PLAN = [
 
 // ✅ Set this to the Monday that should count as “Week 1”
 export const ANCHOR_MONDAY = new Date("2026-01-05T00:00:00");
+
+// ✅ Counter catch-up date: 4 months before 6 June 2026.
+// The live headline adds all completed route bins from this date onward.
+const COUNTER_COUNT_FROM = new Date("2026-02-06T00:00:00");
 
 // Workday times
 const START_HOUR = 9;
@@ -91,14 +95,14 @@ function startOfDay(d) {
 function computeCompletedRouteTotals(now) {
   let bins = 0;
   let customers = 0;
-  const cursor = startOfDay(ANCHOR_MONDAY);
+  const cursor = startOfDay(COUNTER_COUNT_FROM);
   const today = startOfDay(now);
 
   while (cursor < today) {
     const plan = getPlanForDate(cursor);
 
-    // Count every completed route day since the rota anchor.
-    // This keeps the headline counter cumulative instead of resetting each month.
+    // Count every completed route day since the counter catch-up date.
+    // This keeps the headline cumulative and includes the last 4 months.
     if (plan.active && ["Mon", "Tue", "Wed", "Thu"].includes(plan.dayKey)) {
       bins += plan.bins;
       customers += plan.customers;
