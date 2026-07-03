@@ -186,12 +186,16 @@
       top: 68px;
       right: 14px;
       z-index: 89;
-      width: min(290px, calc(100vw - 28px));
+      width: max-content;
+      max-width: calc(100vw - 28px);
+      min-width: 0;
       padding: 12px;
       border: 1px solid rgba(255,255,255,0.22);
       border-radius: 18px;
       background: rgba(24,24,27,0.97);
       box-shadow: 0 18px 42px rgba(0,0,0,0.44);
+      box-sizing: border-box;
+      text-align: right;
       display: none;
     }
     #site-section-menu[data-open="true"] { display: block; }
@@ -202,6 +206,8 @@
       color: white;
       text-decoration: none;
       font-weight: 700;
+      text-align: right;
+      white-space: nowrap;
     }
     #site-section-menu a:hover,
     #site-section-menu a:focus {
