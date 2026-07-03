@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ✅ Your custom styles go below this line */
+
+.squeegee-portal-wrapper {
+  all: revert;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: #111;
+  display: block;
+  width: 100%;
+  min-height: 700px;
+  background: white;
+  overflow: visible;
+  padding: 20px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  margin: 0 auto;
+  max-width: 800px;
+}
+
+/* ✅ Restore sane defaults + accessibility inside the portal */
+.squeegee-portal-wrapper,
+.squeegee-portal-wrapper * {
+  box-sizing: border-box;
+}
+
+/* Ensure form controls have visible boundaries */
+.squeegee-portal-wrapper input,
+.squeegee-portal-wrapper select,
+.squeegee-portal-wrapper textarea,
+.squeegee-portal-wrapper button {
+  border: 1px solid rgba(0, 0, 0, 0.45);
+}
+
+/* Make focus clearly visible inside the portal */
+.squeegee-portal-wrapper a:focus-visible,
+.squeegee-portal-wrapper button:focus-visible,
+.squeegee-portal-wrapper input:focus-visible,
+.squeegee-portal-wrapper select:focus-visible,
+.squeegee-portal-wrapper textarea:focus-visible {
+  outline: 3px solid rgba(0, 0, 0, 0.85);
+  outline-offset: 3px;
+}
+
+/* Skip link accessibility */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 10px;
+  background: #000;
+  color: #fff;
+  padding: 10px 14px;
+  z-index: 1000;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: top 0.2s;
+}
+
+.skip-link:focus,
+.skip-link:focus-visible {
+  top: 10px;
+}
+
+/* Global accessible focus indicators */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #22c55e;
+  outline-offset: 2px;
+}
+
+/* Global visible boundaries for form controls */
+input,
+select,
+textarea {
+  border-color: #6b7280;
+}
+
+/* Give buttons a defined boundary */
+button {
+  border: 1px solid transparent;
+}
