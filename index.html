@@ -149,6 +149,68 @@
   }
   </script>
 
+  <style>
+    html { scroll-behavior: smooth; }
+    #site-menu-toggle {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 90;
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(255,255,255,0.28);
+      border-radius: 14px;
+      background: rgba(24,24,27,0.92);
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    }
+    #site-menu-toggle span,
+    #site-menu-toggle span::before,
+    #site-menu-toggle span::after {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: #4ade80;
+      border-radius: 999px;
+      content: "";
+      position: relative;
+    }
+    #site-menu-toggle span::before { position: absolute; top: -7px; left: 0; }
+    #site-menu-toggle span::after { position: absolute; top: 7px; left: 0; }
+    #site-section-menu {
+      position: fixed;
+      top: 68px;
+      right: 14px;
+      z-index: 89;
+      width: min(290px, calc(100vw - 28px));
+      padding: 12px;
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 18px;
+      background: rgba(24,24,27,0.97);
+      box-shadow: 0 18px 42px rgba(0,0,0,0.44);
+      display: none;
+    }
+    #site-section-menu[data-open="true"] { display: block; }
+    #site-section-menu a {
+      display: block;
+      padding: 12px 13px;
+      border-radius: 12px;
+      color: white;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    #site-section-menu a:hover,
+    #site-section-menu a:focus {
+      background: rgba(74,222,128,0.16);
+      color: #86efac;
+      outline: none;
+    }
+  </style>
+
   <!-- Google Maps JS (Places) -->
   <script
     async
@@ -166,6 +228,18 @@
 
 </head>
 <body>
+
+  <button id="site-menu-toggle" type="button" aria-label="Open website menu" aria-controls="site-section-menu" aria-expanded="false"><span aria-hidden="true"></span></button>
+  <nav id="site-section-menu" aria-label="Website sections" data-open="false">
+    <a href="#main-content">Home</a>
+    <a href="#what-we-do">What We Do</a>
+    <a href="#the-process">The Process</a>
+    <a href="#bins-we-clean">Bins We Clean</a>
+    <a href="#why-clean-your-bin">Why Clean Your Bin</a>
+    <a href="#why-ni-bin-guy">Why Ni Bin Guy</a>
+    <a href="#wheelie-bin-cleaning-questions">Customer Questions</a>
+    <a href="#customer-portal">Customer Portal</a>
+  </nav>
 
   <!-- React Root -->
   <div id="root"></div>
@@ -231,17 +305,62 @@
       });
     })();
   </script>
+  <script>
+    (function () {
+      const button = document.getElementById("site-menu-toggle");
+      const menu = document.getElementById("site-section-menu");
+      const root = document.getElementById("root");
+
+      const sectionIds = {
+        "What We Do": "what-we-do",
+        "The Bins We Clean": "bins-we-clean",
+        "Why Clean Your Bin?": "why-clean-your-bin",
+        "Why Ni Bin Guy?": "why-ni-bin-guy"
+      };
+
+      function setMenuOpen(open) {
+        menu.dataset.open = open ? "true" : "false";
+        button.setAttribute("aria-expanded", open ? "true" : "false");
+        button.setAttribute("aria-label", open ? "Close website menu" : "Open website menu");
+      }
+
+      function assignSectionIds() {
+        document.querySelectorAll("h2").forEach((heading) => {
+          const text = (heading.textContent || "").trim();
+          const id = sectionIds[text];
+          const section = heading.closest("section");
+          if (id && section && !section.id) section.id = id;
+        });
+      }
+
+      button.addEventListener("click", function (event) {
+        event.stopPropagation();
+        setMenuOpen(menu.dataset.open !== "true");
+      });
+
+      menu.addEventListener("click", function (event) {
+        if (event.target.closest("a")) setMenuOpen(false);
+      });
+
+      document.addEventListener("click", function (event) {
+        if (!menu.contains(event.target) && !button.contains(event.target)) setMenuOpen(false);
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") setMenuOpen(false);
+      });
+
+      assignSectionIds();
+      if (root) {
+        new MutationObserver(assignSectionIds).observe(root, { childList: true, subtree: true });
+      }
+    })();
+  </script>
 
   <!-- Search-friendly customer questions -->
   <section id="wheelie-bin-cleaning-questions" style="padding: 64px 16px; background: linear-gradient(180deg, #000000 0%, #18181b 100%); color: white;">
     <div style="max-width: 950px; margin: 0 auto;">
-      <div style="text-align: center; margin-bottom: 36px;">
-        <p style="margin: 0 0 10px; color: #86efac; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.78rem;">Wheelie bin cleaning help</p>
-        <h2 style="font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; margin: 0; color: #4ade80;">Questions Customers Ask Before Booking</h2>
-        <p style="max-width: 760px; margin: 18px auto 0; color: #d4d4d8; font-size: 1.05rem; line-height: 1.7;">
-          Looking for wheelie bin cleaning in Bangor, Newtownards, Donaghadee, Holywood or across County Down? Tap a question to see the answer.
-        </p>
-      </div>
+      <h2 style="font-size: 1.875rem; font-weight: bold; color: #4ade80; margin: 0 0 28px; text-align: center;">Customer Questions</h2>
 
       <div style="display: grid; gap: 14px;">
         <details open style="background: rgba(39, 39, 42, 0.82); border: 1px solid rgba(255,255,255,0.2); border-radius: 18px; padding: 18px 20px; box-shadow: 0 14px 36px rgba(0,0,0,0.28);">
