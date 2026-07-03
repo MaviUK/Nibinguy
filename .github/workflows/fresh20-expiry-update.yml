@@ -29,3 +29,5 @@ jobs:
         with:
           commit_message: Extend FRESH20 voucher to July 2026
           file_pattern: src/LandingPage.jsx
+
+# Triggered once to apply FRESH20 expiry update.
