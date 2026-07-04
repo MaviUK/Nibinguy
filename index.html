@@ -8,7 +8,6 @@
 
   <!-- SEO Meta Tags -->
   <meta name="description" content="Reliable, eco-friendly wheelie bin cleaning across County Down. Covering Bangor, Newtownards, Donaghadee, Holywood, Comber, Dundonald, Millisle, Ballywalter, Portaferry, Ballyhalbert & more. Book The Bin Guy today.">
-  <meta name="keywords" content="bin cleaning, bin cleaner, wheelie bin cleaner, bin washing, Ni Bin Guy, bin cleaning Northern Ireland, bin cleaning County Down">
   <meta name="robots" content="index, follow">
   <meta name="author" content="Ni Bin Guy">
   <link rel="canonical" href="https://nibing.uy" />
@@ -153,7 +152,8 @@
   <script src="https://www.google.com/recaptcha/api.js?render=%VITE_RECAPTCHA_SITE_KEY%"></script>
   <!-- ⭐ Google Reviews Carousel (Elfsight) -->
   <script src="https://apps.elfsight.com/p/platform.js" defer></script>
-  <script src="/google-reviews.js?v=20260704-1" defer></script>
+  <script src="/google-reviews.js?v=20260704-3" defer></script>
+  <script src="/site-tracking.js?v=20260704-1" defer></script>
   <!-- Squeegee Portal -->
   <script src="https://widgets.sqg.ee/main.js" defer></script>
 </head>
@@ -168,6 +168,7 @@
     <a href="#why-clean-your-bin">Why Clean Your Bin</a>
     <a href="#why-ni-bin-guy">Why Ni Bin Guy</a>
     <a href="#customer-reviews">Customer Reviews</a>
+    <a href="#areas-we-cover">Areas We Cover</a>
     <a href="#wheelie-bin-cleaning-questions">Customer Questions</a>
     <a href="#customer-portal">Customer Portal</a>
   </nav>
@@ -175,7 +176,7 @@
   <!-- React Root -->
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
-  <script src="/privacy-link.js?v=20260522-2" defer></script>
+  <script src="/privacy-link.js?v=20260704-3" defer></script>
   <script>
     (function () {
       const logos = ["/logo.png", "/logo2.png", "/logo3.png", "/logo4.png", "/logo5.png"];
@@ -205,7 +206,7 @@
   </script>
 
   <!-- Customer reviews and trust signals -->
-  <section id="customer-reviews" style="padding: 64px 16px; background: #18181b; color: white;">
+  <section id="customer-reviews" style="padding: 64px 16px; background: linear-gradient(180deg, #000000 0%, #18181b 16%, #18181b 84%, #000000 100%); color: white;">
     <div style="max-width: 1050px; margin: 0 auto;">
       <h2 style="font-size: 1.875rem; font-weight: bold; color: #4ade80; margin: 0 0 18px; text-align: center;">Customer Reviews</h2>
       <p style="max-width: 760px; margin: 0 auto 30px; color: #d4d4d8; line-height: 1.7; text-align: center;">See what local customers are saying about Ni Bin Guy on Google and Facebook.</p>
@@ -216,20 +217,39 @@
             <p id="google-rating-summary" style="margin: 0 0 14px; color: #facc15; font-weight: 800;"></p>
             <div id="google-reviews-list" style="margin: 0 0 18px;"><p style="margin: 0; color: #a1a1aa; line-height: 1.65;">Loading Google reviews…</p></div>
           </div>
-          <a id="google-reviews-button" href="https://share.google/hE0fuZuoDjknpdsjF" target="_blank" rel="noopener noreferrer" style="display: inline-block; align-self: flex-start; background: #22c55e; color: #000; font-weight: 800; padding: 12px 20px; border-radius: 14px; text-decoration: none; box-shadow: 0 10px 24px rgba(34,197,94,0.22);">View More Google Reviews</a>
+          <a id="google-reviews-button" data-track="google_reviews_click" href="https://share.google/hE0fuZuoDjknpdsjF" target="_blank" rel="noopener noreferrer" style="display: inline-block; align-self: center; margin: 0 auto; text-align: center; background: #22c55e; color: #000; font-weight: 800; padding: 12px 20px; border-radius: 14px; text-decoration: none; box-shadow: 0 10px 24px rgba(34,197,94,0.22);">View More Google Reviews</a>
         </div>
         <div style="background: rgba(39, 39, 42, 0.82); border: 1px solid rgba(255,255,255,0.2); border-radius: 18px; padding: 22px; box-shadow: 0 14px 36px rgba(0,0,0,0.26);">
           <h3 style="margin: 0 0 14px; color: #4ade80; font-size: 1.15rem;">Facebook Reviews & Updates</h3>
           <div style="overflow: hidden; border-radius: 14px; background: #000; min-height: 500px;"><iframe title="Ni Bin Guy Facebook page" src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2Fprofile.php%3Fid%3D100064103796752&tabs=timeline&width=500&height=500&small_header=false&adapt_container_width=true&hide_cover=false&show_facepile=true" width="100%" height="500" style="border:none; overflow:hidden; display:block;" scrolling="no" frameborder="0" allowfullscreen="true" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"></iframe></div>
-          <p style="margin: 14px 0 0; color: #a1a1aa; line-height: 1.6; font-size: 0.95rem;">If the Facebook feed is blocked by privacy settings, use the button below to open the page directly.</p>
-          <a href="https://www.facebook.com/profile.php?id=100064103796752" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin-top: 14px; background: #22c55e; color: #000; font-weight: 800; padding: 12px 20px; border-radius: 14px; text-decoration: none; box-shadow: 0 10px 24px rgba(34,197,94,0.22);">View Facebook Page</a>
+          <a data-track="facebook_click" href="https://www.facebook.com/profile.php?id=100064103796752" target="_blank" rel="noopener noreferrer" style="display: block; width: fit-content; margin: 14px auto 0; background: #22c55e; color: #000; font-weight: 800; padding: 12px 20px; border-radius: 14px; text-decoration: none; box-shadow: 0 10px 24px rgba(34,197,94,0.22); text-align: center;">View Facebook Page</a>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- Local area coverage -->
+  <section id="areas-we-cover" style="padding: 64px 16px; background: linear-gradient(180deg, #000000 0%, #000000 84%, #18181b 100%); color: white;">
+    <div style="max-width: 1050px; margin: 0 auto;">
+      <h2 style="font-size: 1.875rem; font-weight: bold; color: #4ade80; margin: 0 0 18px; text-align: center;">Areas We Cover</h2>
+      <p style="max-width: 760px; margin: 0 auto 30px; color: #d4d4d8; line-height: 1.7; text-align: center;">Ni Bin Guy is based in Bangor and provides wheelie bin cleaning across nearby County Down towns and coastal areas. If you are close to these areas, just ask and we will confirm whether you are on our round.</p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px;">
+        <div style="background: rgba(39,39,42,0.82); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 16px; text-align: center; font-weight: 800;">Bangor</div>
+        <div style="background: rgba(39,39,42,0.82); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 16px; text-align: center; font-weight: 800;">Newtownards</div>
+        <div style="background: rgba(39,39,42,0.82); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 16px; text-align: center; font-weight: 800;">Donaghadee</div>
+        <div style="background: rgba(39,39,42,0.82); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 16px; text-align: center; font-weight: 800;">Holywood</div>
+        <div style="background: rgba(39,39,42,0.82); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 16px; text-align: center; font-weight: 800;">Comber</div>
+        <div style="background: rgba(39,39,42,0.82); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 16px; text-align: center; font-weight: 800;">Dundonald</div>
+        <div style="background: rgba(39,39,42,0.82); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 16px; text-align: center; font-weight: 800;">Millisle</div>
+        <div style="background: rgba(39,39,42,0.82); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 16px; text-align: center; font-weight: 800;">Ballywalter</div>
+        <div style="background: rgba(39,39,42,0.82); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 16px; text-align: center; font-weight: 800;">Portaferry</div>
+        <div style="background: rgba(39,39,42,0.82); border: 1px solid rgba(255,255,255,0.18); border-radius: 16px; padding: 16px; text-align: center; font-weight: 800;">Ballyhalbert</div>
+      </div>
+    </div>
+  </section>
+
   <!-- Search-friendly customer questions -->
-  <section id="wheelie-bin-cleaning-questions" style="padding: 64px 16px; background: linear-gradient(180deg, #000000 0%, #18181b 100%); color: white;">
+  <section id="wheelie-bin-cleaning-questions" style="padding: 64px 16px; background: linear-gradient(180deg, #18181b 0%, #18181b 84%, #000000 100%); color: white;">
     <div style="max-width: 950px; margin: 0 auto;">
       <h2 style="font-size: 1.875rem; font-weight: bold; color: #4ade80; margin: 0 0 28px; text-align: center;">Customer Questions</h2>
       <div style="display: grid; gap: 14px;">
@@ -245,12 +265,12 @@
         <details style="background: rgba(39, 39, 42, 0.82); border: 1px solid rgba(255,255,255,0.2); border-radius: 18px; padding: 18px 20px; box-shadow: 0 14px 36px rgba(0,0,0,0.28);"><summary style="cursor: pointer; color: white; font-size: 1.18rem; font-weight: 800;">What happens if there is loose waste left in the bin?</summary><p style="margin: 14px 0 0; color: #d4d4d8; line-height: 1.7;">Where it is safe to do so, leftover waste can be removed before cleaning. Excessive, unsafe or heavy waste may need to be cleared before the bin can be cleaned properly.</p></details>
         <details style="background: rgba(39, 39, 42, 0.82); border: 1px solid rgba(255,255,255,0.2); border-radius: 18px; padding: 18px 20px; box-shadow: 0 14px 36px rgba(0,0,0,0.28);"><summary style="cursor: pointer; color: white; font-size: 1.18rem; font-weight: 800;">How do I book a wheelie bin clean?</summary><p style="margin: 14px 0 0; color: #d4d4d8; line-height: 1.7;">Use the Book a Clean button on the website, or contact Ni Bin Guy by WhatsApp, phone or email. We will reply with your price and next available clean date.</p></details>
       </div>
-      <div style="text-align: center; margin-top: 34px;"><a href="#main-content" style="display: inline-block; background: #22c55e; color: #000; font-weight: 800; padding: 14px 24px; border-radius: 14px; text-decoration: none; box-shadow: 0 10px 24px rgba(34,197,94,0.22);">Book a Bin Clean</a></div>
+      <div style="text-align: center; margin-top: 34px;"><button type="button" data-open-booking-form="true" data-track="customer_questions_book_click" style="display: inline-block; background: #22c55e; color: #000; font-weight: 800; padding: 14px 24px; border: 0; border-radius: 14px; text-decoration: none; box-shadow: 0 10px 24px rgba(34,197,94,0.22); cursor: pointer; font: inherit;">Book a Clean</button></div>
     </div>
   </section>
 
   <!-- Static Squeegee Portal -->
-  <section id="customer-portal" style="padding: 40px; background: black; text-align: center; color: white;">
+  <section id="customer-portal" style="padding: 40px; background: linear-gradient(180deg, #000000 0%, #000000 100%); text-align: center; color: white;">
     <h2 style="font-size: 1.875rem; font-weight: bold; color: #4ade80; margin-bottom: 20px;">Customer Portal</h2>
     <div data-sqc="layout" data-sqa="25a031e7-75af-4a0e-9f3a-d308fd9b2e3a" data-sqe="https://sqgee.com" style="width: 100%; max-width: 800px; min-height: 700px; margin: 0 auto; display: block; background: #18181b; border: 1px solid rgba(255,255,255,0.3); border-radius: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); overflow: visible; padding: 20px; box-sizing: border-box;"></div>
   </section>
