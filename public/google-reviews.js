@@ -102,6 +102,15 @@
   const MAX_WIDTH = 500;
   const HEIGHT = 500;
 
+  function removeFacebookFallbackBlurb() {
+    document.querySelectorAll("#customer-reviews p").forEach((paragraph) => {
+      const text = (paragraph.textContent || "").trim().toLowerCase();
+      if (text.startsWith("if the facebook feed is blocked")) {
+        paragraph.remove();
+      }
+    });
+  }
+
   function clampWidth(value) {
     const n = Math.floor(Number(value) || MAX_WIDTH);
     return Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, n));
@@ -123,6 +132,8 @@
   }
 
   function fitFacebookFeed() {
+    removeFacebookFallbackBlurb();
+
     const frame = document.querySelector('iframe[title="Ni Bin Guy Facebook page"]');
     if (!frame) return;
 
