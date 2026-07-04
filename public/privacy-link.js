@@ -177,6 +177,35 @@
 })();
 
 (function () {
+  var portalMaxWidth = "1152px";
+
+  function sizeCustomerPortal() {
+    var portal = document.querySelector("#customer-portal [data-sqc='layout'], [data-sqc='layout'][data-sqa='25a031e7-75af-4a0e-9f3a-d308fd9b2e3a']");
+    if (!portal) return;
+
+    portal.style.setProperty("width", "100%", "important");
+    portal.style.setProperty("max-width", portalMaxWidth, "important");
+    portal.style.setProperty("box-sizing", "border-box", "important");
+    portal.style.setProperty("margin-left", "auto", "important");
+    portal.style.setProperty("margin-right", "auto", "important");
+
+    var section = portal.closest("#customer-portal");
+    if (section) {
+      section.style.setProperty("padding", "64px 16px", "important");
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", sizeCustomerPortal);
+  } else {
+    sizeCustomerPortal();
+  }
+
+  new MutationObserver(sizeCustomerPortal).observe(document.documentElement, { childList: true, subtree: true });
+  setInterval(sizeCustomerPortal, 1000);
+})();
+
+(function () {
   var showAfter = 420;
   var buttonId = "back-to-top-button";
 
