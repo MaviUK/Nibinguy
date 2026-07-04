@@ -191,7 +191,7 @@
     button.textContent = "Top";
     button.style.cssText = [
       "position:fixed",
-      "right:16px",
+      "left:16px",
       "bottom:18px",
       "z-index:38",
       "min-width:42px",
