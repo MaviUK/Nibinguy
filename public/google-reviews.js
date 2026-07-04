@@ -247,3 +247,31 @@
 
   window.setTimeout(applyCustomerReviewAndQuestionTweaks, 400);
 })();
+
+(function () {
+  function fadeNewSectionBackgrounds() {
+    const customerReviews = document.getElementById("customer-reviews");
+    const customerQuestions = document.getElementById("wheelie-bin-cleaning-questions");
+    const customerPortal = document.getElementById("customer-portal");
+
+    if (customerReviews) {
+      customerReviews.style.background = "linear-gradient(180deg, #000000 0%, #18181b 18%, #18181b 82%, #000000 100%)";
+    }
+
+    if (customerQuestions) {
+      customerQuestions.style.background = "linear-gradient(180deg, #000000 0%, #18181b 18%, #18181b 82%, #000000 100%)";
+    }
+
+    if (customerPortal) {
+      customerPortal.style.background = "linear-gradient(180deg, #000000 0%, #000000 100%)";
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", fadeNewSectionBackgrounds);
+  } else {
+    fadeNewSectionBackgrounds();
+  }
+
+  window.setTimeout(fadeNewSectionBackgrounds, 400);
+})();
