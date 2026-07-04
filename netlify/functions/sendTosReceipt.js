@@ -1,5 +1,6 @@
 // netlify/functions/sendTosReceipt.js
 const { Resend } = require("resend");
+const { buildTermsAcceptancePdfAttachment, DEFAULT_TERMS_BODY } = require("./lib/termsPdf");
 
 // Optional blobs logging
 let getStoreSafe = null;
@@ -16,7 +17,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_DEFAULT = process.env.RESEND_FROM || "Ni Bin Guy <noreply@nibing.uy>";
 const TO_ADMIN     = process.env.BOOKINGS_TO || "info@nibing.uy";
-const TERMS_VERSION_DEFAULT = "September 2025";
+const TERMS_VERSION_DEFAULT = "July 2026";
 
 const escapeHtml = (s) => String(s ?? "")
   .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -128,6 +129,27 @@ exports.handler = async (event) => {
     const binsHtml = escapeHtml(binsText).replace(/\n/g,"<br>");
     const pricingBlocks = buildPricingBlocks(pricing, discountCode);
 
+    let termsPdfAttachment = null;
+    try {
+      termsPdfAttachment = await buildTermsAcceptancePdfAttachment({
+        name,
+        email,
+        phone,
+        address,
+        binsText,
+        pricingText: pricingBlocks.text,
+        termsAccepted,
+        termsVersion,
+        termsAcceptanceText,
+        termsTimestamp,
+        termsBody: DEFAULT_TERMS_BODY,
+        source,
+      });
+    } catch (pdfError) {
+      console.warn("Terms PDF generation skipped:", pdfError.message);
+    }
+    const termsAttachments = termsPdfAttachment ? [termsPdfAttachment] : undefined;
+
     // ADMIN email
     const { error: adminError } = await resend.emails.send({
       from: FROM_DEFAULT,
@@ -169,6 +191,7 @@ Source: ${source}`,
         <p style="color:#6b7280">Source: ${escapeHtml(source)}</p>
       `,
       replyTo: email || undefined,
+      attachments: termsAttachments,
     });
 
     if (adminError) {
@@ -187,6 +210,8 @@ Source: ${source}`,
 
 We’ve received your WhatsApp booking. Here is your summary (including pricing) and your Terms confirmation.
 
+Your signed Terms & Conditions Acceptance Certificate PDF is attached to this email.
+
 Address: ${address}
 
 Bins:
@@ -202,6 +227,7 @@ Confirmed: ${termsTimestamp}
 We’ll be in touch to confirm your schedule.`,
         html: `
           <h2>Thanks, ${escapeHtml(name)} — we’ve received your WhatsApp booking</h2>
+          <p><strong>Your signed Terms &amp; Conditions Acceptance Certificate PDF is attached to this email.</strong></p>
           <p><strong>Address:</strong> ${escapeHtml(address)}</p>
           <p><strong>Bins:</strong><br>${binsHtml}</p>
 
@@ -213,6 +239,7 @@ We’ll be in touch to confirm your schedule.`,
           <p><em>${escapeHtml(termsAcceptanceText)}</em></p>
         `,
         replyTo: TO_ADMIN,
+        attachments: termsAttachments,
       });
 
       if (custError) {
@@ -232,6 +259,7 @@ We’ll be in touch to confirm your schedule.`,
           discountCode: discountCode || null,
           pricing: pricing || null,
           termsAccepted, termsVersion, termsAcceptanceText, termsTimestamp,
+          termsPdfAttached: !!termsPdfAttachment,
           createdAt: new Date().toISOString(),
         });
       } catch (e) { console.warn("Blobs log skipped:", e.message); }
