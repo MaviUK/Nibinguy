@@ -254,6 +254,7 @@
 
   function alternateNewSectionBackgrounds() {
     const customerReviews = document.getElementById("customer-reviews");
+    const areas = document.getElementById("areas-we-cover");
     const customerQuestions = document.getElementById("wheelie-bin-cleaning-questions");
     const customerPortal = document.getElementById("customer-portal");
 
@@ -261,12 +262,16 @@
       customerReviews.style.background = `linear-gradient(180deg, ${BLACK} 0%, ${GREY} 16%, ${GREY} 84%, ${BLACK} 100%)`;
     }
 
+    if (areas) {
+      areas.style.background = `linear-gradient(180deg, ${BLACK} 0%, ${BLACK} 84%, ${GREY} 100%)`;
+    }
+
     if (customerQuestions) {
-      customerQuestions.style.background = `linear-gradient(180deg, ${BLACK} 0%, ${BLACK} 84%, ${GREY} 100%)`;
+      customerQuestions.style.background = `linear-gradient(180deg, ${GREY} 0%, ${GREY} 84%, ${BLACK} 100%)`;
     }
 
     if (customerPortal) {
-      customerPortal.style.background = `linear-gradient(180deg, ${GREY} 0%, ${GREY} 84%, ${BLACK} 100%)`;
+      customerPortal.style.background = BLACK;
     }
   }
 
