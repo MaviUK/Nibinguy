@@ -4,7 +4,7 @@ export default function CustomerPortalLoader() {
   useEffect(() => {
     const portalDiv = document.createElement('div')
     portalDiv.innerHTML = `
-      <section style="padding: 40px; background: black; text-align: center; color: white;">
+      <section style="padding: 40px 16px; background: black; text-align: center; color: white;">
         <h2 style="font-size: 1.875rem; font-weight: bold; color: #4ade80; margin-bottom: 20px;">Customer Portal</h2>
         <div 
           data-sqc="layout"
@@ -12,7 +12,7 @@ export default function CustomerPortalLoader() {
           data-sqe="https://sqgee.com"
           style="
             width: 100%;
-            max-width: 800px;
+            max-width: 1152px;
             min-height: 700px;
             margin: 0 auto;
             display: block;
