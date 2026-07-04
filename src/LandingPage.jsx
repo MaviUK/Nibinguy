@@ -158,13 +158,13 @@ async function getRecaptchaToken(action) {
 // Your frequency dropdown options — now structured (id, label, price)
 const PLANS = [
   { id: "domestic_4w", label: "4 Weekly", price: 5 },
-  { id: "domestic_oneoff", label: "One-off", price: 12.5 },
+  { id: "domestic_oneoff", label: "One-off", price: 15 },
 
   { id: "comm_lt360_4w", label: "Commercial <360L 4 Weekly", price: 5 },
-  { id: "comm_lt360_oneoff", label: "Commercial <360L One-Off", price: 12.5 },
+  { id: "comm_lt360_oneoff", label: "Commercial <360L One-Off", price: 15 },
 
   { id: "comm_gt660_4w", label: "Commercial >660L 4 Weekly", price: 12.5 },
-  { id: "comm_gt660_oneoff", label: "Commercial >660L One-Off", price: 30 },
+  { id: "comm_gt660_oneoff", label: "Commercial >660L One-Off", price: 35 },
 ];
 
 // Discount rules (edit these whenever you want)
