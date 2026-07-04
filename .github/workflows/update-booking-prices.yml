@@ -1,0 +1,42 @@
+name: Update booking prices
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  update-booking-prices:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update source prices
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/LandingPage.jsx')
+          text = path.read_text()
+          text = text.replace('{ id: "domestic_oneoff", label: "One-off", price: 12.5 }', '{ id: "domestic_oneoff", label: "One-off", price: 15 }')
+          text = text.replace('{ id: "comm_lt360_oneoff", label: "Commercial <360L One-Off", price: 12.5 }', '{ id: "comm_lt360_oneoff", label: "Commercial <360L One-Off", price: 15 }')
+          text = text.replace('{ id: "comm_gt660_oneoff", label: "Commercial >660L One-Off", price: 30 }', '{ id: "comm_gt660_oneoff", label: "Commercial >660L One-Off", price: 35 }')
+          path.write_text(text)
+          PY
+
+      - name: Commit updated prices
+        run: |
+          if git diff --quiet; then
+            echo "Prices already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/LandingPage.jsx
+          git commit -m "Update booking prices in source"
+          git push
