@@ -175,3 +175,82 @@
 
   setInterval(addPrivacyLinkToTerms, 500);
 })();
+
+(function () {
+  var showAfter = 420;
+  var buttonId = "back-to-top-button";
+
+  function makeButton() {
+    var existing = document.getElementById(buttonId);
+    if (existing) return existing;
+
+    var button = document.createElement("button");
+    button.id = buttonId;
+    button.type = "button";
+    button.setAttribute("aria-label", "Back to top");
+    button.textContent = "Top";
+    button.style.cssText = [
+      "position:fixed",
+      "right:16px",
+      "bottom:18px",
+      "z-index:38",
+      "min-width:42px",
+      "height:42px",
+      "padding:0 10px",
+      "border-radius:999px",
+      "border:1px solid rgba(74,222,128,.65)",
+      "background:rgba(24,24,27,.92)",
+      "color:#4ade80",
+      "font-size:13px",
+      "font-weight:900",
+      "cursor:pointer",
+      "box-shadow:0 12px 28px rgba(0,0,0,.35)",
+      "opacity:0",
+      "pointer-events:none",
+      "transform:translateY(10px)",
+      "transition:opacity .18s ease,transform .18s ease,background .18s ease"
+    ].join(";");
+
+    button.addEventListener("mouseenter", function () {
+      button.style.background = "rgba(39,39,42,.98)";
+    });
+
+    button.addEventListener("mouseleave", function () {
+      button.style.background = "rgba(24,24,27,.92)";
+    });
+
+    button.addEventListener("click", function () {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+
+    document.body.appendChild(button);
+    return button;
+  }
+
+  function updateButton() {
+    var button = makeButton();
+    var visible = window.scrollY > showAfter;
+    button.style.opacity = visible ? "1" : "0";
+    button.style.pointerEvents = visible ? "auto" : "none";
+    button.style.transform = visible ? "translateY(0)" : "translateY(10px)";
+  }
+
+  var ticking = false;
+
+  function scheduleUpdate() {
+    if (ticking) return;
+    ticking = true;
+    window.requestAnimationFrame(function () {
+      updateButton();
+      ticking = false;
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", updateButton);
+  } else {
+    updateButton();
+  }
+
+  window.addEventListener("scroll", scheduleUpdate, { passive: true });
+})();
