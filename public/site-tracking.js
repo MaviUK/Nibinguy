@@ -1,0 +1,56 @@
+(function () {
+  function safeLabel(value) {
+    return String(value || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .slice(0, 80);
+  }
+
+  function eventNameFor(element) {
+    if (!element) return null;
+    if (element.dataset && element.dataset.track) return element.dataset.track;
+
+    var href = element.getAttribute && element.getAttribute("href");
+    var text = safeLabel(element.textContent);
+
+    if (href) {
+      if (href.indexOf("tel:") === 0) return "phone_click";
+      if (href.indexOf("mailto:") === 0) return "email_click";
+      if (href.indexOf("wa.me") !== -1 || href.indexOf("whatsapp") !== -1) return "whatsapp_click";
+      if (href.indexOf("facebook.com") !== -1) return "facebook_click";
+      if (href.indexOf("share.google") !== -1 || href.indexOf("google") !== -1) return "google_click";
+      if (href.indexOf("#customer-portal") !== -1 || href.indexOf("sqgee.com") !== -1) return "customer_portal_click";
+    }
+
+    if (/book a clean/i.test(text) || /book a bin clean/i.test(text)) return "book_click";
+    if (/customer portal/i.test(text)) return "customer_portal_click";
+
+    return null;
+  }
+
+  function sendEvent(name, element) {
+    if (!name) return;
+
+    var href = element && element.getAttribute ? element.getAttribute("href") : "";
+    var payload = {
+      event: name,
+      label: safeLabel(element && element.textContent),
+      href: href || "",
+      path: window.location.pathname,
+      ts: new Date().toISOString()
+    };
+
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push(payload);
+
+    try {
+      window.dispatchEvent(new CustomEvent("nbg:track", { detail: payload }));
+    } catch (error) {}
+  }
+
+  document.addEventListener("click", function (event) {
+    var target = event.target.closest("a, button");
+    if (!target) return;
+    sendEvent(eventNameFor(target), target);
+  }, true);
+})();
