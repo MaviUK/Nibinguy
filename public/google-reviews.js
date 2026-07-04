@@ -252,9 +252,8 @@
   const BLACK = "#000000";
   const GREY = "#18181b";
 
-  function alternateNewSectionBackgrounds() {
+  function fadeNewSectionBackgrounds() {
     const customerReviews = document.getElementById("customer-reviews");
-    const areas = document.getElementById("areas-we-cover");
     const customerQuestions = document.getElementById("wheelie-bin-cleaning-questions");
     const customerPortal = document.getElementById("customer-portal");
 
@@ -262,12 +261,8 @@
       customerReviews.style.background = `linear-gradient(180deg, ${BLACK} 0%, ${GREY} 16%, ${GREY} 84%, ${BLACK} 100%)`;
     }
 
-    if (areas) {
-      areas.style.background = `linear-gradient(180deg, ${BLACK} 0%, ${BLACK} 84%, ${GREY} 100%)`;
-    }
-
     if (customerQuestions) {
-      customerQuestions.style.background = `linear-gradient(180deg, ${GREY} 0%, ${GREY} 84%, ${BLACK} 100%)`;
+      customerQuestions.style.background = `linear-gradient(180deg, ${BLACK} 0%, ${GREY} 16%, ${GREY} 84%, ${BLACK} 100%)`;
     }
 
     if (customerPortal) {
@@ -276,10 +271,10 @@
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", alternateNewSectionBackgrounds);
+    document.addEventListener("DOMContentLoaded", fadeNewSectionBackgrounds);
   } else {
-    alternateNewSectionBackgrounds();
+    fadeNewSectionBackgrounds();
   }
 
-  window.setTimeout(alternateNewSectionBackgrounds, 400);
+  window.setTimeout(fadeNewSectionBackgrounds, 400);
 })();
