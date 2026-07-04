@@ -1,5 +1,6 @@
 name: Update booking terms
 
+# Trigger nudge so the workflow exists before this push event.
 on:
   push:
     branches:
