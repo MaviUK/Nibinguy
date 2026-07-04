@@ -169,3 +169,81 @@
 
   window.addEventListener("resize", scheduleFit);
 })();
+
+(function () {
+  const FACEBOOK_URL = "https://www.facebook.com/profile.php?id=100064103796752";
+
+  function centreReviewButtons() {
+    const googleButton = document.getElementById("google-reviews-button");
+    if (googleButton) {
+      googleButton.style.alignSelf = "center";
+      googleButton.style.marginLeft = "auto";
+      googleButton.style.marginRight = "auto";
+      googleButton.style.textAlign = "center";
+    }
+
+    const facebookButton = document.querySelector('#customer-reviews a[href="' + FACEBOOK_URL + '"]');
+    if (facebookButton) {
+      facebookButton.style.display = "block";
+      facebookButton.style.width = "fit-content";
+      facebookButton.style.marginLeft = "auto";
+      facebookButton.style.marginRight = "auto";
+      facebookButton.style.textAlign = "center";
+    }
+  }
+
+  function findMainBookingButton() {
+    return Array.from(document.querySelectorAll("button")).find((candidate) => {
+      const label = (candidate.textContent || "").trim();
+      return label === "Book a Clean" &&
+        candidate.id !== "site-menu-toggle" &&
+        !candidate.closest("#site-section-menu") &&
+        !candidate.closest("#wheelie-bin-cleaning-questions");
+    });
+  }
+
+  function openBookingForm() {
+    const bookingButton = findMainBookingButton();
+    if (bookingButton) {
+      bookingButton.click();
+      return;
+    }
+
+    document.getElementById("main-content")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function wireCustomerQuestionsBookButton() {
+    const questionsSection = document.getElementById("wheelie-bin-cleaning-questions");
+    if (!questionsSection) return;
+
+    const customerQuestionsButton = Array.from(questionsSection.querySelectorAll("a, button")).find((candidate) => {
+      const label = (candidate.textContent || "").trim();
+      return label === "Book a Bin Clean" || label === "Book a Clean";
+    });
+
+    if (!customerQuestionsButton || customerQuestionsButton.dataset.opensBookingForm === "true") return;
+
+    customerQuestionsButton.textContent = "Book a Clean";
+    customerQuestionsButton.setAttribute("href", "#");
+    customerQuestionsButton.setAttribute("role", "button");
+    customerQuestionsButton.dataset.opensBookingForm = "true";
+
+    customerQuestionsButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      openBookingForm();
+    });
+  }
+
+  function applyCustomerReviewAndQuestionTweaks() {
+    centreReviewButtons();
+    wireCustomerQuestionsBookButton();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyCustomerReviewAndQuestionTweaks);
+  } else {
+    applyCustomerReviewAndQuestionTweaks();
+  }
+
+  window.setTimeout(applyCustomerReviewAndQuestionTweaks, 400);
+})();
