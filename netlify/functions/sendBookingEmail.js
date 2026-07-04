@@ -1,5 +1,6 @@
 // netlify/functions/sendBookingEmail.js
 const { Resend } = require("resend");
+const { buildTermsAcceptancePdfAttachment } = require("./lib/termsPdf");
 
 // Optional (for audit logging). If @netlify/blobs isn't installed, logging will be skipped.
 let getStoreSafe = null;
@@ -11,7 +12,7 @@ try {
     return (siteID && token) ? getStore({ name, siteID, token }) : getStore({ name });
   };
 } catch (_) {
-  // blobs not available — that's fine, we'll skip logging
+  // blobs not available - that's fine, we'll skip logging
 }
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -20,6 +21,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM_DEFAULT = process.env.RESEND_FROM || "Ni Bin Guy <noreply@nibing.uy>";
 const TO_ADMIN     = process.env.BOOKINGS_TO || "info@nibing.uy";
 const TERMS_VERSION_DEFAULT = "July 2026";
+
+// reCAPTCHA config (v3)
+const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY || "";
+const RECAPTCHA_MIN_SCORE = Number(process.env.RECAPTCHA_MIN_SCORE || "0.5");
 
 // Shown in both emails. Replace with your full ToS text if you prefer.
 const TERMS_BODY = `
@@ -150,7 +155,7 @@ Discount Code: ${code || "None"}${code ? (applied ? " (applied)" : " (not applie
 // --- reCAPTCHA verify (v3) ---
 async function verifyRecaptcha({ token, expectedAction }) {
   if (!RECAPTCHA_SECRET) {
-    // If you prefer “fail open” during setup, change this to return ok:true
+    // If you prefer fail open during setup, change this to return ok:true
     return { ok: false, reason: "missing_secret" };
   }
   if (!token) return { ok: false, reason: "missing_token" };
@@ -187,13 +192,13 @@ exports.handler = async (event) => {
   try {
     const payload = JSON.parse(event.body || "{}");
 
-    // ✅ reCAPTCHA guard (must be before sending email)
+    // reCAPTCHA guard (must be before sending email)
     const recaptchaToken = payload.recaptchaToken || null;
     const recaptchaAction = payload.recaptchaAction || "booking_submit";
 
     const recaptcha = await verifyRecaptcha({ token: recaptchaToken, expectedAction: recaptchaAction });
     if (!recaptcha.ok) {
-      // Keep response generic so bots don’t learn
+      // Keep response generic so bots don't learn
       console.warn("reCAPTCHA blocked booking:", recaptcha.reason, recaptcha.data || "");
       return {
         statusCode: 403,
@@ -240,6 +245,27 @@ exports.handler = async (event) => {
         .join("<br>") || "(none provided)";
 
     const pricingBlocks = buildPricingBlocks(pricing, discountCode);
+
+    let termsPdfAttachment = null;
+    try {
+      termsPdfAttachment = await buildTermsAcceptancePdfAttachment({
+        name,
+        email,
+        phone,
+        address,
+        binsText,
+        pricingText: pricingBlocks.text,
+        termsAccepted,
+        termsVersion,
+        termsAcceptanceText,
+        termsTimestamp,
+        termsBody: TERMS_BODY,
+        source,
+      });
+    } catch (pdfError) {
+      console.warn("Terms PDF generation skipped:", pdfError.message);
+    }
+    const termsAttachments = termsPdfAttachment ? [termsPdfAttachment] : undefined;
 
     // ---------- ADMIN EMAIL ----------
     const subjectAdmin = `🗑️ New Bin Cleaning Booking (${source})`;
@@ -291,7 +317,8 @@ Acceptance line: ${termsAcceptanceText}
       subject: subjectAdmin,
       text: textAdmin,
       html: htmlAdmin,
-      replyTo: email || undefined, // ✅ correct Resend field
+      replyTo: email || undefined,
+      attachments: termsAttachments,
     });
 
     if (adminError) {
@@ -307,6 +334,8 @@ Acceptance line: ${termsAcceptanceText}
 `Thanks ${name},
 
 We've received your booking. Here is your booking summary (including pricing) and your Terms confirmation.
+
+Your signed Terms & Conditions Acceptance Certificate PDF is attached to this email.
 
 Name: ${name}
 Phone: ${phone}
@@ -327,6 +356,7 @@ We’ll be in touch to confirm your schedule.`;
       const htmlCustomer = `
         <h2>Thanks, ${escapeHtml(name)} — your booking is in!</h2>
         <p>We’ve received your details and your Terms confirmation. We’ll be in touch to confirm your schedule.</p>
+        <p><strong>Your signed Terms &amp; Conditions Acceptance Certificate PDF is attached to this email.</strong></p>
 
         <h3 style="margin:16px 0 6px">Booking summary</h3>
         <p><strong>Name:</strong> ${escapeHtml(name)}<br>
@@ -346,7 +376,8 @@ We’ll be in touch to confirm your schedule.`;
         subject: subjectCustomer,
         text: textCustomer,
         html: htmlCustomer,
-        replyTo: TO_ADMIN, // ✅ correct Resend field
+        replyTo: TO_ADMIN,
+        attachments: termsAttachments,
       });
 
       if (custError) {
@@ -368,6 +399,7 @@ We’ll be in touch to confirm your schedule.`;
           pricing: pricing || null,
           termsAccepted, termsVersion, termsAcceptanceText,
           termsTimestamp,
+          termsPdfAttached: !!termsPdfAttachment,
           recaptcha: {
             action: recaptchaAction,
             score: recaptcha?.data?.score ?? null,
