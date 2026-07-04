@@ -199,18 +199,26 @@
       display: none;
     }
     #site-section-menu[data-open="true"] { display: block; }
-    #site-section-menu a {
+    #site-section-menu a,
+    #site-section-menu button {
       display: block;
+      width: 100%;
       padding: 12px 13px;
+      border: 0;
       border-radius: 12px;
+      background: transparent;
       color: white;
+      cursor: pointer;
+      font: inherit;
       text-decoration: none;
       font-weight: 700;
       text-align: right;
       white-space: nowrap;
     }
     #site-section-menu a:hover,
-    #site-section-menu a:focus {
+    #site-section-menu a:focus,
+    #site-section-menu button:hover,
+    #site-section-menu button:focus {
       background: rgba(74,222,128,0.16);
       color: #86efac;
       outline: none;
@@ -237,7 +245,7 @@
 
   <button id="site-menu-toggle" type="button" aria-label="Open website menu" aria-controls="site-section-menu" aria-expanded="false"><span aria-hidden="true"></span></button>
   <nav id="site-section-menu" aria-label="Website sections" data-open="false">
-    <a href="#main-content">Book a Clean</a>
+    <button type="button" data-open-booking-form="true">Book a Clean</button>
     <a href="#what-we-do">What We Do</a>
     <a href="#the-process">The Process</a>
     <a href="#bins-we-clean">Bins We Clean</a>
@@ -339,12 +347,35 @@
         });
       }
 
+      function openBookingForm() {
+        const bookingButton = Array.from(document.querySelectorAll("button"))
+          .find((candidate) => {
+            const label = (candidate.textContent || "").trim();
+            return label === "Book a Clean" && candidate.id !== "site-menu-toggle" && !candidate.closest("#site-section-menu");
+          });
+
+        if (bookingButton) {
+          bookingButton.click();
+          return;
+        }
+
+        document.getElementById("main-content")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
       button.addEventListener("click", function (event) {
         event.stopPropagation();
         setMenuOpen(menu.dataset.open !== "true");
       });
 
       menu.addEventListener("click", function (event) {
+        const bookingTrigger = event.target.closest("[data-open-booking-form='true']");
+        if (bookingTrigger) {
+          event.preventDefault();
+          setMenuOpen(false);
+          openBookingForm();
+          return;
+        }
+
         if (event.target.closest("a")) setMenuOpen(false);
       });
 
