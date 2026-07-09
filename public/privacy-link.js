@@ -185,6 +185,8 @@
     ["Millisle", "/bin-cleaning-millisle"],
     ["Ballywalter", "/bin-cleaning-ballywalter"],
     ["Portaferry", "/bin-cleaning-portaferry"],
+    ["Portavogie", "/bin-cleaning-portavogie"],
+    ["Cloughey", "/bin-cleaning-cloughey"],
     ["Ballyhalbert", "/bin-cleaning-ballyhalbert"]
   ];
 
