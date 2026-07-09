@@ -85,7 +85,6 @@ function mapAddressToArea({ postcode, locality }) {
   const town = (locality || "").toLowerCase();
 
   if (town.includes("bangor") || pc.startsWith("BT20") || pc.startsWith("BT19")) return "Bangor";
-  if (town.includes("holywood") || pc.startsWith("BT18")) return "Holywood";
   if (town.includes("comber") || pc.startsWith("BT23")) return "Comber";
   if (town.includes("portaferry") || pc.startsWith("BT22")) return "Portaferry";
 
