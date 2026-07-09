@@ -86,6 +86,8 @@ function mapAddressToArea({ postcode, locality }) {
 
   if (town.includes("bangor") || pc.startsWith("BT20") || pc.startsWith("BT19")) return "Bangor";
   if (town.includes("comber") || pc.startsWith("BT23")) return "Comber";
+  if (town.includes("portavogie")) return "Portavogie";
+  if (town.includes("cloughey")) return "Cloughey";
   if (town.includes("portaferry") || pc.startsWith("BT22")) return "Portaferry";
 
   return "Unknown";
