@@ -31,7 +31,7 @@ export const FOUR_WEEK_PLAN = [
   },
   // Week 4
   {
-    Mon: { area: "Portaferry", bins: 135, customers: 81 },
+    Mon: { area: "Portaferry, Portavogie & Cloughey", bins: 135, customers: 81 },
     Tue: { area: "Ballywalter & Millisle", bins: 101, customers: 72 },
     Wed: { area: "Donaghadee", bins: 112, customers: 71 },
     Thu: { area: "Donaghadee", bins: 129, customers: 78 },
