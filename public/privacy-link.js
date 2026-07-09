@@ -181,9 +181,7 @@
     ["Bangor", "/bin-cleaning-bangor/"],
     ["Donaghadee", "/bin-cleaning-donaghadee"],
     ["Newtownards", "/bin-cleaning-newtownards"],
-    ["Holywood", "/bin-cleaning-holywood"],
     ["Comber", "/bin-cleaning-comber"],
-    ["Dundonald", "/bin-cleaning-dundonald"],
     ["Millisle", "/bin-cleaning-millisle"],
     ["Ballywalter", "/bin-cleaning-ballywalter"],
     ["Portaferry", "/bin-cleaning-portaferry"],
@@ -218,112 +216,4 @@
   }
 
   new MutationObserver(addAreasSection).observe(document.documentElement, { childList: true, subtree: true });
-})();
-
-(function () {
-  var portalMaxWidth = "1152px";
-
-  function sizeCustomerPortal() {
-    var portal = document.querySelector("#customer-portal [data-sqc='layout'], [data-sqc='layout'][data-sqa='25a031e7-75af-4a0e-9f3a-d308fd9b2e3a']");
-    if (!portal) return;
-
-    portal.style.setProperty("width", "100%", "important");
-    portal.style.setProperty("max-width", portalMaxWidth, "important");
-    portal.style.setProperty("box-sizing", "border-box", "important");
-    portal.style.setProperty("margin-left", "auto", "important");
-    portal.style.setProperty("margin-right", "auto", "important");
-
-    var section = portal.closest("#customer-portal");
-    if (section) {
-      section.style.setProperty("padding", "64px 16px", "important");
-    }
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", sizeCustomerPortal);
-  } else {
-    sizeCustomerPortal();
-  }
-
-  new MutationObserver(sizeCustomerPortal).observe(document.documentElement, { childList: true, subtree: true });
-  setInterval(sizeCustomerPortal, 1000);
-})();
-
-(function () {
-  var showAfter = 420;
-  var buttonId = "back-to-top-button";
-
-  function makeButton() {
-    var existing = document.getElementById(buttonId);
-    if (existing) return existing;
-
-    var button = document.createElement("button");
-    button.id = buttonId;
-    button.type = "button";
-    button.setAttribute("aria-label", "Back to top");
-    button.textContent = "Top";
-    button.style.cssText = [
-      "position:fixed",
-      "left:16px",
-      "bottom:18px",
-      "z-index:38",
-      "min-width:42px",
-      "height:42px",
-      "padding:0 10px",
-      "border-radius:999px",
-      "border:1px solid rgba(74,222,128,.65)",
-      "background:rgba(24,24,27,.92)",
-      "color:#4ade80",
-      "font-size:13px",
-      "font-weight:900",
-      "cursor:pointer",
-      "box-shadow:0 12px 28px rgba(0,0,0,.35)",
-      "opacity:0",
-      "pointer-events:none",
-      "transform:translateY(10px)",
-      "transition:opacity .18s ease,transform .18s ease,background .18s ease"
-    ].join(";");
-
-    button.addEventListener("mouseenter", function () {
-      button.style.background = "rgba(39,39,42,.98)";
-    });
-
-    button.addEventListener("mouseleave", function () {
-      button.style.background = "rgba(24,24,27,.92)";
-    });
-
-    button.addEventListener("click", function () {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    });
-
-    document.body.appendChild(button);
-    return button;
-  }
-
-  function updateButton() {
-    var button = makeButton();
-    var visible = window.scrollY > showAfter;
-    button.style.opacity = visible ? "1" : "0";
-    button.style.pointerEvents = visible ? "auto" : "none";
-    button.style.transform = visible ? "translateY(0)" : "translateY(10px)";
-  }
-
-  var ticking = false;
-
-  function scheduleUpdate() {
-    if (ticking) return;
-    ticking = true;
-    window.requestAnimationFrame(function () {
-      updateButton();
-      ticking = false;
-    });
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", updateButton);
-  } else {
-    updateButton();
-  }
-
-  window.addEventListener("scroll", scheduleUpdate, { passive: true });
 })();
