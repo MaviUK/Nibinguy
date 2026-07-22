@@ -2,31 +2,27 @@
 const { Resend } = require("resend");
 const { buildTermsAcceptancePdfAttachment } = require("./lib/termsPdf");
 
-// Optional (for audit logging). If @netlify/blobs isn't installed, logging will be skipped.
+// Optional audit logging. If Netlify Blobs is unavailable, logging is skipped.
 let getStoreSafe = null;
 try {
   const { getStore } = require("@netlify/blobs");
   getStoreSafe = function (name) {
     const siteID = process.env.NETLIFY_SITE_ID || process.env.BLOBS_SITE_ID;
-    const token  = process.env.NETLIFY_BLOBS_TOKEN || process.env.BLOBS_TOKEN;
-    return (siteID && token) ? getStore({ name, siteID, token }) : getStore({ name });
+    const token = process.env.NETLIFY_BLOBS_TOKEN || process.env.BLOBS_TOKEN;
+    return siteID && token ? getStore({ name, siteID, token }) : getStore({ name });
   };
 } catch (_) {
-  // blobs not available - that's fine, we'll skip logging
+  // Blobs are optional.
 }
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// ---------- config ----------
 const FROM_DEFAULT = process.env.RESEND_FROM || "Ni Bin Guy <noreply@nibing.uy>";
-const TO_ADMIN     = process.env.BOOKINGS_TO || "info@nibing.uy";
+const TO_ADMIN = process.env.BOOKINGS_TO || "info@nibing.uy";
 const TERMS_VERSION_DEFAULT = "July 2026";
-
-// reCAPTCHA config (v3)
 const RECAPTCHA_SECRET = process.env.RECAPTCHA_SECRET_KEY || "";
 const RECAPTCHA_MIN_SCORE = Number(process.env.RECAPTCHA_MIN_SCORE || "0.5");
 
-// Shown in both emails. Replace with your full ToS text if you prefer.
 const TERMS_BODY = `
 Ni Bin Guy – Terms of Service
 
@@ -51,18 +47,23 @@ Ni Bin Guy – Terms of Service
 • Text reminders are a courtesy only. You remain responsible for knowing your scheduled clean date.
 `;
 
-// ---------- helpers ----------
-const escapeHtml = (s) =>
-  String(s ?? "")
+const escapeHtml = (value) =>
+  String(value ?? "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+const fmtGBP = (value) => {
+  const amount = Math.round((Number(value) || 0) * 100) / 100;
+  return `£${amount % 1 === 0 ? amount.toFixed(0) : amount.toFixed(2)}`;
+};
+
 function tosHtmlBlock(version, timestampIso) {
   const when = timestampIso
     ? new Date(timestampIso).toLocaleString("en-GB", { timeZone: "Europe/London" })
     : "—";
+
   return `
     <h3 style="margin:16px 0 6px">Terms of Service confirmation</h3>
     <p style="margin:0 0 10px">
@@ -73,109 +74,77 @@ function tosHtmlBlock(version, timestampIso) {
   `;
 }
 
-const fmtGBP = (n) => {
-  const x = Math.round((Number(n) || 0) * 100) / 100;
-  return `£${x % 1 === 0 ? x.toFixed(0) : x.toFixed(2)}`;
-};
-
-// Builds pricing block from the client "pricing" object
 function buildPricingBlocks(pricing, discountCode) {
-  const code = (discountCode || "").trim();
-  const hasPricing = pricing && Array.isArray(pricing.lines) && pricing.lines.length > 0;
+  const code = String(discountCode || "").trim();
+  const lines = Array.isArray(pricing?.lines) ? pricing.lines : [];
 
-  if (!hasPricing) {
-    const text =
-`Pricing:
-(No pricing breakdown provided)
-
-Discount Code: ${code || "None"}`;
-    const html = `
-      <h3 style="margin:16px 0 6px">Pricing</h3>
-      <p style="margin:0 0 8px;color:#6b7280">(No pricing breakdown provided)</p>
-      <p style="margin:0"><strong>Discount Code:</strong> ${escapeHtml(code || "None")}</p>
-    `;
-    return { text, html, applied: false };
+  if (!lines.length) {
+    return {
+      applied: false,
+      text: `Pricing:\n(No pricing breakdown provided)\n\nDiscount Code: ${code || "None"}`,
+      html: `
+        <h3 style="margin:16px 0 6px">Pricing</h3>
+        <p style="margin:0 0 8px;color:#6b7280">(No pricing breakdown provided)</p>
+        <p style="margin:0"><strong>Discount Code:</strong> ${escapeHtml(code || "None")}</p>
+      `,
+    };
   }
 
-  const lines = pricing.lines;
-  const anyDiscounted = lines.some((l) => !!l.discounted);
-  const applied = !!code && anyDiscounted;
-
-  const textLines = lines.map((l) => {
-    const type = String(l.type || "").replace(" Bin", "");
-    const planLabel = l.planLabel || "";
-    const each = fmtGBP(l.unitPrice);
-    const total = fmtGBP(l.lineTotal);
-    const badge = l.discounted ? " (discounted)" : "";
-    return `${l.count}x ${type} — ${planLabel} @ ${each}${badge} = ${total}`;
+  const applied = Boolean(code && lines.some((line) => Boolean(line.discounted)));
+  const textLines = lines.map((line) => {
+    const type = String(line.type || "").replace(" Bin", "");
+    const badge = line.discounted ? " (discounted)" : "";
+    return `${line.count || 1}x ${type} — ${line.planLabel || ""} @ ${fmtGBP(line.unitPrice)}${badge} = ${fmtGBP(line.lineTotal)}`;
   });
 
   const subtotal = fmtGBP(pricing.subtotal);
   const total = fmtGBP(pricing.total);
-
-  const text =
-`Pricing:
-${textLines.join("\n")}
-
-Subtotal: ${subtotal}
-Total: ${total}
-
-Discount Code: ${code || "None"}${code ? (applied ? " (applied)" : " (not applied)") : ""}`;
+  const codeStatus = code ? (applied ? " (applied)" : " (not applied)") : "";
 
   const htmlLines = lines
-    .map((l) => {
-      const type = escapeHtml(String(l.type || "").replace(" Bin", ""));
-      const planLabel = escapeHtml(l.planLabel || "");
-      const each = escapeHtml(fmtGBP(l.unitPrice));
-      const totalLine = escapeHtml(fmtGBP(l.lineTotal));
-      const badge = l.discounted ? ` <span style="color:#059669;font-weight:700">(discounted)</span>` : "";
-      return `<div style="margin:0 0 6px">${escapeHtml(String(l.count || 1))}x <strong>${type}</strong> — ${planLabel} @ ${each}${badge} = <strong>${totalLine}</strong></div>`;
+    .map((line) => {
+      const type = escapeHtml(String(line.type || "").replace(" Bin", ""));
+      const badge = line.discounted
+        ? ` <span style="color:#059669;font-weight:700">(discounted)</span>`
+        : "";
+      return `<div style="margin:0 0 6px">${escapeHtml(line.count || 1)}x <strong>${type}</strong> — ${escapeHtml(line.planLabel || "")} @ ${escapeHtml(fmtGBP(line.unitPrice))}${badge} = <strong>${escapeHtml(fmtGBP(line.lineTotal))}</strong></div>`;
     })
     .join("");
 
-  const html = `
-    <h3 style="margin:16px 0 6px">Pricing</h3>
-    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px">
-      ${htmlLines}
-      <div style="margin-top:10px;border-top:1px solid #e5e7eb;padding-top:10px;display:flex;justify-content:space-between">
-        <div style="color:#374151">Subtotal</div>
-        <div style="font-weight:700">${escapeHtml(subtotal)}</div>
+  return {
+    applied,
+    text: `Pricing:\n${textLines.join("\n")}\n\nSubtotal: ${subtotal}\nTotal: ${total}\n\nDiscount Code: ${code || "None"}${codeStatus}`,
+    html: `
+      <h3 style="margin:16px 0 6px">Pricing</h3>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px">
+        ${htmlLines}
+        <div style="margin-top:10px;border-top:1px solid #e5e7eb;padding-top:10px;display:flex;justify-content:space-between">
+          <div style="color:#374151">Subtotal</div><div style="font-weight:700">${escapeHtml(subtotal)}</div>
+        </div>
+        <div style="margin-top:6px;display:flex;justify-content:space-between">
+          <div style="color:#111827;font-weight:700">Total</div><div style="font-weight:800">${escapeHtml(total)}</div>
+        </div>
       </div>
-      <div style="margin-top:6px;display:flex;justify-content:space-between">
-        <div style="color:#111827;font-weight:700">Total</div>
-        <div style="font-weight:800">${escapeHtml(total)}</div>
-      </div>
-    </div>
-    <p style="margin:10px 0 0"><strong>Discount Code:</strong> ${escapeHtml(code || "None")}${code ? (applied ? " <span style='color:#059669;font-weight:700'>(applied)</span>" : " <span style='color:#dc2626;font-weight:700'>(not applied)</span>") : ""}</p>
-  `;
-
-  return { text, html, applied };
+      <p style="margin:10px 0 0"><strong>Discount Code:</strong> ${escapeHtml(code || "None")}${code ? (applied ? " <span style='color:#059669;font-weight:700'>(applied)</span>" : " <span style='color:#dc2626;font-weight:700'>(not applied)</span>") : ""}</p>
+    `,
+  };
 }
 
-// --- reCAPTCHA verify (v3) ---
 async function verifyRecaptcha({ token, expectedAction }) {
-  if (!RECAPTCHA_SECRET) {
-    // If you prefer fail open during setup, change this to return ok:true
-    return { ok: false, reason: "missing_secret" };
-  }
+  if (!RECAPTCHA_SECRET) return { ok: false, reason: "missing_secret" };
   if (!token) return { ok: false, reason: "missing_token" };
 
-  const res = await fetch("https://www.google.com/recaptcha/api/siteverify", {
+  const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ secret: RECAPTCHA_SECRET, response: token }),
   });
-
-  const data = await res.json();
+  const data = await response.json();
 
   if (!data?.success) return { ok: false, reason: "not_success", data };
-
-  // Action check (recommended for v3)
   if (expectedAction && data.action && data.action !== expectedAction) {
     return { ok: false, reason: "action_mismatch", data };
   }
-
-  // Score check (v3)
   if (typeof data.score === "number" && data.score < RECAPTCHA_MIN_SCORE) {
     return { ok: false, reason: "low_score", data };
   }
@@ -183,28 +152,32 @@ async function verifyRecaptcha({ token, expectedAction }) {
   return { ok: true, data };
 }
 
-// ---------- function ----------
+function buildAuditPromise(details) {
+  if (!getStoreSafe) return Promise.resolve();
+
+  return (async () => {
+    try {
+      const store = getStoreSafe("tos-confirmations");
+      const identifier = details.email || details.phone || "unknown";
+      const key = `${new Date().toISOString()}__${identifier.replace(/[^a-z0-9@.+_-]/gi, "_")}.json`;
+      await store.setJSON(key, details);
+    } catch (error) {
+      console.warn("Blobs log skipped:", error.message);
+    }
+  })();
+}
+
 exports.handler = async (event) => {
+  const startedAt = Date.now();
+
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed" }) };
   }
 
   try {
     const payload = JSON.parse(event.body || "{}");
-
-    // reCAPTCHA guard (must be before sending email)
     const recaptchaToken = payload.recaptchaToken || null;
     const recaptchaAction = payload.recaptchaAction || "booking_submit";
-
-    const recaptcha = await verifyRecaptcha({ token: recaptchaToken, expectedAction: recaptchaAction });
-    if (!recaptcha.ok) {
-      // Keep response generic so bots don't learn
-      console.warn("reCAPTCHA blocked booking:", recaptcha.reason, recaptcha.data || "");
-      return {
-        statusCode: 403,
-        body: JSON.stringify({ error: "Anti-bot check failed" }),
-      };
-    }
 
     const {
       name = "",
@@ -216,39 +189,35 @@ exports.handler = async (event) => {
       lat = null,
       lng = null,
       source = "website",
-
       discountCode = null,
       pricing = null,
-
       termsAccepted = false,
       termsVersion = TERMS_VERSION_DEFAULT,
       termsAcceptanceText = `I confirm I’ve read and agree to the Ni Bin Guy Terms of Service (v${TERMS_VERSION_DEFAULT}).`,
       termsTimestamp = new Date().toISOString(),
     } = payload;
 
-    const filteredBins = (Array.isArray(bins) ? bins : []).filter((b) => b && b.type);
-
+    const filteredBins = (Array.isArray(bins) ? bins : []).filter((bin) => bin?.type);
     const binsText =
       filteredBins
-        .map((b) => {
-          const planOrFreq = b.planId ? `plan: ${b.planId}` : (b.frequency || "");
-          return `${b.count || 1} x ${b.type} (${planOrFreq})`;
+        .map((bin) => {
+          const planOrFrequency = bin.planId ? `plan: ${bin.planId}` : bin.frequency || "";
+          return `${bin.count || 1} x ${bin.type} (${planOrFrequency})`;
         })
         .join("\n") || "(none provided)";
-
     const binsHtml =
       filteredBins
-        .map((b) => {
-          const planOrFreq = b.planId ? `plan: ${escapeHtml(b.planId)}` : escapeHtml(b.frequency || "");
-          return `${escapeHtml(b.count || 1)} x ${escapeHtml(b.type)} (${planOrFreq})`;
+        .map((bin) => {
+          const planOrFrequency = bin.planId ? `plan: ${escapeHtml(bin.planId)}` : escapeHtml(bin.frequency || "");
+          return `${escapeHtml(bin.count || 1)} x ${escapeHtml(bin.type)} (${planOrFrequency})`;
         })
         .join("<br>") || "(none provided)";
-
     const pricingBlocks = buildPricingBlocks(pricing, discountCode);
 
-    let termsPdfAttachment = null;
-    try {
-      termsPdfAttachment = await buildTermsAcceptancePdfAttachment({
+    // These two independent network/CPU operations used to run one after the other.
+    const [recaptcha, termsPdfAttachment] = await Promise.all([
+      verifyRecaptcha({ token: recaptchaToken, expectedAction: recaptchaAction }),
+      buildTermsAcceptancePdfAttachment({
         name,
         email,
         phone,
@@ -261,23 +230,29 @@ exports.handler = async (event) => {
         termsTimestamp,
         termsBody: TERMS_BODY,
         source,
-      });
-    } catch (pdfError) {
-      console.warn("Terms PDF generation skipped:", pdfError.message);
-    }
-    const termsAttachments = termsPdfAttachment ? [termsPdfAttachment] : undefined;
+      }).catch((error) => {
+        console.warn("Terms PDF generation skipped:", error.message);
+        return null;
+      }),
+    ]);
 
-    // ---------- ADMIN EMAIL ----------
+    if (!recaptcha.ok) {
+      console.warn("reCAPTCHA blocked booking:", recaptcha.reason, recaptcha.data || "");
+      return {
+        statusCode: 403,
+        body: JSON.stringify({ error: "Anti-bot check failed" }),
+      };
+    }
+
+    const attachments = termsPdfAttachment ? [termsPdfAttachment] : undefined;
     const subjectAdmin = `🗑️ New Bin Cleaning Booking (${source})`;
-    const textAdmin =
-`New Bin Cleaning Booking
+    const textAdmin = `New Bin Cleaning Booking
 
 Name: ${name}
 Email: ${email}
 Phone: ${phone}
 Address: ${address}
-${lat != null && lng != null ? `Geo: ${lat}, ${lng}\n` : ""}${placeId ? `Place ID: ${placeId}\n` : ""}
-Bins:
+${lat != null && lng != null ? `Geo: ${lat}, ${lng}\n` : ""}${placeId ? `Place ID: ${placeId}\n` : ""}Bins:
 ${binsText}
 
 ${pricingBlocks.text}
@@ -288,50 +263,41 @@ Version: ${termsVersion}
 Confirmed: ${termsTimestamp}
 Acceptance line: ${termsAcceptanceText}
 `;
-
     const htmlAdmin = `
       <h2>New Bin Cleaning Booking</h2>
       <p><strong>Name:</strong> ${escapeHtml(name)}</p>
       <p><strong>Address:</strong> ${escapeHtml(address)}</p>
       <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
       <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-      ${lat != null && lng != null ? `<p><strong>Geo:</strong> ${escapeHtml(String(lat))}, ${escapeHtml(String(lng))}</p>` : ""}
+      ${lat != null && lng != null ? `<p><strong>Geo:</strong> ${escapeHtml(lat)}, ${escapeHtml(lng)}</p>` : ""}
       ${placeId ? `<p><strong>Place ID:</strong> ${escapeHtml(placeId)}</p>` : ""}
       <p><strong>Bins:</strong><br>${binsHtml}</p>
-
       ${pricingBlocks.html}
-
-      <hr style="margin:16px 0;border:none;border-top:1px solid #e5e7eb" />
+      <hr style="margin:16px 0;border:none;border-top:1px solid #e5e7eb">
       <div style="padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb">
-        <p style="margin:0 0 6px 0"><strong>TERMS</strong> <span style="color:#6b7280">(v${escapeHtml(termsVersion)})</span></p>
-        <p style="margin:0 0 6px 0"><em>${escapeHtml(termsAcceptanceText)}</em></p>
+        <p style="margin:0 0 6px"><strong>TERMS</strong> <span style="color:#6b7280">(v${escapeHtml(termsVersion)})</span></p>
+        <p style="margin:0 0 6px"><em>${escapeHtml(termsAcceptanceText)}</em></p>
         ${tosHtmlBlock(termsVersion, termsTimestamp)}
       </div>
-
       <p style="color:#6b7280;font-size:12px;margin-top:12px">Source: ${escapeHtml(source)}</p>
     `;
 
-    const { error: adminError } = await resend.emails.send({
+    const adminEmailPromise = resend.emails.send({
       from: FROM_DEFAULT,
       to: TO_ADMIN,
       subject: subjectAdmin,
       text: textAdmin,
       html: htmlAdmin,
       replyTo: email || undefined,
-      attachments: termsAttachments,
+      attachments,
     });
 
-    if (adminError) {
-      console.error("Resend admin error:", adminError);
-      return { statusCode: 502, body: JSON.stringify({ error: "Failed to send admin email", details: adminError }) };
-    }
-
-    // ---------- CUSTOMER EMAIL ----------
-    if (email) {
-      const subjectCustomer = `Your Ni Bin Guy booking & Terms confirmation (v${termsVersion})`;
-
-      const textCustomer =
-`Thanks ${name},
+    const customerEmailPromise = email
+      ? resend.emails.send({
+          from: FROM_DEFAULT,
+          to: email,
+          subject: `Your Ni Bin Guy booking & Terms confirmation (v${termsVersion})`,
+          text: `Thanks ${name},
 
 We've received your booking. Here is your booking summary (including pricing) and your Terms confirmation.
 
@@ -351,67 +317,84 @@ Accepted: ${termsAccepted ? "yes" : "no"}
 Version: ${termsVersion}
 Confirmed: ${termsTimestamp}
 
-We’ll be in touch to confirm your schedule.`;
+We’ll be in touch to confirm your schedule.`,
+          html: `
+            <h2>Thanks, ${escapeHtml(name)} — your booking is in!</h2>
+            <p>We’ve received your details and your Terms confirmation. We’ll be in touch to confirm your schedule.</p>
+            <p><strong>Your signed Terms &amp; Conditions Acceptance Certificate PDF is attached to this email.</strong></p>
+            <h3 style="margin:16px 0 6px">Booking summary</h3>
+            <p><strong>Name:</strong> ${escapeHtml(name)}<br>
+               <strong>Phone:</strong> ${escapeHtml(phone)}<br>
+               <strong>Address:</strong> ${escapeHtml(address)}</p>
+            <p><strong>Bins:</strong><br>${binsHtml}</p>
+            ${pricingBlocks.html}
+            ${tosHtmlBlock(termsVersion, termsTimestamp)}
+          `,
+          replyTo: TO_ADMIN,
+          attachments,
+        })
+      : Promise.resolve({ error: null });
 
-      const htmlCustomer = `
-        <h2>Thanks, ${escapeHtml(name)} — your booking is in!</h2>
-        <p>We’ve received your details and your Terms confirmation. We’ll be in touch to confirm your schedule.</p>
-        <p><strong>Your signed Terms &amp; Conditions Acceptance Certificate PDF is attached to this email.</strong></p>
+    // Start the optional audit write at the same time as both emails.
+    const auditPromise = buildAuditPromise({
+      channel: "email",
+      name,
+      email,
+      phone,
+      address,
+      bins,
+      placeId,
+      lat,
+      lng,
+      source,
+      discountCode: discountCode || null,
+      pricing: pricing || null,
+      termsAccepted,
+      termsVersion,
+      termsAcceptanceText,
+      termsTimestamp,
+      termsPdfAttached: Boolean(termsPdfAttachment),
+      recaptcha: {
+        action: recaptchaAction,
+        score: recaptcha?.data?.score ?? null,
+      },
+      createdAt: new Date().toISOString(),
+    });
 
-        <h3 style="margin:16px 0 6px">Booking summary</h3>
-        <p><strong>Name:</strong> ${escapeHtml(name)}<br>
-           <strong>Phone:</strong> ${escapeHtml(phone)}<br>
-           <strong>Address:</strong> ${escapeHtml(address)}</p>
+    const [adminResult, customerResult] = await Promise.all([
+      adminEmailPromise,
+      customerEmailPromise,
+      auditPromise,
+    ]);
 
-        <p><strong>Bins:</strong><br>${binsHtml}</p>
-
-        ${pricingBlocks.html}
-
-        ${tosHtmlBlock(termsVersion, termsTimestamp)}
-      `;
-
-      const { error: custError } = await resend.emails.send({
-        from: FROM_DEFAULT,
-        to: email,
-        subject: subjectCustomer,
-        text: textCustomer,
-        html: htmlCustomer,
-        replyTo: TO_ADMIN,
-        attachments: termsAttachments,
-      });
-
-      if (custError) {
-        console.error("Resend customer error:", custError);
-        return { statusCode: 502, body: JSON.stringify({ error: "Failed to send customer email", details: custError }) };
-      }
+    if (adminResult?.error) {
+      console.error("Resend admin error:", adminResult.error);
+      return {
+        statusCode: 502,
+        body: JSON.stringify({ error: "Failed to send admin email", details: adminResult.error }),
+      };
     }
 
-    // ---------- OPTIONAL AUDIT LOG (Blobs) ----------
-    if (getStoreSafe) {
-      try {
-        const store = getStoreSafe("tos-confirmations");
-        const key = `${new Date().toISOString()}__${(email || phone || "unknown").replace(/[^a-z0-9@.+_-]/gi, "_")}.json`;
-        await store.setJSON(key, {
-          channel: "email",
-          name, email, phone, address, bins,
-          placeId, lat, lng, source,
-          discountCode: discountCode || null,
-          pricing: pricing || null,
-          termsAccepted, termsVersion, termsAcceptanceText,
-          termsTimestamp,
-          termsPdfAttached: !!termsPdfAttachment,
-          recaptcha: {
-            action: recaptchaAction,
-            score: recaptcha?.data?.score ?? null,
-          },
-          createdAt: new Date().toISOString(),
-        });
-      } catch (e) {
-        console.warn("Blobs log skipped:", e.message);
-      }
+    // The booking is safely received once the admin email succeeds. A customer-email
+    // failure should not tell the customer that their booking failed and encourage duplicates.
+    if (customerResult?.error) {
+      console.error("Resend customer error:", customerResult.error);
     }
 
-    return { statusCode: 200, body: JSON.stringify({ success: true }) };
+    const durationMs = Date.now() - startedAt;
+    console.log(`Booking email completed in ${durationMs}ms`);
+
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Server-Timing": `booking;dur=${durationMs}`,
+      },
+      body: JSON.stringify({
+        success: true,
+        customerConfirmationSent: !customerResult?.error,
+      }),
+    };
   } catch (error) {
     console.error("sendBookingEmail failed:", error);
     return { statusCode: 500, body: JSON.stringify({ error: "Email send failed" }) };
