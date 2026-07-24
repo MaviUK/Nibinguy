@@ -104,6 +104,13 @@ updateFile("src/LandingPage.jsx", (text) => {
     );
   }
 
+  if (!text.includes("isEmailSubmitting")) {
+    text = text.replace(
+      '  const [isWhatsAppSubmitting, setIsWhatsAppSubmitting] = useState(false);',
+      '  const [isWhatsAppSubmitting, setIsWhatsAppSubmitting] = useState(false);\n  const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);'
+    );
+  }
+
   text = text.replace(
     "const handleSendWhatsApp = () => {",
     "const handleSendWhatsApp = async () => {"
@@ -160,9 +167,33 @@ updateFile("src/LandingPage.jsx", (text) => {
     );
   }
 
+  if (!text.includes('setIsEmailSubmitting(true);')) {
+    text = text.replace(
+      '    // ✅ reCAPTCHA token (v3)\n    const recaptchaAction = "booking_submit";',
+      '    setIsEmailSubmitting(true);\n\n    // ✅ reCAPTCHA token (v3)\n    const recaptchaAction = "booking_submit";'
+    );
+    text = text.replace(
+      '    if (!recaptchaToken) {\n      alert("Anti-bot check not ready. Please try again in a moment.");',
+      '    if (!recaptchaToken) {\n      setIsEmailSubmitting(false);\n      alert("Anti-bot check not ready. Please try again in a moment.");'
+    );
+    text = text.replace(
+      '    console.error("Email failed:", errorText);\n    alert("Failed to send booking email: " + errorText);',
+      '    setIsEmailSubmitting(false);\n    console.error("Email failed:", errorText);\n    alert("Failed to send booking email: " + errorText);'
+    );
+    text = text.replace(
+      '  console.error(err);\n  alert("Error sending booking.");',
+      '  setIsEmailSubmitting(false);\n  console.error(err);\n  alert("Error sending booking.");'
+    );
+  }
+
   text = text.replace(
     '      <button onClick={handleSendWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>\n        Send via WhatsApp\n      </button>',
-    '      <button onClick={handleSendWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60 flex items-center justify-center gap-2" disabled={!agreeToTerms || isWhatsAppSubmitting}>\n        {isWhatsAppSubmitting && <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" aria-hidden="true" />}\n        {isWhatsAppSubmitting ? "Registering booking..." : "Send via WhatsApp"}\n      </button>'
+    '      <button onClick={handleSendWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60 flex items-center justify-center gap-2" disabled={!agreeToTerms || isWhatsAppSubmitting || isEmailSubmitting}>\n        {isWhatsAppSubmitting && <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" aria-hidden="true" />}\n        {isWhatsAppSubmitting ? "Registering booking..." : "Send via WhatsApp"}\n      </button>'
+  );
+
+  text = text.replace(
+    '      <button onClick={handleSendEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>\n        Send via Email\n      </button>',
+    '      <button onClick={handleSendEmail} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60 flex items-center justify-center gap-2" disabled={!agreeToTerms || isEmailSubmitting || isWhatsAppSubmitting}>\n        {isEmailSubmitting && <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" aria-hidden="true" />}\n        {isEmailSubmitting ? "Sending booking..." : "Send via Email"}\n      </button>'
   );
 
   return text;
