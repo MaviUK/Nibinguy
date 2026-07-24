@@ -97,9 +97,13 @@ updateFile("src/LandingPage.jsx", (text) => {
   text = text.replace(/const TERMS_VERSION = "[^"]+";/, `const TERMS_VERSION = "${VERSION}";`);
   text = text.replace(/const TERMS_BODY = `.*?`;/s, `const TERMS_BODY = \`${FULL_TERMS}\`;`);
 
-  // WhatsApp bookings must confirm the receipt email was accepted before
-  // opening WhatsApp. The previous sendBeacon call could be discarded when
-  // the browser switched apps and all failures were silently ignored.
+  if (!text.includes("isWhatsAppSubmitting")) {
+    text = text.replace(
+      '  const [agreeToTerms, setAgreeToTerms] = useState(false);',
+      '  const [agreeToTerms, setAgreeToTerms] = useState(false);\n  const [isWhatsAppSubmitting, setIsWhatsAppSubmitting] = useState(false);'
+    );
+  }
+
   text = text.replace(
     "const handleSendWhatsApp = () => {",
     "const handleSendWhatsApp = async () => {"
@@ -119,7 +123,9 @@ updateFile("src/LandingPage.jsx", (text) => {
       }).catch(() => {});
     }`;
 
-  const reliableSend = `    try {
+  const reliableSend = `    setIsWhatsAppSubmitting(true);
+
+    try {
       const response = await fetch("/.netlify/functions/sendTosReceipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -135,6 +141,7 @@ updateFile("src/LandingPage.jsx", (text) => {
         throw new Error(\`Booking receipt failed\${details}\`);
       }
     } catch (error) {
+      setIsWhatsAppSubmitting(false);
       console.error("WhatsApp booking receipt failed:", error);
       alert("We couldn't register your booking yet. Please check your connection and try again. WhatsApp has not been opened.");
       return;
@@ -142,7 +149,21 @@ updateFile("src/LandingPage.jsx", (text) => {
 
   if (text.includes(unreliableSend)) {
     text = text.replace(unreliableSend, reliableSend);
+  } else if (text.includes('    try {\n      const response = await fetch("/.netlify/functions/sendTosReceipt"') && !text.includes("setIsWhatsAppSubmitting(true);")) {
+    text = text.replace(
+      '    try {\n      const response = await fetch("/.netlify/functions/sendTosReceipt"',
+      '    setIsWhatsAppSubmitting(true);\n\n    try {\n      const response = await fetch("/.netlify/functions/sendTosReceipt"'
+    );
+    text = text.replace(
+      '    } catch (error) {\n      console.error("WhatsApp booking receipt failed:", error);',
+      '    } catch (error) {\n      setIsWhatsAppSubmitting(false);\n      console.error("WhatsApp booking receipt failed:", error);'
+    );
   }
+
+  text = text.replace(
+    '      <button onClick={handleSendWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60" disabled={!agreeToTerms}>\n        Send via WhatsApp\n      </button>',
+    '      <button onClick={handleSendWhatsApp} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg w-full disabled:opacity-60 flex items-center justify-center gap-2" disabled={!agreeToTerms || isWhatsAppSubmitting}>\n        {isWhatsAppSubmitting && <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" aria-hidden="true" />}\n        {isWhatsAppSubmitting ? "Registering booking..." : "Send via WhatsApp"}\n      </button>'
+  );
 
   return text;
 });
