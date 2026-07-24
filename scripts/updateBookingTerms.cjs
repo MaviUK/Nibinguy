@@ -96,6 +96,54 @@ function updateFile(path, updater) {
 updateFile("src/LandingPage.jsx", (text) => {
   text = text.replace(/const TERMS_VERSION = "[^"]+";/, `const TERMS_VERSION = "${VERSION}";`);
   text = text.replace(/const TERMS_BODY = `.*?`;/s, `const TERMS_BODY = \`${FULL_TERMS}\`;`);
+
+  // WhatsApp bookings must confirm the receipt email was accepted before
+  // opening WhatsApp. The previous sendBeacon call could be discarded when
+  // the browser switched apps and all failures were silently ignored.
+  text = text.replace(
+    "const handleSendWhatsApp = () => {",
+    "const handleSendWhatsApp = async () => {"
+  );
+
+  const unreliableSend = `    try {
+      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+      if (!navigator.sendBeacon("/.netlify/functions/sendTosReceipt", blob)) {
+        throw new Error("sendBeacon not sent");
+      }
+    } catch {
+      fetch("/.netlify/functions/sendTosReceipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify(payload),
+      }).catch(() => {});
+    }`;
+
+  const reliableSend = `    try {
+      const response = await fetch("/.netlify/functions/sendTosReceipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        let details = "";
+        try {
+          const result = await response.json();
+          details = result?.error ? \`: \${result.error}\` : "";
+        } catch (_) {}
+        throw new Error(\`Booking receipt failed\${details}\`);
+      }
+    } catch (error) {
+      console.error("WhatsApp booking receipt failed:", error);
+      alert("We couldn't register your booking yet. Please check your connection and try again. WhatsApp has not been opened.");
+      return;
+    }`;
+
+  if (text.includes(unreliableSend)) {
+    text = text.replace(unreliableSend, reliableSend);
+  }
+
   return text;
 });
 
